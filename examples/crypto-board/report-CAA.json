@@ -12,7 +12,10 @@
     "EVI-9EAF8C339454C52653CF8672",
     "EVI-C3A7EABEBA55DC868D79F91A"
   ],
-  "finding_categories": {},
+  "finding_categories": {
+    "CG001-CAA-CG-04": "CG-04",
+    "CG002-CAA-CG-04": "CG-04"
+  },
   "findings": [
     {
       "schema_version": "1.0.0",
@@ -31,7 +34,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Record upgradeability, the admin address, and that a holder's guarantees survive only as long as the admin chooses not to replace the implementation.",
@@ -55,7 +58,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Enumerate every privileged function with its controlling address and, where multisig, its threshold. Absent that, no claim of trustlessness can be made.",
@@ -80,9 +83,9 @@
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
+      "human_verified": true,
       "method": "provena-chain-c/CAA-001"
     },
-    "human_signature_ref": "SIG-PENDING-CAA"
+    "human_signature_ref": "SIG-VERIFY-CAA-Ian McGuane"
   }
 }

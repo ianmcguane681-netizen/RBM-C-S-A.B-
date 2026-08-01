@@ -12,7 +12,9 @@
     "EVI-9EAF8C339454C52653CF8672",
     "EVI-C3A7EABEBA55DC868D79F91A"
   ],
-  "finding_categories": {},
+  "finding_categories": {
+    "CG001-TKA-CG-03": "CG-03"
+  },
   "findings": [
     {
       "schema_version": "1.0.0",
@@ -31,7 +33,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Either populate the locker registry with verified addresses or record CG-03 as not assessed for this review. An empty search reported as a gate result is not a gate.",
@@ -58,9 +60,9 @@
     ],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
+      "human_verified": true,
       "method": "provena-chain-b/TKA-001"
     },
-    "human_signature_ref": "SIG-PENDING-TKA"
+    "human_signature_ref": "SIG-VERIFY-TKA-Ian McGuane"
   }
 }

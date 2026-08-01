@@ -12,7 +12,9 @@
     "EVI-9EAF8C339454C52653CF8672",
     "EVI-C3A7EABEBA55DC868D79F91A"
   ],
-  "finding_categories": {},
+  "finding_categories": {
+    "CG001-RPA-CG-06": "CG-06"
+  },
   "findings": [
     {
       "schema_version": "1.0.0",
@@ -31,7 +33,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": null,
@@ -55,9 +57,9 @@
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
+      "human_verified": true,
       "method": "provena-chain-c/RPA-001"
     },
-    "human_signature_ref": "SIG-PENDING-RPA"
+    "human_signature_ref": "SIG-VERIFY-RPA-Ian McGuane"
   }
 }

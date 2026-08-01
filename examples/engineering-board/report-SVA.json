@@ -9,7 +9,10 @@
     "EVI-E3342429DEBC4A8DB294D753",
     "EVI-EC59EB6ADBF6A16542BFDEF7"
   ],
-  "finding_categories": {},
+  "finding_categories": {
+    "EG001-SVA-EG-05": "EG-05",
+    "EG002-SVA-EG-05": "EG-05"
+  },
   "findings": [
     {
       "schema_version": "1.0.0",
