@@ -105,26 +105,55 @@ class LiquidityFinding:
     venues_probed: tuple[str, ...] = ()
     unreachable: tuple[str, ...] = ()
 
-    def best_by_size(self) -> list[ExitQuote]:
-        """The best execution available at each size, across every venue probed.
+    @property
+    def quote_assets(self) -> tuple[str, ...]:
+        return tuple(sorted({q.quote_token for q in self.quotes}))
 
-        This is the only comparison that means anything. Quotes from different fee tiers
-        are not comparable to each other -- a 0.05% pool and a 1% pool price the same trade
-        differently by construction -- so pooling them into one curve produces a slippage
-        figure that can come out *negative*, which is how the first version of this method
-        reported that a larger trade got a better price.
+    def _scope(self, quote_token: str | None) -> tuple[ExitQuote, ...]:
+        """The quotes a curve may legitimately be drawn through.
 
-        A seller takes the best price available at their size. That is what is curved here.
+        `price()` is `amount_out / size_in` in raw token units, so it is only a price
+        within one quote asset. Across assets it is a decimals comparison: DAI at 18
+        decimals yields ~1e12 and USDT at 6 yields ~1 for the same dollar of proceeds,
+        and whichever asset carries more decimals wins every size.
+
+        Found live on USDC, where DAI was named best execution at every size and the
+        resulting 99.14% slippage had its baseline and its worst case in different pools.
+        A cross-asset best price needs a common numéraire; this profile has no oracle, so
+        the comparison is refused rather than approximated.
+        """
+
+        if quote_token is not None:
+            return tuple(q for q in self.quotes if q.quote_token == quote_token)
+        assets = self.quote_assets
+        if len(assets) > 1:
+            raise ValueError(
+                f"Quotes span {len(assets)} quote assets ({', '.join(assets)}); name one. "
+                f"Raw prices are not comparable across assets with different decimals."
+            )
+        return self.quotes
+
+    def best_by_size(self, quote_token: str | None = None) -> list[ExitQuote]:
+        """The best execution available at each size, within one quote asset.
+
+        Quotes from different fee tiers are not comparable to each other -- a 0.05% pool
+        and a 1% pool price the same trade differently by construction -- so pooling them
+        into one curve produces a slippage figure that can come out *negative*, which is
+        how the first version of this method reported that a larger trade got a better
+        price. Quotes in different assets are not comparable either; see `_scope`.
+
+        A seller takes the best price available at their size, in the asset they are
+        selling into. That is what is curved here.
         """
 
         best: dict[int, ExitQuote] = {}
-        for quote in self.quotes:
+        for quote in self._scope(quote_token):
             incumbent = best.get(quote.size_in)
             if incumbent is None or quote.price() > incumbent.price():
                 best[quote.size_in] = quote
         return [best[size] for size in sorted(best)]
 
-    def slippage_curve(self) -> list[tuple[int, float]]:
+    def slippage_curve(self, quote_token: str | None = None) -> list[tuple[int, float]]:
         """Best obtainable price per unit at each size, smallest first.
 
         The shape is the finding. A flat curve is real depth; one that falls away is a pool
@@ -132,16 +161,18 @@ class LiquidityFinding:
         single quote or from TVL.
         """
 
-        return [(q.size_in, q.price()) for q in self.best_by_size()]
+        return [(q.size_in, q.price()) for q in self.best_by_size(quote_token)]
 
-    def slippage_from_smallest(self) -> list[tuple[int, float]]:
+    def slippage_from_smallest(
+        self, quote_token: str | None = None
+    ) -> list[tuple[int, float]]:
         """Each size's best price as a percentage drop from the smallest size quoted.
 
         Measured against the smallest *quoted* size rather than a mid-price, because the
         mid-price is not a price anyone can trade at.
         """
 
-        curve = self.slippage_curve()
+        curve = self.slippage_curve(quote_token)
         if not curve:
             return []
         best = curve[0][1]
@@ -149,19 +180,33 @@ class LiquidityFinding:
             return []
         return [(size, (best - price) / best * 100.0) for size, price in curve]
 
+    def curves_by_quote(self) -> dict[str, list[tuple[int, float]]]:
+        """One slippage curve per quote asset.
+
+        A ratio within an asset *is* comparable across assets even though the prices are
+        not, so this is the honest way to show whether depth holds up in more than one
+        direction.
+        """
+
+        return {asset: self.slippage_from_smallest(asset) for asset in self.quote_assets}
+
     def describe(self) -> str:
         if self.status == QUOTED:
-            best = self.best_by_size()
             lines = [
-                f"Exit cost at block {self.block_number}, best execution across "
-                f"{len({q.venue for q in self.quotes})} venue(s):"
+                f"Exit cost at block {self.block_number} across "
+                f"{len({q.venue for q in self.quotes})} venue(s), by quote asset. Prices "
+                f"are not compared across quote assets: raw amounts in assets of "
+                f"different decimals are not a price comparison, and this profile has no "
+                f"numéraire to convert them."
             ]
-            drops = dict(self.slippage_from_smallest())
-            for quote in best:
-                lines.append(
-                    f"  size {quote.size_in:>22,}  {drops[quote.size_in]:6.2f}% worse "
-                    f"than smallest   via {quote.venue}"
-                )
+            for asset in self.quote_assets:
+                lines.append(f"  into {asset}:")
+                drops = dict(self.slippage_from_smallest(asset))
+                for quote in self.best_by_size(asset):
+                    lines.append(
+                        f"    size {quote.size_in:>22,}  {drops[quote.size_in]:6.2f}% "
+                        f"worse than smallest   via {quote.venue}"
+                    )
             return "\n".join(lines)
         if self.status == INDETERMINATE:
             return (
@@ -325,8 +370,20 @@ def v2_reserves(client: ChainClient, pair: str, token: str, **kw: Any) -> tuple[
     return reserve1, reserve0, reading.block_number
 
 
+def _venue(base: str, quote_name: str) -> str:
+    """Label a pool by its pair, not only by its fee tier.
+
+    USDC/WETH and USDC/DAI at the same fee tier are two pools. Labelling both
+    "uniswap-v3-100" collapsed fifteen probed venues to five in every set and count, and
+    `describe()` reported the smaller number.
+    """
+
+    return f"{base}/{quote_name}" if quote_name else base
+
+
 def quote_v2_exit(
-    client: ChainClient, token: str, quote: str, size_in: int, **kw: Any
+    client: ChainClient, token: str, quote: str, size_in: int,
+    *, quote_name: str = "", **kw: Any
 ) -> ExitQuote | None:
     """Constant-product output, exactly.
 
@@ -356,7 +413,7 @@ def quote_v2_exit(
     if amount_out <= 0:
         return None
     return ExitQuote(
-        venue="uniswap-v2",
+        venue=_venue("uniswap-v2", quote_name),
         size_in=size_in,
         amount_out=amount_out,
         quote_token=quote,
@@ -366,7 +423,8 @@ def quote_v2_exit(
 
 
 def quote_v3_exit(
-    client: ChainClient, token: str, quote: str, fee: int, size_in: int, **kw: Any
+    client: ChainClient, token: str, quote: str, fee: int, size_in: int,
+    *, quote_name: str = "", **kw: Any
 ) -> ExitQuote | None:
     """Ask Uniswap what this exit actually returns.
 
@@ -392,7 +450,7 @@ def quote_v3_exit(
     if len(raw) < 66:
         return None
     return ExitQuote(
-        venue=f"uniswap-v3-{fee}",
+        venue=_venue(f"uniswap-v3-{fee}", quote_name),
         size_in=size_in,
         amount_out=int(raw[2:66], 16),
         quote_token=quote,
@@ -434,7 +492,9 @@ def exit_cost(
         probed.append(v2_venue)
         for size in sizes:
             try:
-                quoted = quote_v2_exit(client, token, quote_token, size, **kw)
+                quoted = quote_v2_exit(
+                    client, token, quote_token, size, quote_name=name, **kw
+                )
             except TransientRetrievalError:
                 unreachable.append(f"{v2_venue}@{size}")
                 continue
@@ -456,7 +516,9 @@ def exit_cost(
                 continue
             for size in sizes:
                 try:
-                    quoted = quote_v3_exit(client, token, quote_token, fee, size, **kw)
+                    quoted = quote_v3_exit(
+                        client, token, quote_token, fee, size, quote_name=name, **kw
+                    )
                 except TransientRetrievalError:
                     unreachable.append(f"{venue}@{size}")
                     continue

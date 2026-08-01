@@ -196,6 +196,17 @@ def cmd_commit_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+# Exit sizes for CG-05, in WHOLE TOKENS, scaled at runtime by the decimals read from the
+# contract. Four orders of magnitude, because a single quote cannot distinguish a deep pool
+# from a shallow one that happens to price small trades well, and that distinction is the
+# entire question the gate asks.
+#
+# Whole tokens rather than a currency amount: converting to dollars needs a price this
+# profile has no oracle for, and inventing one is the same overreach as comparing raw
+# amounts across quote assets. The basis is stated in the evidence provenance.
+EXIT_SIZES_IN_TOKENS = (10_000, 1_000_000, 100_000_000)
+
+
 def cmd_chain_evidence(args: argparse.Namespace) -> int:
     """Register chain state as evidence, pinned to a finalized block height.
 
@@ -205,16 +216,34 @@ def cmd_chain_evidence(args: argparse.Namespace) -> int:
 
     Reads at `finalized` rather than `latest`, so evidence cannot be reorged out from
     under a record already made.
+
+    **Every reading pins to one height.** The first crypto review registered identity and
+    upgradeability at block 25,660,396 and locks, liquidity and composition at 25,661,826 --
+    1,430 blocks later -- while declaring a single artefact version. Half the evidence
+    described a state the other half never saw, and nothing in the record said so. The
+    height is resolved once here and passed to every probe.
+
+    All six gates are registered from this one command. Three of them used to be run by
+    hand afterwards, which is how the split above happened in the first place.
     """
 
     from connectors.chain import ChainClient, best_for
     from connectors import chain_queries as queries
+    from connectors.chain_clustering import METHOD, address_distinctness
+    from connectors.chain_liquidity import QUOTE_TOKENS, exit_cost, pool_ownership, v2_pair
+    from connectors.chain_locks import BURN_ADDRESSES, lock_finding
 
     runtime = _runtime(args)
     client = ChainClient(best_for("state"))
     address = args.contract
 
+    block = args.block or int(
+        client.read("eth_getBlockByNumber", ["finalized", False]).value["number"], 16
+    )
+    at = {"block_number": block}
+
     print(f"Reading {address} on {client.provider.chain} via {client.provider.name}")
+    print(f"Every reading pinned to block {block:,}")
 
     def _register(label: str, reading, tier: str) -> None:
         runtime.register_evidence(
@@ -229,40 +258,108 @@ def cmd_chain_evidence(args: argparse.Namespace) -> int:
         )
         print(f"  T1  {label:<14} block {reading.block_number}  {reading.content_sha256[:16]}")
 
-    for label, reading in queries.token_identity(client, address).items():
+    def _register_finding(label: str, finding, tier: str, provenance: dict[str, Any]) -> None:
+        """Register an assessment rather than a single reading.
+
+        Its status is recorded verbatim in the provenance. `NO_PATTERN_MATCHED`,
+        `NO_VENUE_FOUND` and `NO_LOCK_CONTRACT_IDENTIFIED` must reach the reviewer as
+        themselves and never be softened into the negative claim they resemble.
+        """
+
+        runtime.register_evidence(
+            args.review,
+            locator=f"{client.provider.chain}:{address}@{block}:{label}",
+            content=finding.describe().encode("utf-8"),
+            description=f"{label} for {address} at block {block}",
+            source_tier=tier,
+            provenance={
+                "kind": "CHAIN_STATE", "chain": client.provider.chain,
+                "block_number": block, "contract": address, "reading": label,
+                **provenance,
+            },
+            actor=args.actor,
+            idempotency_key=f"chain-{block}-{address}-{label}",
+        )
+        print(f"  {tier}  {label:<14} {provenance.get('status', '')}")
+
+    identity = queries.token_identity(client, address, **at)
+    for label, reading in identity.items():
         _register(label, reading, "T1")
-    _register("totalSupply", queries.total_supply(client, address), "T1")
+    _register("totalSupply", queries.total_supply(client, address, **at), "T1")
 
-    # The proxy finding is not a single reading, so it is registered as an assessment with
-    # its own provenance. Its status is recorded verbatim: NO_PATTERN_MATCHED must reach
-    # the reviewer as itself, never softened into "immutable" on the way.
-    finding = queries.proxy_finding(client, address)
-    runtime.register_evidence(
-        args.review,
-        locator=f"{client.provider.chain}:{address}@{finding.block_number}:upgradeability",
-        content=finding.describe().encode("utf-8"),
-        description=f"Upgradeability probe for {address}",
-        source_tier="T2",
-        provenance={
-            "kind": "CHAIN_STATE",
-            "chain": client.provider.chain,
-            "block_number": finding.block_number,
-            "contract": address,
-            "reading": "upgradeability",
-            "status": finding.status,
-            "matched_patterns": sorted(finding.slots),
-            "unreachable_probes": list(finding.unreachable),
-            "conventions_probed": len(queries.PROXY_SLOTS),
-        },
-        actor=args.actor,
-        idempotency_key=f"chain-{finding.block_number}-{address}-upgradeability",
-    )
-    print(f"  T2  {'upgradeability':<14} {finding.status}")
-    print(f"      {finding.describe()}")
+    # Read, never assumed. A token with 18 decimals quoted at sizes computed for 6 would
+    # be probed a million times too small, and would report flawless depth.
+    decimals = int(str(identity["decimals"].value), 16)
 
-    holders = queries.authority_holders(client, address)
+    # CG-04
+    proxy = queries.proxy_finding(client, address, **at)
+    _register_finding("upgradeability", proxy, "T2", {
+        "status": proxy.status,
+        "matched_patterns": sorted(proxy.slots),
+        "unreachable_probes": list(proxy.unreachable),
+        "conventions_probed": len(queries.PROXY_SLOTS),
+    })
+    print(f"      {proxy.describe()}")
+
+    holders = queries.authority_holders(client, address, **at)
+    paused = queries.is_paused(client, address, **at)
     print(f"  --  authority       {holders}")
-    print(f"  --  paused          {queries.is_paused(client, address)}")
+    print(f"  --  paused          {paused}")
+
+    # CG-03
+    locks = lock_finding(client, address, **at)
+    _register_finding("locks", locks, "T1", {
+        "status": locks.status,
+        "registry_size": locks.registry_size,
+        "addresses_searched": list(locks.searched),
+        "burned_supply": locks.burned_supply,
+        "locked_supply": locks.locked_supply,
+    })
+
+    # CG-05. Sizes span four orders of magnitude because one quote cannot tell a deep pool
+    # from a shallow one that prices small trades well, and that is the whole question.
+    sizes = tuple(n * 10**decimals for n in EXIT_SIZES_IN_TOKENS)
+    liquidity = exit_cost(client, address, sizes, **at)
+    _register_finding("liquidity", liquidity, "T1", {
+        "status": liquidity.status,
+        "sizes_in_whole_tokens": list(EXIT_SIZES_IN_TOKENS),
+        "decimals": decimals,
+        "venues_probed": list(liquidity.venues_probed),
+        "quote_assets": list(liquidity.quote_assets),
+        "unreachable": list(liquidity.unreachable),
+    })
+
+    # Composition needs a pool, not a token: `pool_ownership` reads the pair's own ERC-20.
+    # Which pair is a choice, so it is recorded rather than left implied.
+    pair = v2_pair(client, address, QUOTE_TOKENS["WETH"], **at)
+    if pair:
+        composition = pool_ownership(client, pair, burn_addresses=BURN_ADDRESSES, **at)
+        _register_finding("lp_composition", composition, "T1", {
+            "status": "ASSESSED",
+            "pair": pair,
+            "quote_asset": "WETH",
+            "lp_total_supply": composition.lp_total_supply,
+            "covers_v3": composition.covers_v3,
+        })
+    else:
+        # No V2 pair is not "no liquidity"; V3 holds positions as NFTs this cannot read.
+        print("  --  lp_composition  NO_V2_PAIR (V3 positions are NFTs and unreachable here)")
+
+    # CG-02. A window, never an unbounded history: the finding is about the blocks walked
+    # and says so, and `covered_ranges` proves the walk had no gap the log cap opened.
+    window_from = max(0, block - max(1, args.log_window) + 1)
+    logs_client = ChainClient(best_for("logs"))
+    distinctness = address_distinctness(logs_client, address, window_from, block)
+    _register_finding("address_distinctness", distinctness, "T2", {
+        "status": "ASSESSED",
+        "method": METHOD,
+        "from_block": window_from,
+        "to_block": block,
+        "covered_ranges": [list(r) for r in distinctness.covered_ranges],
+        "transfers_seen": distinctness.transfers_seen,
+        "addresses_seen": len(distinctness.addresses_seen),
+        "clusters": len(distinctness.clusters),
+    })
 
     _print_next("board advance --to EVIDENCE_LOCKED, then ASSIGNMENT")
     return 0
@@ -625,6 +722,14 @@ def build_parser() -> argparse.ArgumentParser:
     chain.add_argument("--review", required=True)
     chain.add_argument("--contract", required=True, help="Contract address to read")
     chain.add_argument("--actor", required=True)
+    chain.add_argument(
+        "--block", type=int, default=0,
+        help="Pin every reading to this height. Default: whatever is finalized now.",
+    )
+    chain.add_argument(
+        "--log-window", type=int, default=60,
+        help="Blocks of Transfer history for CG-02, ending at the pinned block.",
+    )
     chain.set_defaults(func=cmd_chain_evidence)
 
     advance = sub.add_parser("advance", help="Move to the next lifecycle state")

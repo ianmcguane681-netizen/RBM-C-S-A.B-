@@ -206,7 +206,7 @@ class TestV2IsProbed:
         finding = exit_cost(client, "0xtok", (10**18,), quotes={"WETH": WETH})
 
         assert finding.status == QUOTED, "V2-only liquidity must not read as NO_VENUE_FOUND"
-        assert any(q.venue == "uniswap-v2" for q in finding.quotes)
+        assert any(q.venue.startswith("uniswap-v2") for q in finding.quotes)
 
     def test_v2_is_listed_among_the_probed_venues(self):
         """So that a genuine NO_VENUE_FOUND can be trusted to have looked there."""
@@ -242,6 +242,102 @@ class TestV2IsProbed:
         ))
 
         assert finding.best_by_size()[0].venue == "uniswap-v3-500"
+
+
+class TestQuoteAssetsAreNotComparable:
+    """The same defect as the class above, one axis over, found live on USDC.
+
+    `price()` is `amount_out / size_in` in RAW token units. Across quote assets that is
+    not a price comparison, it is a decimals comparison: DAI (18 decimals, trading near
+    a dollar) yields ~1e12 while USDT (6 decimals, trading near the same dollar) yields
+    ~1. Whichever asset carries more decimals wins every size, regardless of execution.
+
+    The Tier 2 USDC review quoted one asset, so the fault could not appear. Acting on the
+    sceptical reviewer's finding -- quote more assets -- produced it immediately, with DAI
+    named best execution at every size and a 99.14% slippage figure whose baseline and
+    worst case were different pools.
+
+    A cross-asset best price needs a common numéraire, which needs an oracle this profile
+    does not have. So it is refused rather than approximated.
+    """
+
+    DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+
+    def mixed(self):
+        """One size, two assets, both trading at par. Only the decimals differ."""
+
+        return LiquidityFinding(QUOTED, "0xtok", 100, (
+            ExitQuote("uniswap-v3-100/DAI", 10**10, 9_990 * 10**18, self.DAI, 100, 100),
+            # The genuinely better execution: 0.05% more out, in an asset with 6 decimals.
+            ExitQuote("uniswap-v3-100/USDT", 10**10, 9_995 * 10**6, self.USDT, 100, 100),
+        ))
+
+    def test_a_curve_across_quote_assets_is_refused_rather_than_computed(self):
+        with pytest.raises(ValueError, match="quote asset"):
+            self.mixed().best_by_size()
+
+    def test_naming_the_quote_asset_gives_a_curve(self):
+        best = self.mixed().best_by_size(self.USDT)
+
+        assert len(best) == 1
+        assert best[0].quote_token == self.USDT
+
+    def test_the_asset_with_more_decimals_is_not_declared_best(self):
+        """The regression proper. Raw-magnitude comparison picks DAI here, always."""
+
+        assert self.mixed().best_by_size(self.DAI)[0].amount_out == 9_990 * 10**18
+        assert self.mixed().best_by_size(self.USDT)[0].amount_out == 9_995 * 10**6
+
+    def test_one_quote_asset_still_needs_no_argument(self):
+        """Single-asset findings keep working without ceremony."""
+
+        finding = LiquidityFinding(QUOTED, "0xtok", 100, (quote(100, 99), quote(100, 90)))
+
+        assert finding.best_by_size()[0].amount_out == 99
+
+    def test_slippage_is_reported_per_quote_asset(self):
+        curves = self.mixed().curves_by_quote()
+
+        assert set(curves) == {self.DAI, self.USDT}
+
+    def test_the_description_states_that_assets_are_not_compared(self):
+        described = self.mixed().describe()
+
+        assert "not compared across quote assets" in described
+
+    def test_the_description_never_names_one_asset_as_best_overall(self):
+        described = self.mixed().describe().lower()
+
+        for overreach in ("best execution across", "best overall", "cheapest exit"):
+            assert overreach not in described
+
+
+class TestAVenueIsAPoolNotAFeeTier:
+    """15 probed venues collapsed to 5, because the label omitted the quote asset."""
+
+    def test_the_quote_asset_appears_in_the_venue_label(self):
+        def _post(_url, payload):
+            if payload["method"] == "eth_getBlockByNumber":
+                return {"result": {"number": "0x1"}}
+            data = payload["params"][0].get("data", "")
+            if data.startswith(SELECTORS["getPair"]) or data.startswith(SELECTORS["getPool"]):
+                return {"result": POOL}
+            if data.startswith(SELECTORS["getReserves"]):
+                word = lambda v: hex(v)[2:].rjust(64, "0")
+                return {"result": "0x" + word(10**24) + word(10**24) + word(1)}
+            return {"result": "0x" + hex(10**18)[2:].rjust(64, "0")}
+
+        finding = exit_cost(ChainClient(PROVIDER, post_json=_post), "0xtok", (100,),
+                            quotes={"WETH": WETH, "USDT": TestQuoteAssetsAreNotComparable.USDT})
+
+        assert any(v.endswith("/WETH") for v in finding.venues_probed)
+        assert any(q.venue.endswith("/USDT") for q in finding.quotes)
+        # The count that was wrong: two assets on the same fee tier are two pools, and
+        # a label without the asset counts them as one.
+        assert len({q.venue for q in finding.quotes}) > len(
+            {q.venue.split("/")[0] for q in finding.quotes}
+        )
 
 
 class TestSizeIsAlwaysCarried:
