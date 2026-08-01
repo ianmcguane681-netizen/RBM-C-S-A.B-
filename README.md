@@ -74,6 +74,45 @@ EG-06  reproducibility           test counts quoted from memory rather than from
 EG-02 has recurred more than any other, and its output is indistinguishable from a
 correct result. If you read one thing here, read that gate.
 
+## The crypto gates, and what building them cost
+
+RBM-003's six gates name failure modes in the domain rather than in this repository. But
+each one, on the way to being implemented against live chain state, produced a defect here
+first — which is the second column:
+
+```text
+CG-01  chain-observable         claims read from dashboards rather than regenerable queries
+       verification             -> a provider's archive depth was reported from ONE successful
+                                   historical query; re-measured across eight heights, 4 of 8
+
+CG-02  address distinctness     addresses funded from one wallet counted as distinct users
+       -> DistinctnessFinding carries no holder count, because a cluster-corrected
+          census invites being read as one
+
+CG-03  supply and locks         published tokenomics believed over deployed contract
+       -> an earlier draft named lockers from memory; a wrong locker address returns zero
+          and renders as "no locks found". The registry now ships EMPTY
+
+CG-04  contract authority       "ownership renounced" beside a live proxy admin
+       -> empty EIP-1967 slots read as "not a proxy". The pre-1967 zeppelinos slot was
+          populated the whole time
+
+CG-05  liquidity reality        TVL reported as though it were exit depth
+       -> v2_pair was defined and never called, so V2-only tokens returned NO_VENUE_FOUND
+          with real liquidity sitting there. And pooling quotes across V3 fee tiers made a
+          larger trade price cheaper than a smaller one
+
+CG-06  reproducibility          a figure nobody else can regenerate
+       -> the reading hash included the block TAG, so a value read via `finalized` and the
+          same value re-read at that height disagreed. Every resample returned DIVERGED
+```
+
+One defect underlies most of that column: a value meaning *not found* or *unknown* read as
+*not there*. Empty proxy slot, absent venue, unattempted resample, 0.0049% rounded to
+0.00%. Each gate's connector answers with a third state rather than a negative claim —
+`NO_PATTERN_MATCHED`, `NO_VENUE_FOUND`, `NO_LOCK_CONTRACT_IDENTIFIED`, `NOT_ATTEMPTED` —
+and a test asserts the wording never collapses it into the flattering reading.
+
 ## Agent seats
 
 Seats may be held by agents. They are advisory, always:
