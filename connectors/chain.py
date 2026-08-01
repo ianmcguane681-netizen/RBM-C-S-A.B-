@@ -244,12 +244,26 @@ class ChainReading:
             )
 
     def digest(self) -> str:
+        """Identify the measurement, not the route taken to reach it.
+
+        The block tag is stripped before hashing. A reading taken via `finalized` and one
+        taken at the explicit height that tag resolved to are the same measurement -- same
+        chain, same block, same call, same value -- and hashing the tag alongside them made
+        those two disagree.
+
+        That is not cosmetic. CG-06 re-runs readings at their recorded heights and compares
+        hashes, so with the tag included every resample reported DIVERGED: identical values
+        at identical blocks, flagged as the provider serving state it was not asked for.
+        A reproducibility gate that always fails is worse than none, because it trains the
+        reader to ignore it.
+        """
+
         payload = json.dumps(
             {
                 "chain": self.chain,
                 "block": self.block_number,
                 "method": self.method,
-                "params": self.params,
+                "params": [p for p in self.params if not _is_block_reference(p)],
                 "value": self.value,
             },
             sort_keys=True,
@@ -437,6 +451,24 @@ class ChainClient:
             covered.append((start, end))
             start = end + 1
         return collected, covered
+
+
+BLOCK_TAGS = frozenset({"latest", "finalized", "safe", "pending", "earliest"})
+
+
+def _is_block_reference(param: Any) -> bool:
+    """Is this parameter the block a call was pinned to, rather than part of the call?
+
+    Either a named tag, or a short hex quantity. Block numbers are hex quantities well
+    under 18 characters; an address is 42 and calldata longer still, so the length bound
+    separates them without needing to know each method's parameter order.
+    """
+
+    if not isinstance(param, str):
+        return False
+    if param in BLOCK_TAGS:
+        return True
+    return param.startswith("0x") and len(param) <= 18
 
 
 def _with_block_tag(method: str, params: list[Any], tag: str) -> list[Any]:
