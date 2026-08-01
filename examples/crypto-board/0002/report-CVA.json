@@ -1,0 +1,66 @@
+{
+  "reviewer_role": "CVA",
+  "summary": "Supply, symbol, name and decimals reproduce from contract state at the reviewed block. What a unit is worth is not a chain fact and no gate here reaches it.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-0CB098806DB562503B1408C3",
+    "EVI-23CEB7E3AD5C5D3299B231B0",
+    "EVI-458DD31911B4EB70BC528335",
+    "EVI-50627FC253727D641396BD22",
+    "EVI-56EFEE4BDD2940298B9C9A1C",
+    "EVI-7251ECB755BA8B462F971844",
+    "EVI-72A87795F70E6FDEBFBA642A",
+    "EVI-8654949EA26EFD946CFA7372",
+    "EVI-FA2F424BC61FD26539BA3851"
+  ],
+  "finding_categories": {
+    "CG001-CVA-CG-01": "CG-01"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-CVA-CG-01",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:cva",
+      "reviewer_role": "CVA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-002 section 7 (CG-01)",
+      "title": "The reviewed figure is supply, not backing",
+      "detail": "totalSupply at block 25662176 is 49,578,553,356,366,347 raw units. decimals is read from the contract as 6, not assumed, giving 49,578,553,356.37 USDC; symbol reads USDC and name reads USD Coin. Every one of these is reproducible by anyone from the recorded query and height. That establishes how many units exist. It does not establish that each is redeemable for one dollar, which is the claim holders actually rely on and which lives entirely in off-chain attestations this profile cannot read. Recorded so that a reproduced supply figure is not taken for a reproduced backing figure.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-50627FC253727D641396BD22",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "State in the decision that CG-01 verified supply and that backing was out of scope.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0002-CVA",
+    "review_id": "RBM003-USDC-0002",
+    "reviewer": "agent:cva",
+    "reviewer_role": "CVA",
+    "reviewer_spec_id": "RBS-002",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25662176",
+    "finding_ids": [
+      "CG001-CVA-CG-01"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-b/CVA-002"
+    },
+    "human_signature_ref": "SIG-PENDING-CVA"
+  }
+}

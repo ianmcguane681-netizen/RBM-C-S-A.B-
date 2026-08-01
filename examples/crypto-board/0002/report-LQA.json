@@ -1,0 +1,92 @@
+{
+  "reviewer_role": "LQA",
+  "summary": "Exit cost was quoted at three sizes into two assets across ten venues. Depth is deep at a million and falls apart at a hundred million, and the two assets disagree by roughly a factor of two about how badly.",
+  "recommendation": "Reject",
+  "evidence_reference_ids": [
+    "EVI-0CB098806DB562503B1408C3",
+    "EVI-23CEB7E3AD5C5D3299B231B0",
+    "EVI-458DD31911B4EB70BC528335",
+    "EVI-50627FC253727D641396BD22",
+    "EVI-56EFEE4BDD2940298B9C9A1C",
+    "EVI-7251ECB755BA8B462F971844",
+    "EVI-72A87795F70E6FDEBFBA642A",
+    "EVI-8654949EA26EFD946CFA7372",
+    "EVI-FA2F424BC61FD26539BA3851"
+  ],
+  "finding_categories": {
+    "CG001-LQA-CG-05": "CG-05",
+    "CG002-LQA-CG-05": "CG-05"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-LQA-CG-05",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:lqa",
+      "reviewer_role": "LQA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-006 section 7 (CG-05)",
+      "title": "No single depth figure for USDC is correct; the curves disagree by asset",
+      "detail": "Best single-venue execution at block 25662176, as a drop from the smallest size quoted: into WETH 0.00% at 10k, 0.35% at 1M, 38.41% at 100M, best route uniswap-v3-100 then v3-500. Into USDT 0.00%, 0.00%, 73.24%, best route uniswap-v3-100 throughout. Two facts follow. First, depth that is flat to 1M collapses by 100M on every route probed. Second, the two quote assets differ by roughly a factor of two at the largest size, so any headline depth or TVL number for USDC is wrong for at least one of them and cannot be corrected without saying which asset it is denominated in. Prices are deliberately not compared across the two: raw amounts in assets of different decimals are not a price comparison, and this profile has no num\u00e9raire to convert them.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-56EFEE4BDD2940298B9C9A1C",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Any depth or liquidity figure must state the quote asset and the size it was measured at. A single number without both is not a depth figure.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG002-LQA-CG-05",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:lqa",
+      "reviewer_role": "LQA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-006 section 7 (CG-05)",
+      "title": "What CG-05 did not reach: DAI, aggregators, and every V3 position",
+      "detail": "The quote set locked with this review's evidence was WETH and USDT. DAI was not in the default set at the time of the lock and was not probed; neither was any venue outside Uniswap V2 and V3, nor any aggregator that would split an order across several. LP composition was read for the V2 USDC/WETH pair 0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc: LP supply 71,431,360,536,931,727, burned 0.0001%, locked 0%, project-held 0%, reported separately and never summed. Uniswap V3 positions are NFTs held by a position manager rather than fungible LP tokens, so they are neither counted nor excluded -- and since the best route at every size above was a V3 pool, the composition figures describe a venue that carried none of the quoted volume. The exit curve is therefore a single-route lower bound on available execution, not an estimate of what a real seller would pay.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-7251ECB755BA8B462F971844",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "State in the decision that exit cost is single-route and that V3 composition is unreached. A realistic exit estimate needs order splitting across venues and assets, which this gate does not perform.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0002-LQA",
+    "review_id": "RBM003-USDC-0002",
+    "reviewer": "agent:lqa",
+    "reviewer_role": "LQA",
+    "reviewer_spec_id": "RBS-006",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25662176",
+    "finding_ids": [
+      "CG001-LQA-CG-05",
+      "CG002-LQA-CG-05"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-b/LQA-002"
+    },
+    "human_signature_ref": "SIG-PENDING-LQA"
+  }
+}

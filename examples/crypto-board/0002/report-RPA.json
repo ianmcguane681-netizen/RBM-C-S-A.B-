@@ -1,0 +1,92 @@
+{
+  "reviewer_role": "RPA",
+  "summary": "Every reading that can be resampled was resampled and reproduced. That covers four of the nine evidence items; the other five are assessments rather than single readings.",
+  "recommendation": "Accept",
+  "evidence_reference_ids": [
+    "EVI-0CB098806DB562503B1408C3",
+    "EVI-23CEB7E3AD5C5D3299B231B0",
+    "EVI-458DD31911B4EB70BC528335",
+    "EVI-50627FC253727D641396BD22",
+    "EVI-56EFEE4BDD2940298B9C9A1C",
+    "EVI-7251ECB755BA8B462F971844",
+    "EVI-72A87795F70E6FDEBFBA642A",
+    "EVI-8654949EA26EFD946CFA7372",
+    "EVI-FA2F424BC61FD26539BA3851"
+  ],
+  "finding_categories": {
+    "CG001-RPA-CG-06": "CG-06",
+    "CG002-RPA-CG-06": "CG-06"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-RPA-CG-06",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:rpa",
+      "reviewer_role": "RPA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-4",
+      "spec_reference": "RBS-007 section 7 (CG-06)",
+      "title": "Four of four resampled readings reproduced",
+      "detail": "symbol, name, decimals and totalSupply were re-run at block 25662176 through an archive-capable provider: four reproduced, zero diverged, zero unattempted. Each carries chain, block height, contract, query and content hash, so any third party can repeat them. Observation only; no defect asserted.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-50627FC253727D641396BD22",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "No remediation required.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG002-RPA-CG-06",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:rpa",
+      "reviewer_role": "RPA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-007 section 7 (CG-06)",
+      "title": "Reproducibility covers four of nine evidence items, not the review",
+      "detail": "Five of the nine registered items -- upgradeability, locks, liquidity, lp_composition and address_distinctness -- are assessments built from many reads, not single readings, and the resample path does not take them. They carry a block height and a described method, which makes them repeatable by someone re-running the connector, but not verified-reproduced by this gate. The distinction matters because CG-06 is the gate most likely to pass for the wrong reason: 4/4 is a true statement about a quarter of the evidence and would be a false statement about the review. The predecessor review reported 4/4 without this bound.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-458DD31911B4EB70BC528335",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Either extend resampling to re-run assessment findings and compare their described output, or state on every CG-06 result which items it covered.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0002-RPA",
+    "review_id": "RBM003-USDC-0002",
+    "reviewer": "agent:rpa",
+    "reviewer_role": "RPA",
+    "reviewer_spec_id": "RBS-007",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25662176",
+    "finding_ids": [
+      "CG001-RPA-CG-06",
+      "CG002-RPA-CG-06"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-b/RPA-002"
+    },
+    "human_signature_ref": "SIG-PENDING-RPA"
+  }
+}

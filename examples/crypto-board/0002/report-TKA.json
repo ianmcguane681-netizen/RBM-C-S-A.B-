@@ -1,0 +1,68 @@
+{
+  "reviewer_role": "TKA",
+  "summary": "CG-03 is NOT ASSESSED for this review. The locker registry is empty, so zero lock contracts were searched, and this seat declines to present a non-result as a gate result.",
+  "recommendation": "Reject",
+  "evidence_reference_ids": [
+    "EVI-0CB098806DB562503B1408C3",
+    "EVI-23CEB7E3AD5C5D3299B231B0",
+    "EVI-458DD31911B4EB70BC528335",
+    "EVI-50627FC253727D641396BD22",
+    "EVI-56EFEE4BDD2940298B9C9A1C",
+    "EVI-7251ECB755BA8B462F971844",
+    "EVI-72A87795F70E6FDEBFBA642A",
+    "EVI-8654949EA26EFD946CFA7372",
+    "EVI-FA2F424BC61FD26539BA3851"
+  ],
+  "finding_categories": {
+    "CG001-TKA-CG-03": "CG-03"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-TKA-CG-03",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:tka",
+      "reviewer_role": "TKA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-004 section 7 (CG-03)",
+      "title": "CG-03 is recorded as not assessed, not as answered",
+      "detail": "The locks probe returned NO_LOCK_CONTRACT_IDENTIFIED and its own description states the registry is EMPTY and zero known lockers were searched. Burn addresses were probed and hold 53,911,272,789 units, 0.0001% of supply, which cannot return to circulation. No vesting or lock contract was searched for: top-holder enumeration is not available from JSON-RPC, and the registry ships empty because populating it from recollection would produce zero balances that render as 'no locks found'. The predecessor review left this as a reported gate result. This seat records it as NOT ASSESSED instead. For a centrally-issued stablecoin with no vesting schedule a locker search has little to find, but 'little to find' is a judgement about the subject and not a measurement, and the gate measured nothing.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-23CEB7E3AD5C5D3299B231B0",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Record CG-03 as not assessed in the decision. Do not populate the registry to make the gate appear answered; a verified locker address is the only thing that changes this, and none was available.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0002-TKA",
+    "review_id": "RBM003-USDC-0002",
+    "reviewer": "agent:tka",
+    "reviewer_role": "TKA",
+    "reviewer_spec_id": "RBS-004",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25662176",
+    "finding_ids": [
+      "CG001-TKA-CG-03"
+    ],
+    "evidence_sufficiency": "INSUFFICIENT",
+    "missing_evidence": [
+      "Verified lock contract addresses, or top-holder enumeration via an indexer"
+    ],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-b/TKA-002"
+    },
+    "human_signature_ref": "SIG-PENDING-TKA"
+  }
+}

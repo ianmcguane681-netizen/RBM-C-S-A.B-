@@ -1,0 +1,92 @@
+{
+  "reviewer_role": "ADA",
+  "summary": "Address activity was walked across a stated 60-block window with no gap. A third of the addresses seen share a first funder, so an address count in this window is not a count of actors.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-0CB098806DB562503B1408C3",
+    "EVI-23CEB7E3AD5C5D3299B231B0",
+    "EVI-458DD31911B4EB70BC528335",
+    "EVI-50627FC253727D641396BD22",
+    "EVI-56EFEE4BDD2940298B9C9A1C",
+    "EVI-7251ECB755BA8B462F971844",
+    "EVI-72A87795F70E6FDEBFBA642A",
+    "EVI-8654949EA26EFD946CFA7372",
+    "EVI-FA2F424BC61FD26539BA3851"
+  ],
+  "finding_categories": {
+    "CG001-ADA-CG-02": "CG-02",
+    "CG002-ADA-CG-02": "CG-02"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-ADA-CG-02",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:ada",
+      "reviewer_role": "ADA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-003 section 7 (CG-02)",
+      "title": "Nearly a third of addresses in the window share a first funder",
+      "detail": "Over blocks 25662117-25662176, 6,432 transfers involved 5,854 distinct addresses. 342 groups totalling 1,772 of those addresses share a first funder within the window -- 30.3% of everything seen. The largest group is 207 addresses funded by 0x00009d17b7b809e38f30892cff11650763b80000. Whether any group is one actor running many wallets or one exchange serving many customers is NOT determined by this evidence, and the first-funder-v1 method cannot distinguish them. The consequence is narrow and firm: any user, holder or active-address count drawn from this window overstates distinct actors by an amount this gate has bounded but not resolved. No such count appears anywhere in this review, and none may be added later on this evidence.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-458DD31911B4EB70BC528335",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Any figure described as users, holders or actives must either exclude these clusters or carry the cluster share beside it. Resolving whether a cluster is one actor requires evidence this gate does not produce.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG002-ADA-CG-02",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:ada",
+      "reviewer_role": "ADA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-4",
+      "spec_reference": "RBS-003 section 7 (CG-02)",
+      "title": "The window is twelve minutes of a token that has existed for years",
+      "detail": "60 blocks were walked in 10 ranges of 6, the provider's log cap, and covered_ranges shows the walk contiguous with no gap. That is roughly twelve minutes. The finding describes those blocks and no period outside them. Observation rather than defect: the bound is stated in the evidence itself and is a property of walking logs at a six-block cap, not an error. Recorded so the decision does not read as a characterisation of USDC's user base.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-458DD31911B4EB70BC528335",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "No remediation. The window is stated in the evidence and must remain stated in anything quoting it.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0002-ADA",
+    "review_id": "RBM003-USDC-0002",
+    "reviewer": "agent:ada",
+    "reviewer_role": "ADA",
+    "reviewer_spec_id": "RBS-003",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25662176",
+    "finding_ids": [
+      "CG001-ADA-CG-02",
+      "CG002-ADA-CG-02"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-b/ADA-002"
+    },
+    "human_signature_ref": "SIG-PENDING-ADA"
+  }
+}

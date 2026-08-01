@@ -1,0 +1,92 @@
+{
+  "reviewer_role": "CAA",
+  "summary": "USDC is upgradeable behind a transparent proxy whose EIP-1967 slots are empty, and mint, pause and blacklist authority sit with named addresses.",
+  "recommendation": "Reject",
+  "evidence_reference_ids": [
+    "EVI-0CB098806DB562503B1408C3",
+    "EVI-23CEB7E3AD5C5D3299B231B0",
+    "EVI-458DD31911B4EB70BC528335",
+    "EVI-50627FC253727D641396BD22",
+    "EVI-56EFEE4BDD2940298B9C9A1C",
+    "EVI-7251ECB755BA8B462F971844",
+    "EVI-72A87795F70E6FDEBFBA642A",
+    "EVI-8654949EA26EFD946CFA7372",
+    "EVI-FA2F424BC61FD26539BA3851"
+  ],
+  "finding_categories": {
+    "CG001-CAA-CG-04": "CG-04",
+    "CG002-CAA-CG-04": "CG-04"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-CAA-CG-04",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:caa",
+      "reviewer_role": "CAA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-005 section 7 (CG-04)",
+      "title": "USDC is upgradeable and the EIP-1967 slots are empty",
+      "detail": "At block 25662176 the three EIP-1967 slots read empty and implementation() reverts, which together look exactly like a non-upgradeable contract. The pre-EIP-1967 OpenZeppelin slots are populated: implementation 0x43506849d7c04f9138d1a2050bbf3a0c054402dd, admin 0x807a96288a1a408dbc13de2b1d087d10356395d2. The proxy is transparent, so it routes non-admin callers to the implementation and the function probe reverts rather than answering. Any assessment checking only EIP-1967 would report one of the largest tokens in existence as immutable. The admin can replace the implementation entirely, so every behaviour verified by every other gate in this review holds only while that admin chooses not to act.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-0CB098806DB562503B1408C3",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Record upgradeability, the admin address, and that a holder's guarantees survive only as long as the admin chooses not to replace the implementation.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG002-CAA-CG-04",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:caa",
+      "reviewer_role": "CAA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-005 section 7 (CG-04)",
+      "title": "Mint, pause and blacklist authority sit with named addresses",
+      "detail": "owner() resolves to 0xfcb19e6a322b27c06842a71e8c725399f049ae3a and masterMinter() to 0xe982615d461dd5cd06575bbea87624fda4e3de17. paused() answers false, which establishes that a pause function exists and is currently off rather than that none exists. admin() and implementation() both revert for this caller, which is the transparent proxy behaving correctly and not an absence of those functions. Together these mean supply, transferability and individual balances are subject to decisions by parties other than the holder. The supply figure this review reproduces is therefore a measurement at a height, not a bound.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-0CB098806DB562503B1408C3",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Enumerate every privileged function with its controlling address and, where multisig, its threshold. Absent that, no claim of trustlessness can be made.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0002-CAA",
+    "review_id": "RBM003-USDC-0002",
+    "reviewer": "agent:caa",
+    "reviewer_role": "CAA",
+    "reviewer_spec_id": "RBS-005",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25662176",
+    "finding_ids": [
+      "CG001-CAA-CG-04",
+      "CG002-CAA-CG-04"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-b/CAA-002"
+    },
+    "human_signature_ref": "SIG-PENDING-CAA"
+  }
+}

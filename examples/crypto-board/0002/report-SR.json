@@ -1,0 +1,118 @@
+{
+  "reviewer_role": "SR",
+  "summary": "Six gates were seated and five answered. All of them are chain facts, and the claim a USDC holder relies on is not a chain fact.",
+  "recommendation": "Reject",
+  "evidence_reference_ids": [
+    "EVI-0CB098806DB562503B1408C3",
+    "EVI-23CEB7E3AD5C5D3299B231B0",
+    "EVI-458DD31911B4EB70BC528335",
+    "EVI-50627FC253727D641396BD22",
+    "EVI-56EFEE4BDD2940298B9C9A1C",
+    "EVI-7251ECB755BA8B462F971844",
+    "EVI-72A87795F70E6FDEBFBA642A",
+    "EVI-8654949EA26EFD946CFA7372",
+    "EVI-FA2F424BC61FD26539BA3851"
+  ],
+  "finding_categories": {
+    "CG001-SR-CG-01": "CG-01",
+    "CG002-SR-CG-05": "CG-05",
+    "CG003-SR-CG-02": "CG-02"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-SR-CG-01",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-008 section 7 (CG-01)",
+      "title": "The board verified what is checkable and the risk is elsewhere",
+      "detail": "This review is materially stronger than its predecessor: six specialists rather than four, every reading at one block height rather than two, and two gates answered live that had no implementation before. None of that touches the question. Every gate in RBM-003 examines chain state. The claim a USDC holder relies on is that each unit is redeemable for one dollar, and that rests on reserves held by a company, attested by an auditor, under a regulator, none of which is on any chain. A reader seeing a Tier 3 review with six specialists may conclude the asset was assessed. It was not; its principal risk was never in scope, and running the review more thoroughly has not changed that by one inch. This is a limit of the profile, not of the execution.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-50627FC253727D641396BD22",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "RBM-003 must state in its scope section that it assesses on-chain claims only, and any decision on a fiat-backed token must carry that limit on its face.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG002-SR-CG-05",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-008 section 7 (CG-05)",
+      "title": "The exit figures are single-route and will be read as exit cost",
+      "detail": "LQA quoted two assets rather than the predecessor's one, which is the improvement that finding asked for, and it immediately produced a two-fold disagreement between them at 100M. But every quote is one pool. A seller of that size splits across venues, assets and time, and would not pay 38% or 73%. The figures establish that no single route absorbs 100M without severe cost. They do not establish what leaving costs, and the two will be confused by any reader who meets the number without the sentence beside it.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-56EFEE4BDD2940298B9C9A1C",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Label the curve single-route wherever it appears. Estimating a real exit needs order splitting this profile does not implement.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG003-SR-CG-02",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-008 section 7 (CG-02)",
+      "title": "A twelve-minute window is carrying a claim about a multi-year token",
+      "detail": "ADA walked 60 blocks and reported honestly that the finding describes those blocks and nothing outside them. The sceptical question is what the window is then doing in a Tier 3 review of USDC. Twelve minutes of transfers is a reasonable sample for detecting that clustering exists -- and it detected it, at 30.3% -- but it cannot support any statement about USDC's user base, concentration over time, or whether that funder is an exchange. The gate is answered. The subject is barely touched, and the decision should not let the first fact conceal the second.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-458DD31911B4EB70BC528335",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "State the window on the face of any CG-02 result. A characterisation of the holder base needs an indexer and a period measured in months.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0002-SR",
+    "review_id": "RBM003-USDC-0002",
+    "reviewer": "agent:sr",
+    "reviewer_role": "SR",
+    "reviewer_spec_id": "RBS-008",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25662176",
+    "finding_ids": [
+      "CG001-SR-CG-01",
+      "CG002-SR-CG-05",
+      "CG003-SR-CG-02"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-b/SR-002"
+    },
+    "human_signature_ref": "SIG-PENDING-SR"
+  }
+}

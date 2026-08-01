@@ -1,0 +1,118 @@
+{
+  "reviewer_role": "MA",
+  "summary": "The tiering defect that this review exists to answer is answered. Two further methodology defects are raised, one inherited from the predecessor and one live here.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-0CB098806DB562503B1408C3",
+    "EVI-23CEB7E3AD5C5D3299B231B0",
+    "EVI-458DD31911B4EB70BC528335",
+    "EVI-50627FC253727D641396BD22",
+    "EVI-56EFEE4BDD2940298B9C9A1C",
+    "EVI-7251ECB755BA8B462F971844",
+    "EVI-72A87795F70E6FDEBFBA642A",
+    "EVI-8654949EA26EFD946CFA7372",
+    "EVI-FA2F424BC61FD26539BA3851"
+  ],
+  "finding_categories": {
+    "CG001-MA-CG-04": "CG-04",
+    "CG002-MA-CG-01": "CG-01",
+    "CG003-MA-CG-03": "CG-03"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-MA-CG-04",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-4",
+      "spec_reference": "RBS-001 section 7 (CG-04)",
+      "title": "The Tier 3 quorum is met and the predecessor's tiering finding is answered",
+      "detail": "RBM003-USDC-0001 was opened at Tier 2 and its MA seat found the subject required Tier 3, because RBM-003 section 8 makes anything behind an upgradeable proxy Tier 3 by construction and CAA established upgradeability. This review is seated at Tier 3 with all six specialists -- CVA, ADA, TKA, CAA, LQA, RPA -- and omitted_roles is empty. The two roles waived previously, ADA and LQA, were waived because their gates had no implementation; both are implemented and both answered here. The quorum requirement is met rather than waived. Observation, recorded so the supersession has a stated basis.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-0CB098806DB562503B1408C3",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "No remediation. This finding records that the predecessor's SEV-2 is discharged by this review rather than closed by assertion.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG002-MA-CG-01",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-001 section 7 (CG-01)",
+      "title": "The predecessor's evidence spanned two block heights under one artefact version",
+      "detail": "RBM003-USDC-0001 declared artefact version 25660396 and registered symbol, name, decimals, totalSupply and upgradeability at that height -- then registered locks, liquidity and lp_composition at 25661826, 1,430 blocks later. Three of its eight evidence items described a state the other five never saw, and nothing in the record said so. The cause was procedural: three gates were run by hand after the evidence command rather than by it. This review pins every one of its nine items to 25662176 and the tooling now resolves the height once, so the defect is fixed rather than avoided. Raised against the predecessor because its decision is being superseded and the reason must be on the record.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-50627FC253727D641396BD22",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "The superseding decision must record that RBM003-USDC-0001 carried a split evidence height, so that anyone reading the earlier decision finds the reason it was replaced.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG003-MA-CG-03",
+      "review_id": "RBM003-USDC-0002",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "25662176",
+      "date_raised": "2026-08-01T20:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-001 section 7 (CG-03)",
+      "title": "A Tier 3 review is complete in seats and short one gate",
+      "detail": "All six specialist seats reported, which satisfies the Tier 3 quorum. But TKA recorded CG-03 as NOT ASSESSED with evidence_sufficiency INSUFFICIENT, because the locker registry is empty and zero lock contracts were searched. That is the correct call and this seat endorses it: a populated registry assembled from recollection would have produced a flattering non-result instead. The methodology point is that seat count and gate coverage are different things, and a Tier 3 badge asserts the first while a reader will hear the second. Five of six gates were answered on this artefact.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-23CEB7E3AD5C5D3299B231B0",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "The decision must state that CG-03 was not assessed. RBM-003 should say whether a tier can be claimed with a gate unassessed, which it currently does not address.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0002-MA",
+    "review_id": "RBM003-USDC-0002",
+    "reviewer": "agent:ma",
+    "reviewer_role": "MA",
+    "reviewer_spec_id": "RBS-001",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25662176",
+    "finding_ids": [
+      "CG001-MA-CG-04",
+      "CG002-MA-CG-01",
+      "CG003-MA-CG-03"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-b/MA-002"
+    },
+    "human_signature_ref": "SIG-PENDING-MA"
+  }
+}
