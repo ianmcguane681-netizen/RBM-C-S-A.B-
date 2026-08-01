@@ -8,17 +8,24 @@ can regenerate it. Every read here returns the second kind or nothing.
 Providers are not interchangeable and the differences are not documented anywhere
 convenient, so they are declared. Measured on 2026-08-01:
 
-    quicknode (keyed, free tier)  archive 9/9 heights   getLogs  6 blocks
-    1rpc.io/eth                   archive 4/8 heights   getLogs 50 blocks
-    ethereum-rpc.publicnode.com   archive none          getLogs none
-    rpc.ankr.com                  requires a key even for eth_blockNumber
-    eth.llamarpc.com              HTTP 521
-    cloudflare-eth.com            refuses eth_blockNumber
+    quicknode (keyed, free)  archive 9/9 heights     getLogs  6 blocks, reliable
+    1rpc.io/eth              archive 4/8 heights     getLogs 50 blocks, UNRELIABLE
+    publicnode               archive none            getLogs none
+    rpc.ankr.com             requires a key even for eth_blockNumber
+    eth.llamarpc.com         HTTP 521
+    cloudflare-eth.com       refuses eth_blockNumber
 
-That table inverts the obvious assumption and is the reason `best_for(task)` exists. The
-keyed endpoint is the only one usable for history and is **eight times worse** for logs;
-the anonymous one is the reverse. A single "preferred provider" would silently degrade
-half the work, so state reads and log walks resolve to different endpoints.
+The reliability column is the one that decides, and it took two measurements to see it.
+The first recorded ranges and capabilities: 1rpc served archive once and offered a 50-block
+log range against QuickNode's 6, so `best_for` sent logs to 1rpc. Re-measuring across
+offsets found identical `eth_getLogs` shapes returning served, "block range extends beyond
+current head", and "method not available" by turns -- the same load balancer, the same
+lottery, one layer down.
+
+A walk that is eight times cheaper and sometimes reports a method as unavailable is not
+cheaper; it is unusable as evidence. So both state and logs now resolve to the keyed
+endpoint when one is configured, and the extra requests are the price of a figure that
+reproduces.
 
 "Unreliable" rather than "yes" is the whole lesson of that measurement. A single
 historical query against 1rpc succeeded, which looked like archive support. Repeating it
@@ -33,11 +40,9 @@ consistently, and post-merge finality also means the state cannot later be reorg
 from under evidence already recorded. The tag is what gets queried; the height it resolved
 to is what gets recorded.
 
-The log cap is the constraint that shapes everything else, and it is small on every free
-endpoint measured. A continuously running watcher only ever asks for the newest blocks --
-one request per ten minutes of chain on the 50-block endpoint -- so forward capture is
-comfortable. Historical backfill over a month is roughly 4,300 requests at 50 blocks and
-36,000 at 6, and is not.
+The log cap then shapes everything downstream. At 6 blocks a continuously running watcher
+still needs only one request per ~72 seconds of chain, so forward capture is comfortable.
+Historical backfill over a month is roughly 36,000 requests, and is not.
 
 The distinction this module exists to protect: **"the range holds no logs" and "the
 provider refused to answer" are different facts.** Recording the second as the first is
@@ -86,6 +91,12 @@ class ChainProvider:
     # 1rpc an archive provider (it answers some historical heights) and calling it not one
     # (it refuses others). Both are wrong, and the third value is the measurement.
     archive: str = "no"
+    # Same three values, and added after making the same mistake twice. The first
+    # measurement recorded 1rpc's log *range* (50 blocks, eight times QuickNode's) and
+    # concluded log *capability*. Re-measuring across offsets found the same query shape
+    # returning three different outcomes -- served, "beyond current head", and "method not
+    # available" -- depending on which backend answered. Range is not reliability.
+    logs: str = "no"
     requires_key: bool = False
 
     @property
@@ -93,6 +104,10 @@ class ChainProvider:
         """True only where historical reads can be relied upon, not merely attempted."""
 
         return self.archive == "yes"
+
+    @property
+    def serves_logs(self) -> bool:
+        return self.logs == "yes"
 
 
 # Anonymous and free. Serves current state and block tags reliably; historical heights
@@ -106,6 +121,11 @@ ONE_RPC_ETHEREUM = ChainProvider(
     # was refused at 12, 128, 256 and 100,000. That is a load balancer in front of
     # backends with different state retention, not an archive node.
     archive="unreliable",
+    # The same load balancer, measured again at the log layer: identical eth_getLogs
+    # shapes returned served, "block range extends beyond current head", and "method not
+    # available" depending on the backend. The wide range is real and useless without
+    # reliability.
+    logs="unreliable",
 )
 
 # Latest state only. Kept as a declared fallback rather than deleted, because a caller that
@@ -134,8 +154,8 @@ def quicknode_ethereum(url: str = "") -> ChainProvider:
     USDC succeeded at 6 with 482 -- so it is a span limit rather than a result limit, and
     it is eight times tighter than the anonymous public endpoint's.
 
-    That inversion is why providers are chosen per task rather than globally. This one is
-    for state; 1rpc is for logs. A single "best provider" would be wrong for half the work.
+    Slower per block than the anonymous endpoint and the only one measured to answer
+    reliably, which is why both tasks resolve here when it is configured.
     """
 
     resolved = (url or os.environ.get(QUICKNODE_URL_ENV, "")).strip()
@@ -150,6 +170,7 @@ def quicknode_ethereum(url: str = "") -> ChainProvider:
         chain="ethereum",
         max_log_range=6,
         archive="yes",
+        logs="yes",
         requires_key=True,
     )
 
@@ -176,7 +197,14 @@ def best_for(task: str, *, quicknode_url: str = "") -> ChainProvider:
             # refuses those against an unreliable provider rather than guessing.
             return ONE_RPC_ETHEREUM
     if task == "logs":
-        return ONE_RPC_ETHEREUM
+        # Reversed after measurement. The first version preferred 1rpc for its 50-block
+        # range over QuickNode's 6, which optimised the wrong axis: a walk that is eight
+        # times cheaper and sometimes returns "method not available" is not cheaper, it is
+        # unusable as evidence. Reliability first, and the extra requests are the price.
+        try:
+            return quicknode_ethereum(quicknode_url)
+        except ChainAccessError:
+            return ONE_RPC_ETHEREUM
     raise ValueError(f"Unknown task {task!r}; expected 'state' or 'logs'")
 
 

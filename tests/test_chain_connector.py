@@ -185,10 +185,42 @@ class TestProvidersAreChosenByMeasurementNotPreference:
         assert provider.name == "quicknode"
         assert provider.serves_archive is True
 
-    def test_logs_prefer_the_wider_range_even_when_a_key_is_configured(self, monkeypatch):
+    def test_logs_prefer_reliability_over_range(self, monkeypatch):
+        """This assertion is the reverse of what it was, and the reversal is the point.
+
+        The first version preferred 1rpc for logs because its 50-block range is eight
+        times QuickNode's 6. That optimised the wrong axis. Re-measuring found identical
+        eth_getLogs shapes returning served, "block range extends beyond current head",
+        and "method not available" by turns -- the same load balancer, one layer down from
+        the archive lottery.
+
+        A walk that is eight times cheaper and sometimes reports a method as unavailable is
+        not cheaper. It is unusable as evidence.
+        """
+
         monkeypatch.setenv(QUICKNODE_URL_ENV, "https://example.test/token/")
 
-        assert best_for("logs").max_log_range == 50
+        provider = best_for("logs")
+
+        assert provider.serves_logs is True
+        assert provider.name == "quicknode"
+
+    def test_a_wide_but_unreliable_log_provider_is_not_treated_as_capable(self):
+        """Range and reliability are different properties. Recording the first and
+        concluding the second is the mistake this field exists to prevent."""
+
+        from connectors.chain import ONE_RPC_ETHEREUM
+
+        assert ONE_RPC_ETHEREUM.max_log_range == 50
+        assert ONE_RPC_ETHEREUM.logs == "unreliable"
+        assert ONE_RPC_ETHEREUM.serves_logs is False
+
+    def test_logs_still_fall_back_when_no_key_is_configured(self, monkeypatch):
+        """An unreliable walk beats no walk, provided its unreliability is declared."""
+
+        monkeypatch.delenv(QUICKNODE_URL_ENV, raising=False)
+
+        assert best_for("logs").name == "1rpc.io"
 
     def test_state_falls_back_when_no_key_is_configured(self, monkeypatch):
         """Legitimate for current-state reads, which the anonymous endpoint serves
