@@ -115,9 +115,29 @@ RBM_002 = PackageSpec(
     ),
 )
 
+RBM_003 = PackageSpec(
+    profile_id="RBM-003",
+    profile_version="1.0.0",
+    package_root=REPO_ROOT / "docs" / "crypto-board",
+    schema_files=_CANONICAL_SCHEMAS,
+    reviewer_spec_count=8,
+    methodology_document="CRYPTO-REVIEW-METHODOLOGY.md",
+    methodology_terms=frozenset(
+        {
+            "## 10. Process Status and Decision Framework",
+            "`INSUFFICIENT_EVIDENCE`",
+            "`PROCEDURALLY_INCOMPLETE`",
+            "### 6B. Canonical RBE Lifecycle Mapping",
+            "### 16.2 Activation Gate",
+            "Decision Finalisation and Publication Separation",
+        }
+    ),
+)
+
 PROFILES: dict[str, PackageSpec] = {
     RBM_001.profile_id: RBM_001,
     RBM_002.profile_id: RBM_002,
+    RBM_003.profile_id: RBM_003,
 }
 
 DEFAULT_PROFILE_ID = RBM_001.profile_id

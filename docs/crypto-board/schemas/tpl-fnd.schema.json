@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provena-foundry/crypto-board/tpl-fnd/1.0.0",
+  "title": "TPL-FND Finding Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "finding_id",
+    "review_id",
+    "reviewer",
+    "reviewer_role",
+    "artefact_version",
+    "date_raised",
+    "severity",
+    "spec_reference",
+    "title",
+    "detail",
+    "evidence_tier",
+    "evidence_reference",
+    "status",
+    "ai_assistance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "finding_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artefact_version": {
+      "type": "string",
+      "minLength": 7
+    },
+    "date_raised": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "severity": {
+      "enum": [
+        "SEV-1",
+        "SEV-2",
+        "SEV-3",
+        "SEV-4"
+      ]
+    },
+    "spec_reference": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "detail": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_tier": {
+      "enum": [
+        "T1",
+        "T2",
+        "T3",
+        "T3-AUTHORITATIVE-EXTERNAL",
+        "T4"
+      ]
+    },
+    "evidence_reference": {
+      "type": "string",
+      "minLength": 1
+    },
+    "t3_authoritative": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "ai_assistance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "used",
+        "description",
+        "human_verified"
+      ],
+      "properties": {
+        "used": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "human_verified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "OPEN",
+        "CONTESTED",
+        "UNDER_REVIEW",
+        "CLOSED",
+        "WITHDRAWN",
+        "WAIVED"
+      ]
+    },
+    "remediation_requirement": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "target_resolution_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "closure": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

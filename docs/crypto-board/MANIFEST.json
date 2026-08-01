@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "RBM-003",
+  "package_version": "1.0.0",
+  "files": [
+    {
+      "path": "CRYPTO-REVIEW-METHODOLOGY.md",
+      "sha256": "b16df0587fc1693e0ff8b9df7b588f43a8bbb842d45db54e94ed12c740c90cc9",
+      "size": 10012
+    },
+    {
+      "path": "PROFILE.json",
+      "sha256": "df9c22fc0b23b977030b5266aeacafd7c6c30ae0346a47bd7e6966b158d883ec",
+      "size": 8773
+    },
+    {
+      "path": "schemas/tpl-bdr.schema.json",
+      "sha256": "085890dbf1cd465a98fa9e4966a1789ef6d11f8b765cc61bc667643b91e5dfcb",
+      "size": 6094
+    },
+    {
+      "path": "schemas/tpl-cor.schema.json",
+      "sha256": "88ca0dbd34c5fa5210e901f97bba1231222bd84e1b0c5822ea8ad1aca958c6f2",
+      "size": 2600
+    },
+    {
+      "path": "schemas/tpl-fnd.schema.json",
+      "sha256": "dd72035e3bef626a76a3f641819924ee12c70293f33bd8c8a136cc0461f1db2c",
+      "size": 2609
+    },
+    {
+      "path": "schemas/tpl-mri.schema.json",
+      "sha256": "6ba74a14abf1088c6d64ff6302bb3547d9b81437db0ed20661024a7705e76f49",
+      "size": 5123
+    },
+    {
+      "path": "schemas/tpl-rir.schema.json",
+      "sha256": "7e472f3ccd396237341bace79ba71c98a59e5f4f9e98ff467220e150b53786c6",
+      "size": 3616
+    },
+    {
+      "path": "schemas/tpl-rmp.schema.json",
+      "sha256": "ae0b0a0730c57ffd78b641118ff4c4012db31fd822a02ce9c387c5b924cb07e6",
+      "size": 2044
+    },
+    {
+      "path": "schemas/tpl-rrr.schema.json",
+      "sha256": "ad2aca416c73c9201c471d75cef794cd3d6da9030e4136428d79f1d314bb20e9",
+      "size": 1603
+    },
+    {
+      "path": "specs/RBS-001-METHODOLOGY-AUDIT.md",
+      "sha256": "2ec010b96682b38c54d03cc1ef5752110215c5d0f5efb488f7d9cc860c64a6e8",
+      "size": 3818
+    },
+    {
+      "path": "specs/RBS-002-CHAIN-VERIFICATION-AUDIT.md",
+      "sha256": "f7464c1c0e8841c48f0cd82edb942306dd3241384001677488d7a34f20438719",
+      "size": 3877
+    },
+    {
+      "path": "specs/RBS-003-ADDRESS-DISTINCTNESS-AUDIT.md",
+      "sha256": "f560fb3c6f0c00bfd73d79f6adf6e961290fac2a6dfbcf9603792b4968c48a35",
+      "size": 3821
+    },
+    {
+      "path": "specs/RBS-004-TOKENOMICS-AUDIT.md",
+      "sha256": "a44efbaa62c92e7dff5d316b331a308699bf3848ef3e927a65c55734f612ba2f",
+      "size": 3656
+    },
+    {
+      "path": "specs/RBS-005-CONTRACT-AUTHORITY-AUDIT.md",
+      "sha256": "a56cd23e0eea561513d10b6a87babbe0934442c370cfd59dccc91b45fd871906",
+      "size": 3657
+    },
+    {
+      "path": "specs/RBS-006-LIQUIDITY-AUDIT.md",
+      "sha256": "104b656bdac5d44026a5d04ba87ba24f154490722bfea74dff319984717574c3",
+      "size": 3578
+    },
+    {
+      "path": "specs/RBS-007-REPRODUCIBILITY-AUDIT.md",
+      "sha256": "aacd5e6e236d7ec2071610c8db99cf80851e669a7b0c5e0afa0800b15fa8d740",
+      "size": 3742
+    },
+    {
+      "path": "specs/RBS-008-SCEPTICAL-REVIEW.md",
+      "sha256": "811b8ef51e8079fb0397ef02137ae16707d9a85daaa1a3f50f0c7c17f49b5f73",
+      "size": 3780
+    }
+  ],
+  "root_sha256": "sha256:b6902686f1f47a4fdf4f2e5d3a4d902e1e49d8caa1c95f5631c9639f9ab4bbb0"
+}

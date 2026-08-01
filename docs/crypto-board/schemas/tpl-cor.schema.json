@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provena-foundry/crypto-board/tpl-cor/1.0.0",
+  "title": "TPL-COR Correction Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "correction_id",
+    "original_record_id",
+    "original_record_type",
+    "correction_date",
+    "panel_chair",
+    "reason",
+    "error_description",
+    "corrected_content",
+    "original_preserved",
+    "lineage",
+    "panel_chair_signature_ref"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "correction_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "original_record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "original_record_type": {
+      "enum": [
+        "TPL-RIR",
+        "TPL-FND",
+        "TPL-RRR",
+        "TPL-BDR",
+        "TPL-MRI",
+        "TPL-RMP",
+        "TPL-RVR",
+        "OTHER"
+      ]
+    },
+    "correction_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "panel_chair": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "enum": [
+        "PROCEDURAL_ERROR",
+        "NEW_MATERIAL_EVIDENCE",
+        "DECISION_RULE_MISAPPLICATION"
+      ]
+    },
+    "error_description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "corrected_content": {
+      "type": "object"
+    },
+    "original_preserved": {
+      "const": true
+    },
+    "lineage": {
+      "type": "string",
+      "minLength": 1
+    },
+    "panel_chair_signature_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision_effect": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "original_process_status": {
+          "enum": [
+            "READY",
+            "PROCEDURALLY_INCOMPLETE",
+            "BLOCKED",
+            "VOID"
+          ]
+        },
+        "corrected_process_status": {
+          "enum": [
+            "READY",
+            "PROCEDURALLY_INCOMPLETE",
+            "BLOCKED",
+            "VOID"
+          ]
+        },
+        "original_outcome": {
+          "enum": [
+            "PASS",
+            "PASS_WITH_FINDINGS",
+            "FAIL",
+            "INSUFFICIENT_EVIDENCE",
+            null
+          ]
+        },
+        "corrected_outcome": {
+          "enum": [
+            "PASS",
+            "PASS_WITH_FINDINGS",
+            "FAIL",
+            "INSUFFICIENT_EVIDENCE",
+            null
+          ]
+        },
+        "revised_mri_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

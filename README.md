@@ -46,10 +46,12 @@ Two ship with the repo, and both are real rather than illustrative:
 |---|---|---|
 | **RBM-001** | research conclusions, where evidence is scarce and curated by others | SAA BCA DEA QRA SPA POA |
 | **RBM-002** | engineering artefacts at a named commit, where evidence is cheap | GCA MCA EFA ATA SVA RPA |
+| **RBM-003** | on-chain assets and the claims made about them, at a named block height | CVA ADA TKA CAA LQA RPA |
 
-Two profiles, one engine, no changes to the decision code between them. That's the
-claim, and `tests/test_profile_registry.py` is where it's checked — both load in one
-process and produce disjoint rule sets.
+Three profiles, one engine, no changes to the decision code between them. That's the
+claim, and `tests/test_profile_registry.py` is where it's checked — every registered
+profile loads in one process and produces a distinct rule set. The test iterates the
+registry rather than a hardcoded list, so a fourth is covered the moment it exists.
 
 Adding a third is a registry entry in `controlled_authority/profiles.py` plus a package
 directory. The runtime states what it expects to find; a package that disagrees fails to
@@ -116,6 +118,7 @@ lib/                  adjudication standing, retry policy, domain packs, term ma
 docs/rbe-001/         the architecture package
 docs/review-board/    RBM-001
 docs/engineering-board/ RBM-002
+docs/crypto-board/    RBM-003
 ```
 
 `lib/adjudication.py` is worth knowing about independently. It separates two axes that

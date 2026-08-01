@@ -46,12 +46,87 @@ class TestTheRegistry:
             assert key == spec.profile_id
 
 
-class TestTwoProfilesOnOneEngine:
-    """The claim the seam work exists to make good.
+class TestEveryProfileOnOneEngine:
+    """The claim this repository exists to make good.
 
-    If both profiles resolved to the same rules, the registry would be decoration. If
-    loading one disturbed the other, the runtime would be carrying a global.
+    If the profiles resolved to the same rules, the registry would be decoration. If
+    loading one disturbed another, the runtime would be carrying a global.
+
+    Written against `PROFILES` rather than a hardcoded list, so a fourth profile is
+    covered the moment it is registered. A test that enumerated three would silently
+    stop testing the thing it was written for.
     """
+
+    def test_every_registered_profile_loads_and_is_distinct(self):
+        pools = {}
+        for profile_id in profiles.PROFILES:
+            bundle = AuthorityBundle.load(profile_id=profile_id)
+            pools[profile_id] = frozenset(
+                bundle.profile["quorum"]["tier_3"]["specialist_pool"]
+            )
+
+        assert len(pools) >= 3
+        # Pools may legitimately share a role -- RPA audits reproducibility under both
+        # RBM-002 and RBM-003 -- but no two profiles may have the same pool, or one of
+        # them is not doing its own job.
+        assert len(set(pools.values())) == len(pools)
+
+    def test_every_profile_shares_the_architecture_it_maps_onto(self):
+        """A profile that supplied its own outcomes would be deciding what FAIL means."""
+
+        loaded = [
+            AuthorityBundle.load(profile_id=p).profile for p in profiles.PROFILES
+        ]
+        first = loaded[0]
+        for other in loaded[1:]:
+            assert other["permitted_outcomes"] == first["permitted_outcomes"]
+            assert other["process_statuses"] == first["process_statuses"]
+            assert other["canonical_lifecycle_mapping"] == first["canonical_lifecycle_mapping"]
+            assert [r["rule_id"] for r in other["decision_precedence"]] == [
+                r["rule_id"] for r in first["decision_precedence"]
+            ]
+
+    def test_no_profile_may_authorise_action_while_a_release_candidate(self):
+        """The safety property the whole design rests on. A profile that is still a
+        release candidate cannot permit a merge, a stake, or any other action -- and
+        that is enforced by the same function for every profile."""
+
+        from controlled_authority.rbm_package import is_merge_permitted
+
+        for profile_id in profiles.PROFILES:
+            profile = AuthorityBundle.load(profile_id=profile_id).profile
+            if profile["status"] != "ACTIVE":
+                assert is_merge_permitted(
+                    profile_status=profile["status"],
+                    binding=profile["binding"],
+                    process_status="READY",
+                    outcome="PASS",
+                ) is False
+
+
+class TestTheCryptoProfile:
+    def test_the_chain_gates_each_name_a_failure_mode(self):
+        """A gate with no failure mode is a checklist item. Each of these describes a
+        specific way a checkable claim still misleads once you start checking."""
+
+        gates = AuthorityBundle.load(profile_id="RBM-003").profile["chain_gates"]
+
+        assert [g["gate_id"] for g in gates] == [
+            "CG-01", "CG-02", "CG-03", "CG-04", "CG-05", "CG-06",
+        ]
+        for gate in gates:
+            assert gate["failure_mode"].strip()
+            assert gate["requirement"].strip()
+
+    def test_every_chain_gate_has_a_seat_that_owns_it(self):
+        profile = AuthorityBundle.load(profile_id="RBM-003").profile
+        pool = set(profile["quorum"]["tier_3"]["specialist_pool"])
+
+        assert {g["reviewer_role"] for g in profile["chain_gates"]} == pool
+
+
+class TestTwoProfilesOnOneEngine:
+    """Retained from the extraction: the original two-profile checks, still specific."""
 
     def test_the_engineering_board_is_registered(self):
         spec = profiles.get("RBM-002")

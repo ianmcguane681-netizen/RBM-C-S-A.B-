@@ -11,9 +11,10 @@ docs/rbe-001/README.md text eol=lf
 docs/rbe-001/CODEX_REVIEW_INSTRUCTIONS.md text eol=lf
 tests/test_rbe001_package.py text eol=lf
 
-# Methodology profiles. Both are controlled packages with hashed manifests.
+# Methodology profiles. Each is a controlled package with a hashed manifest.
 docs/review-board/** text eol=lf
 docs/engineering-board/** text eol=lf
+docs/crypto-board/** text eol=lf
 tests/test_rbm001_package.py text eol=lf
 
 # Runtime, board front door, and the shared guards

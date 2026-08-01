@@ -1,0 +1,269 @@
+{
+  "profile_id": "RBM-003",
+  "version": "1.0.0",
+  "status": "RELEASE_CANDIDATE",
+  "architecture_authority": {
+    "document_id": "RBE-001",
+    "minimum_compatible_version": "1.1.0",
+    "named_human_approval_required": true
+  },
+  "owner": "Provena Foundry Governance",
+  "human_approval_record": null,
+  "checksum": "sha256:ac299c5aa2dc3aee224f15dbda0a59cf21c37937298ed66390139f8cf9873cb3",
+  "manifest": "MANIFEST.json",
+  "binding": false,
+  "permitted_outcomes": [
+    "PASS",
+    "PASS_WITH_FINDINGS",
+    "FAIL",
+    "INSUFFICIENT_EVIDENCE"
+  ],
+  "omitted_outcome_mapping": {
+    "DEFER_FOR_FURTHER_RESEARCH": "INSUFFICIENT_EVIDENCE"
+  },
+  "process_statuses": [
+    "READY",
+    "PROCEDURALLY_INCOMPLETE",
+    "BLOCKED",
+    "VOID"
+  ],
+  "unresolved_finding_statuses": [
+    "OPEN",
+    "CONTESTED",
+    "UNDER_REVIEW"
+  ],
+  "decision_precedence": [
+    {
+      "priority": 1,
+      "rule_id": "RBM-DEC-001",
+      "condition": "unresolved_sev1 >= 1",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 2,
+      "rule_id": "RBM-DEC-002",
+      "condition": "unresolved_sev2 >= 2",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 3,
+      "rule_id": "RBM-DEC-003",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 0",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 4,
+      "rule_id": "RBM-DEC-004",
+      "condition": "substantive_evidence_sufficient == false",
+      "outcome": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "priority": 5,
+      "rule_id": "RBM-DEC-005",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 1",
+      "outcome": "PASS_WITH_FINDINGS"
+    },
+    {
+      "priority": 6,
+      "rule_id": "RBM-DEC-006",
+      "condition": "unresolved_sev1 == 0 and unresolved_sev2 == 0 and substantive_evidence_sufficient == true",
+      "outcome": "PASS"
+    }
+  ],
+  "role_policy": {
+    "distinct_human_per_board_role": true,
+    "ai_counts_toward_quorum": false,
+    "board_chair_may_hold_other_role": false,
+    "methodology_auditor_may_hold_other_role": false,
+    "board_chair_and_governance_validator_must_differ": true,
+    "decision_assembler_and_publication_control_must_differ": true,
+    "governance_validator_and_publication_control_must_differ": true,
+    "distinct_actor_per_board_role": true
+  },
+  "quorum": {
+    "tier_1": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 2,
+      "specialist_pool": [
+        "CVA",
+        "ADA",
+        "RPA"
+      ]
+    },
+    "tier_2": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 4,
+      "specialist_pool": [
+        "CVA",
+        "ADA",
+        "TKA",
+        "CAA",
+        "LQA",
+        "RPA"
+      ]
+    },
+    "tier_3": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "CVA",
+        "ADA",
+        "TKA",
+        "CAA",
+        "LQA",
+        "RPA",
+        "SR"
+      ],
+      "specialists_required": 6,
+      "specialist_pool": [
+        "CVA",
+        "ADA",
+        "TKA",
+        "CAA",
+        "LQA",
+        "RPA"
+      ]
+    }
+  },
+  "canonical_lifecycle_mapping": {
+    "pre_review": [
+      "DRAFT",
+      "SUBMITTED",
+      "INTAKE_VALIDATION",
+      "RETURNED",
+      "ACCEPTED",
+      "EVIDENCE_LOCKED",
+      "ASSIGNMENT"
+    ],
+    "specialist_review": [
+      "INDEPENDENT_REVIEW"
+    ],
+    "challenge": [
+      "CHALLENGE",
+      "CLARIFICATION"
+    ],
+    "decision": [
+      "CONSOLIDATION",
+      "GOVERNANCE_VALIDATION",
+      "BLOCKED",
+      "DECIDED",
+      "PUBLISHED"
+    ],
+    "appeal": [
+      "APPEALED",
+      "APPEAL_REVIEW",
+      "UPHELD",
+      "SUPERSEDED",
+      "REMANDED"
+    ],
+    "terminal": [
+      "FINAL",
+      "ARCHIVED",
+      "VOID",
+      "WITHDRAWN"
+    ]
+  },
+  "activation_requirements": [
+    "approved_rbe_release",
+    "valid_profile_checksum",
+    "valid_package_manifest",
+    "named_human_principal_architect_approval",
+    "named_human_methodology_owner_approval",
+    "active_status_commit",
+    "immutable_release_tag"
+  ],
+  "supersedes": null,
+  "amendment_rationale": "First release. A crypto claim and its verification are unusually close together: the chain is immutable, hash-addressed, independently retrievable and free to query, so almost every quantitative claim a project makes is checkable against state rather than taken on trust. RBM-003 exists to make that check the default and to record, per claim, whether it was reproduced from chain state or merely asserted. Its gates target the specific ways a checkable claim still misleads: counting one entity as many, verifying supply against a website rather than a contract, and reporting headline liquidity that would not survive an exit.",
+  "agent_seat_policy": {
+    "agent_seats_permitted": true,
+    "permitted_agent_roles": [
+      "MA",
+      "CVA",
+      "ADA",
+      "TKA",
+      "CAA",
+      "LQA",
+      "RPA",
+      "SR"
+    ],
+    "prohibited_agent_roles": [
+      "BC"
+    ],
+    "agent_actor_prefixes": [
+      "agent:"
+    ],
+    "named_human_verifier_required": true,
+    "ratification_authority_must_be_human": true,
+    "publication_authority_must_be_human": true,
+    "agent_seat_review_is_advisory_only": true,
+    "independence_requirements": {
+      "distinct_instruction_version_per_seat": true,
+      "sceptical_seat_is_blind_to_proposed_outcome": true,
+      "record_model_and_instruction_version_per_seat": true,
+      "shared_model_across_seats_must_be_recorded": true
+    }
+  },
+  "single_authority_policy": {
+    "single_authority_permitted": true,
+    "permitted_only_when_profile_non_binding": true,
+    "never_binding": true,
+    "never_merge_permitted": true,
+    "authority_must_be_human": true,
+    "authority_must_be_board_chair": true,
+    "recorded_flag": "single_authority",
+    "supersedable_by_two_signature_decision": true,
+    "rationale_required": true
+  },
+  "chain_gates": [
+    {
+      "gate_id": "CG-01",
+      "name": "Chain-observable verification",
+      "reviewer_role": "CVA",
+      "requirement": "Every quantitative claim must be reproducible from chain state at a stated block height, by a query recorded in the finding. A claim that cannot be reproduced is ALLEGED and can never establish occurrence.",
+      "failure_mode": "A dashboard figure is cited as though it were chain state. Dashboards apply undisclosed filters, and the number cannot be regenerated by anyone else."
+    },
+    {
+      "gate_id": "CG-02",
+      "name": "Address distinctness",
+      "reviewer_role": "ADA",
+      "requirement": "Counts of users, holders or actives must exclude self-transfers, cyclic flows, and clusters funded from a common source. An address is not a person.",
+      "failure_mode": "Ten thousand addresses funded sequentially from one wallet are reported as ten thousand users. This is the sentinel defect in another costume: distinct identifiers that are not distinct entities."
+    },
+    {
+      "gate_id": "CG-03",
+      "name": "Supply and lock verification",
+      "reviewer_role": "TKA",
+      "requirement": "Circulating supply, vesting schedules and locks must be read from contract state, never from a website or a spreadsheet. An unlock schedule is code.",
+      "failure_mode": "Published tokenomics and deployed contract disagree, and the published version is the one everyone models."
+    },
+    {
+      "gate_id": "CG-04",
+      "name": "Contract authority",
+      "reviewer_role": "CAA",
+      "requirement": "Identify every address that can mint, pause, upgrade, blacklist or withdraw, and the threshold required. A claim of immutability must be verified against the deployed contract and its proxy admin.",
+      "failure_mode": "'Ownership renounced' is stated while an upgradeable proxy retains an admin who can replace the implementation entirely."
+    },
+    {
+      "gate_id": "CG-05",
+      "name": "Liquidity reality",
+      "reviewer_role": "LQA",
+      "requirement": "Liquidity must be assessed as exit cost at a stated size, not as headline TVL. Locked, incentivised and self-owned liquidity is identified separately.",
+      "failure_mode": "TVL is reported as though it were depth. The question a holder actually faces is what it costs to leave, and that is a different number."
+    },
+    {
+      "gate_id": "CG-06",
+      "name": "Provenance and reproducibility",
+      "reviewer_role": "RPA",
+      "requirement": "Every figure records chain, block height, contract address and the exact query, and reproduces on a clean run against an archive node.",
+      "failure_mode": "A figure is correct when taken and unreproducible a week later, because the block height was never recorded. A number that cannot be regenerated is a claim, not a measurement."
+    }
+  ]
+}
