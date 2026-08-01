@@ -1,0 +1,38 @@
+[
+  {
+    "role": "MA",
+    "model": "provena-eng-a",
+    "instruction_version": "EMA-001",
+    "name": "ma"
+  },
+  {
+    "role": "GCA",
+    "model": "provena-eng-b",
+    "instruction_version": "GCA-001",
+    "name": "gca"
+  },
+  {
+    "role": "MCA",
+    "model": "provena-eng-b",
+    "instruction_version": "MCA-001",
+    "name": "mca"
+  },
+  {
+    "role": "EFA",
+    "model": "provena-eng-c",
+    "instruction_version": "EFA-001",
+    "name": "efa"
+  },
+  {
+    "role": "SVA",
+    "model": "provena-eng-c",
+    "instruction_version": "SVA-001",
+    "name": "sva"
+  },
+  {
+    "role": "SR",
+    "model": "provena-eng-d",
+    "instruction_version": "ESR-001",
+    "name": "sr"
+  }
+]

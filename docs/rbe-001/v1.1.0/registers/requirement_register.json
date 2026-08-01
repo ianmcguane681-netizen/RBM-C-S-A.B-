@@ -1,0 +1,4375 @@
+{
+  "architecture_release": "1.1.0",
+  "requirements": [
+    {
+      "id": "RBE-AI-001",
+      "line_end": 23,
+      "line_start": 22,
+      "section": "17.1 Purpose",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "The complete governed review process SHALL remain operational when all AI assistance is disabled."
+    },
+    {
+      "id": "RBE-AI-002",
+      "line_end": 25,
+      "line_start": 24,
+      "section": "17.1 Purpose",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "AI output SHALL be treated as untrusted proposed content until explicitly reviewed and adopted by an authorized human."
+    },
+    {
+      "id": "RBE-AI-003",
+      "line_end": 27,
+      "line_start": 26,
+      "section": "17.1 Purpose",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "No model, agent or automated workflow SHALL possess authority to approve, reject or finalize a substantive Review Board outcome."
+    },
+    {
+      "id": "RBE-AI-010",
+      "line_end": 62,
+      "line_start": 61,
+      "section": "17.3 Prohibited Uses",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "The system SHALL technically prevent AI identities from invoking decision-finalization, report-signing, appeal-resolution and privilege-management commands."
+    },
+    {
+      "id": "RBE-AI-020",
+      "line_end": 69,
+      "line_start": 68,
+      "section": "17.4 Human Accountability",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Every AI-assisted final artefact SHALL identify the responsible human adopter and retain provenance to the model invocation and cited source material."
+    },
+    {
+      "id": "RBE-AI-021",
+      "line_end": 71,
+      "line_start": 70,
+      "section": "17.4 Human Accountability",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "A reviewer SHALL be able to edit, reject or ignore AI output without penalty or workflow obstruction."
+    },
+    {
+      "id": "RBE-AI-030",
+      "line_end": 88,
+      "line_start": 87,
+      "section": "17.5 Model and Provider Governance",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Each production model deployment SHALL have an owner, approved use cases, data classification limit, evaluation record and retirement procedure."
+    },
+    {
+      "id": "RBE-AI-031",
+      "line_end": 90,
+      "line_start": 89,
+      "section": "17.5 Model and Provider Governance",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Model upgrades SHALL NOT be treated as transparent infrastructure changes where they can alter substantive output."
+    },
+    {
+      "id": "RBE-AI-040",
+      "line_end": 106,
+      "line_start": 105,
+      "section": "17.6 Prompt and Instruction Governance",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Every model invocation SHALL record prompt version, model version, parameters, tools, source references, actor, case, timestamp and output hash."
+    },
+    {
+      "id": "RBE-AI-041",
+      "line_end": 107,
+      "line_start": 107,
+      "section": "17.6 Prompt and Instruction Governance",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Case evidence SHALL be treated as data, not as trusted instructions to the model or agent."
+    },
+    {
+      "id": "RBE-AI-050",
+      "line_end": 113,
+      "line_start": 112,
+      "section": "17.7 Retrieval and Grounding",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "AI-generated factual claims used in review artefacts SHALL resolve to authoritative evidence references accessible to the adopting reviewer."
+    },
+    {
+      "id": "RBE-AI-051",
+      "line_end": 115,
+      "line_start": 114,
+      "section": "17.7 Retrieval and Grounding",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "The retrieval layer SHALL enforce the same case access, classification and conflict restrictions as direct evidence access."
+    },
+    {
+      "id": "RBE-AI-060",
+      "line_end": 124,
+      "line_start": 123,
+      "section": "17.8 Output Structure and Uncertainty",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "AI output SHALL NOT be represented to users as a Board decision, reviewer opinion or verified fact until the relevant human action occurs."
+    },
+    {
+      "id": "RBE-AI-070",
+      "line_end": 144,
+      "line_start": 143,
+      "section": "17.9 Evaluation Framework",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Decision-adjacent AI features SHALL pass documented evaluations before release and after material model, prompt or retrieval changes."
+    },
+    {
+      "id": "RBE-AI-071",
+      "line_end": 146,
+      "line_start": 145,
+      "section": "17.9 Evaluation Framework",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Evaluation datasets SHALL include adversarial, contradictory, incomplete and outcome- tempting cases."
+    },
+    {
+      "id": "RBE-AI-080",
+      "line_end": 158,
+      "line_start": 157,
+      "section": "17.10 Bias and Outcome Neutrality Controls",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "AI feature performance SHALL NOT be optimized against approval, rejection, pass-rate or commercial-conversion targets."
+    },
+    {
+      "id": "RBE-AI-090",
+      "line_end": 185,
+      "line_start": 184,
+      "section": "17.11 Agents and Tool Use",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Agent tools SHALL expose the minimum capability necessary and SHALL NOT provide generic database, shell or unrestricted network access in production."
+    },
+    {
+      "id": "RBE-AI-100",
+      "line_end": 195,
+      "line_start": 194,
+      "section": "17.12 Data Protection and Model Isolation",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "Restricted evidence SHALL NOT be sent to a model or provider not approved for that classification."
+    },
+    {
+      "id": "RBE-AI-110",
+      "line_end": 201,
+      "line_start": 200,
+      "section": "17.13 Failure, Fallback and Kill Switch",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "The platform SHALL provide a centrally controlled kill switch capable of disabling AI invocations without disabling core Review Board operations."
+    },
+    {
+      "id": "RBE-AI-111",
+      "line_end": 203,
+      "line_start": 202,
+      "section": "17.13 Failure, Fallback and Kill Switch",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "AI retries SHALL preserve idempotency and SHALL NOT duplicate adopted notes, notifications or audit events."
+    },
+    {
+      "id": "RBE-AI-120",
+      "line_end": 209,
+      "line_start": 208,
+      "section": "17.14 Audit and Explainability",
+      "source": "architecture/chapters/17-ai-and-automation-architecture.md",
+      "statement": "AI provenance SHALL be sufficient to reproduce the invocation context to the extent permitted by provider capability and retention policy."
+    },
+    {
+      "id": "RBE-AI-130",
+      "line_end": 178,
+      "line_start": 177,
+      "section": "2.20 AI Assistance Boundary",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "Every AI-assisted output incorporated into a report SHALL be attributable, reviewable and explicitly accepted by an accountable human actor or deterministic validation rule."
+    },
+    {
+      "id": "RBE-AI-131",
+      "line_end": 180,
+      "line_start": 179,
+      "section": "2.20 AI Assistance Boundary",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "AI model identity, prompt or instruction version, timestamp and accepted output hash SHOULD be retained when AI assistance materially influences reviewer analysis."
+    },
+    {
+      "id": "RBE-API-001",
+      "line_end": 22,
+      "line_start": 21,
+      "section": "13.1 Purpose",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Every mutating endpoint SHALL map to a named domain command with defined actor, target, preconditions and audit effect."
+    },
+    {
+      "id": "RBE-API-002",
+      "line_end": 24,
+      "line_start": 23,
+      "section": "13.1 Purpose",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "The API SHALL NOT expose unrestricted create, update or delete operations for governed aggregates."
+    },
+    {
+      "id": "RBE-API-010",
+      "line_end": 57,
+      "line_start": 56,
+      "section": "13.3 Command Envelope",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "The server SHALL derive authorization identity from trusted authentication context, not from a caller-supplied actor_id alone."
+    },
+    {
+      "id": "RBE-API-011",
+      "line_end": 62,
+      "line_start": 61,
+      "section": "13.3 Command Envelope",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Idempotency records SHALL bind command identity to actor, target and normalized payload hash."
+    },
+    {
+      "id": "RBE-API-020",
+      "line_end": 96,
+      "line_start": 96,
+      "section": "13.5 Query Model",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Query projections SHALL be rebuildable from authoritative records and events."
+    },
+    {
+      "id": "RBE-API-021",
+      "line_end": 98,
+      "line_start": 97,
+      "section": "13.5 Query Model",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "A stale projection SHALL never be used to authorize a command or determine a substantive outcome."
+    },
+    {
+      "id": "RBE-API-030",
+      "line_end": 118,
+      "line_start": 117,
+      "section": "13.6 Error Contract",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Error responses SHALL be deterministic, machine-readable and safe for the caller’s authorization scope."
+    },
+    {
+      "id": "RBE-API-031",
+      "line_end": 119,
+      "line_start": 119,
+      "section": "13.6 Error Contract",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "The API SHALL distinguish business rejection from technical failure."
+    },
+    {
+      "id": "RBE-API-040",
+      "line_end": 125,
+      "line_start": 124,
+      "section": "13.7 Idempotency and Concurrency",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "A repeated accepted command with the same idempotency key SHALL return the original result."
+    },
+    {
+      "id": "RBE-API-041",
+      "line_end": 127,
+      "line_start": 126,
+      "section": "13.7 Idempotency and Concurrency",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Reusing an idempotency key with a different normalized payload SHALL be rejected and audited as a protocol violation."
+    },
+    {
+      "id": "RBE-API-042",
+      "line_end": 128,
+      "line_start": 128,
+      "section": "13.7 Idempotency and Concurrency",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Lost-update prevention SHALL apply to all aggregate mutations."
+    },
+    {
+      "id": "RBE-API-050",
+      "line_end": 137,
+      "line_start": 136,
+      "section": "13.8 Versioning and Compatibility",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Breaking contract changes SHALL require a new major version and a documented migration path."
+    },
+    {
+      "id": "RBE-API-060",
+      "line_end": 154,
+      "line_start": 154,
+      "section": "13.9 File and Evidence Transfer",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Client-provided hashes SHALL be treated as claims and verified server-side."
+    },
+    {
+      "id": "RBE-API-061",
+      "line_end": 155,
+      "line_start": 155,
+      "section": "13.9 File and Evidence Transfer",
+      "source": "architecture/chapters/13-api-and-command-architecture.md",
+      "statement": "Download grants SHALL be audience-scoped, short-lived and logged."
+    },
+    {
+      "id": "RBE-APP-001",
+      "line_end": 22,
+      "line_start": 21,
+      "section": "23.1 Purpose and Status",
+      "source": "architecture/chapters/23-appendices-and-normative-reference-material.md",
+      "statement": "Implementations and operating procedures SHALL use the canonical terms and identifiers defined in this chapter or provide an approved mapping."
+    },
+    {
+      "id": "RBE-APP-010",
+      "line_end": 123,
+      "line_start": 122,
+      "section": "23.4 Constitutional Principles — Canonical Text",
+      "source": "architecture/chapters/23-appendices-and-normative-reference-material.md",
+      "statement": "The canonical wording above SHALL be preserved in the master architecture unless amended through explicit constitutional governance."
+    },
+    {
+      "id": "RBE-APP-020",
+      "line_end": 284,
+      "line_start": 283,
+      "section": "23.9 Core Traceability Chain",
+      "source": "architecture/chapters/23-appendices-and-normative-reference-material.md",
+      "statement": "A finalized decision SHALL be considered non-conformant if any mandatory link in the traceability chain cannot be resolved and verified."
+    },
+    {
+      "id": "RBE-APP-030",
+      "line_end": 291,
+      "line_start": 290,
+      "section": "23.10 Requirement Identifier Convention",
+      "source": "architecture/chapters/23-appendices-and-normative-reference-material.md",
+      "statement": "Requirement identifiers SHALL NOT be renumbered for cosmetic convenience after the master document is published."
+    },
+    {
+      "id": "RBE-APP-040",
+      "line_end": 355,
+      "line_start": 354,
+      "section": "23.14 Master Document Assembly Rules",
+      "source": "architecture/chapters/23-appendices-and-normative-reference-material.md",
+      "statement": "The master document SHALL NOT be declared final while unresolved cross-section contradictions, broken references or undefined normative terms remain."
+    },
+    {
+      "id": "RBE-APP-050",
+      "line_end": 430,
+      "line_start": 429,
+      "section": "23.18 Final Codex Constitutional Contract",
+      "source": "architecture/chapters/23-appendices-and-normative-reference-material.md",
+      "statement": "Codex SHALL NOT fabricate evidence, requirements, reviewer assessments, methodology rules, approvals, or test results."
+    },
+    {
+      "id": "RBE-APP-051",
+      "line_end": 433,
+      "line_start": 432,
+      "section": "23.18 Final Codex Constitutional Contract",
+      "source": "architecture/chapters/23-appendices-and-normative-reference-material.md",
+      "statement": "Codex SHALL NOT optimize for a preferred Review Board outcome, approval rate, rejection rate, or commercial conclusion."
+    },
+    {
+      "id": "RBE-APP-052",
+      "line_end": 436,
+      "line_start": 435,
+      "section": "23.18 Final Codex Constitutional Contract",
+      "source": "architecture/chapters/23-appendices-and-normative-reference-material.md",
+      "statement": "Codex SHALL treat insufficient evidence and architecture clarification required as valid outputs rather than failures to complete a task."
+    },
+    {
+      "id": "RBE-ARC-001",
+      "line_end": 117,
+      "line_start": 116,
+      "section": "3.4 C4 Level 2 — Containers",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "The domain core SHALL have no dependency on web frameworks, database drivers, UI libraries, network clients or AI services."
+    },
+    {
+      "id": "RBE-ARC-002",
+      "line_end": 119,
+      "line_start": 118,
+      "section": "3.4 C4 Level 2 — Containers",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "All state-changing operations SHALL pass through application services and a single validated domain transition path."
+    },
+    {
+      "id": "RBE-ARC-003",
+      "line_end": 121,
+      "line_start": 120,
+      "section": "3.4 C4 Level 2 — Containers",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "Artifact generation SHALL operate from a frozen decision snapshot, not from mutable live queries."
+    },
+    {
+      "id": "RBE-ARC-004",
+      "line_end": 122,
+      "line_start": 122,
+      "section": "3.4 C4 Level 2 — Containers",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "The CLI replay path and API finalization path SHALL invoke the same decision functions."
+    },
+    {
+      "id": "RBE-AUD-001",
+      "line_end": 22,
+      "line_start": 22,
+      "section": "10.1 Objective",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Every material action SHALL produce an immutable, attributable audit event."
+    },
+    {
+      "id": "RBE-AUD-002",
+      "line_end": 24,
+      "line_start": 23,
+      "section": "10.1 Objective",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "The system SHALL support independent reconstruction of any published decision from retained artefacts and versioned rules."
+    },
+    {
+      "id": "RBE-AUD-003",
+      "line_end": 25,
+      "line_start": 25,
+      "section": "10.1 Objective",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Audit data SHALL be designed as evidence, not as diagnostic logging."
+    },
+    {
+      "id": "RBE-AUD-020",
+      "line_end": 74,
+      "line_start": 74,
+      "section": "10.3 Event Taxonomy",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Event types SHALL be versioned and backward-readable."
+    },
+    {
+      "id": "RBE-AUD-021",
+      "line_end": 75,
+      "line_start": 75,
+      "section": "10.3 Event Taxonomy",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Free-text operational logs SHALL NOT substitute for required audit events."
+    },
+    {
+      "id": "RBE-AUD-030",
+      "line_end": 95,
+      "line_start": 95,
+      "section": "10.4 Evidence Provenance and Chain of Custody",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "The original artefact SHALL be retained whenever legally and technically permissible."
+    },
+    {
+      "id": "RBE-AUD-031",
+      "line_end": 97,
+      "line_start": 96,
+      "section": "10.4 Evidence Provenance and Chain of Custody",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "A transformed artefact SHALL retain a verifiable link to its source artefact and transformation procedure."
+    },
+    {
+      "id": "RBE-AUD-040",
+      "line_end": 120,
+      "line_start": 119,
+      "section": "10.5 Decision Provenance Graph",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "No published decision basis SHALL exist without at least one trace path to a governing rule and supporting assessment or evidence record."
+    },
+    {
+      "id": "RBE-AUD-050",
+      "line_end": 145,
+      "line_start": 144,
+      "section": "10.6 Cryptographic Integrity Strategy",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Cryptographic controls SHALL detect alteration; they SHALL NOT be represented as proving truth of the underlying content."
+    },
+    {
+      "id": "RBE-AUD-051",
+      "line_end": 147,
+      "line_start": 146,
+      "section": "10.6 Cryptographic Integrity Strategy",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Algorithm identifiers and key versions SHALL be stored with each signature or digest record."
+    },
+    {
+      "id": "RBE-AUD-060",
+      "line_end": 168,
+      "line_start": 168,
+      "section": "10.7 Immutability and Corrections",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "No correction process SHALL erase the existence of the original record."
+    },
+    {
+      "id": "RBE-AUD-070",
+      "line_end": 182,
+      "line_start": 182,
+      "section": "10.8 Reproducibility and Decision Replay",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Decision replay SHALL be executable without editing historical records."
+    },
+    {
+      "id": "RBE-AUD-071",
+      "line_end": 183,
+      "line_start": 183,
+      "section": "10.8 Reproducibility and Decision Replay",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "A replay mismatch SHALL create a blocking integrity incident."
+    },
+    {
+      "id": "RBE-AUD-072",
+      "line_end": 184,
+      "line_start": 184,
+      "section": "10.8 Reproducibility and Decision Replay",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "The platform SHALL distinguish deterministic decision replay from human re-review."
+    },
+    {
+      "id": "RBE-AUD-090",
+      "line_end": 211,
+      "line_start": 211,
+      "section": "10.10 Retention, Archive and Legal Hold",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Retention deletion SHALL be a governed, logged and independently authorized action."
+    },
+    {
+      "id": "RBE-AUD-091",
+      "line_end": 212,
+      "line_start": 212,
+      "section": "10.10 Retention, Archive and Legal Hold",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "An archive SHALL remain verifiable without dependence on the live application UI."
+    },
+    {
+      "id": "RBE-AUD-100",
+      "line_end": 223,
+      "line_start": 223,
+      "section": "10.11 Audit Query and Export",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Audit export SHALL preserve identifiers, timestamps, digests and schema version."
+    },
+    {
+      "id": "RBE-AUD-101",
+      "line_end": 224,
+      "line_start": 224,
+      "section": "10.11 Audit Query and Export",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Exports SHALL be access-controlled and themselves audited."
+    },
+    {
+      "id": "RBE-AUD-110",
+      "line_end": 229,
+      "line_start": 228,
+      "section": "10.12 Privacy and Data Minimization",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Audit records SHALL reference protected content by identifier and digest rather than duplicating full sensitive payloads unless required."
+    },
+    {
+      "id": "RBE-AUD-111",
+      "line_end": 230,
+      "line_start": 230,
+      "section": "10.12 Privacy and Data Minimization",
+      "source": "architecture/chapters/10-audit-traceability-and-provenance.md",
+      "statement": "Redaction or pseudonymization SHALL preserve evidentiary integrity and lineage."
+    },
+    {
+      "id": "RBE-BIAS-001",
+      "line_end": 141,
+      "line_start": 140,
+      "section": "2.18 Bias and Conflict Controls",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The system SHALL require a conflict declaration for every assignment before review materials are released."
+    },
+    {
+      "id": "RBE-BIAS-002",
+      "line_end": 143,
+      "line_start": 142,
+      "section": "2.18 Bias and Conflict Controls",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "A declared material conflict SHALL block assignment acceptance unless an explicit methodology-authorized exception is approved and audited."
+    },
+    {
+      "id": "RBE-BIAS-003",
+      "line_end": 146,
+      "line_start": 144,
+      "section": "2.18 Bias and Conflict Controls",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The engine SHALL preserve reviewer independence by preventing access to peer recommendations before initial report submission, unless the methodology explicitly defines a collaborative phase."
+    },
+    {
+      "id": "RBE-BIAS-004",
+      "line_end": 148,
+      "line_start": 147,
+      "section": "2.18 Bias and Conflict Controls",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The system SHALL NOT calculate reviewer performance using approval or rejection frequency."
+    },
+    {
+      "id": "RBE-CON-001",
+      "line_end": 126,
+      "line_start": 125,
+      "section": "1.7 Conformance and Authority",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "An implementation conforms only when all mandatory requirements, schema validations, deterministic replay tests and audit-integrity tests pass."
+    },
+    {
+      "id": "RBE-CON-002",
+      "line_end": 128,
+      "line_start": 127,
+      "section": "1.7 Conformance and Authority",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "Any exception SHALL identify the affected requirement, risk, approving authority, expiry date and remediation plan."
+    },
+    {
+      "id": "RBE-CON-003",
+      "line_end": 129,
+      "line_start": 129,
+      "section": "1.7 Conformance and Authority",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "A non-conforming engine SHALL NOT label its output “Review Board Decision”."
+    },
+    {
+      "id": "RBE-CTX-001",
+      "line_end": 43,
+      "line_start": 43,
+      "section": "3.1 System Context",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "RBE SHALL treat every upstream artifact as untrusted until package validation completes."
+    },
+    {
+      "id": "RBE-CTX-002",
+      "line_end": 45,
+      "line_start": 44,
+      "section": "3.1 System Context",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "RBE SHALL publish an outcome only after all mandatory board functions and decision prerequisites are satisfied."
+    },
+    {
+      "id": "RBE-CTX-003",
+      "line_end": 47,
+      "line_start": 46,
+      "section": "3.1 System Context",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "Downstream systems SHALL consume signed or checksummed decision artifacts, not infer approval from session status or user-interface text."
+    },
+    {
+      "id": "RBE-DAT-001",
+      "line_end": 22,
+      "line_start": 21,
+      "section": "14.1 Purpose",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Each data item SHALL have a declared system of record, owner, classification, retention rule and mutability rule."
+    },
+    {
+      "id": "RBE-DAT-002",
+      "line_end": 23,
+      "line_start": 23,
+      "section": "14.1 Purpose",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Derived data SHALL never silently replace or overwrite its authoritative source."
+    },
+    {
+      "id": "RBE-DAT-010",
+      "line_end": 78,
+      "line_start": 77,
+      "section": "14.4 Identifier Strategy",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Foreign-system identifiers SHALL be stored as namespaced external references, not used as internal primary keys."
+    },
+    {
+      "id": "RBE-DAT-020",
+      "line_end": 92,
+      "line_start": 92,
+      "section": "14.5 Immutability and Versioning",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Hard deletion of governed records SHALL be prohibited in normal application operation."
+    },
+    {
+      "id": "RBE-DAT-021",
+      "line_end": 94,
+      "line_start": 93,
+      "section": "14.5 Immutability and Versioning",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Privacy-driven erasure or redaction SHALL preserve a verifiable tombstone and legal basis without retaining prohibited content."
+    },
+    {
+      "id": "RBE-DAT-030",
+      "line_end": 107,
+      "line_start": 106,
+      "section": "14.6 Evidence Integrity and Object Storage",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Every evidence read used in review SHALL verify object identity against authoritative metadata."
+    },
+    {
+      "id": "RBE-DAT-031",
+      "line_end": 109,
+      "line_start": 108,
+      "section": "14.6 Evidence Integrity and Object Storage",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Replacement of an evidence object SHALL create a new EvidenceItem and shall never preserve the prior identifier."
+    },
+    {
+      "id": "RBE-DAT-040",
+      "line_end": 118,
+      "line_start": 118,
+      "section": "14.7 Audit Persistence",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "The governed write and its primary audit event SHALL commit or roll back together."
+    },
+    {
+      "id": "RBE-DAT-041",
+      "line_end": 119,
+      "line_start": 119,
+      "section": "14.7 Audit Persistence",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Audit sequence allocation SHALL be deterministic within an aggregate or ledger partition."
+    },
+    {
+      "id": "RBE-DAT-050",
+      "line_end": 148,
+      "line_start": 147,
+      "section": "14.9 Retention, Archival and Legal Hold",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Retention configuration SHALL be versioned and applied by record classification and effective policy version."
+    },
+    {
+      "id": "RBE-DAT-051",
+      "line_end": 149,
+      "line_start": 149,
+      "section": "14.9 Retention, Archival and Legal Hold",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Archive retrieval SHALL preserve integrity verification and access authorization."
+    },
+    {
+      "id": "RBE-DAT-060",
+      "line_end": 162,
+      "line_start": 161,
+      "section": "14.10 Backup, Restore and Disaster Recovery",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "A restoration SHALL not be declared successful until authoritative data, evidence integrity and audit continuity are verified together."
+    },
+    {
+      "id": "RBE-DAT-070",
+      "line_end": 168,
+      "line_start": 167,
+      "section": "14.11 Migrations and Schema Evolution",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "Production migrations SHALL be automated, checksum-verified and recorded as deployment evidence."
+    },
+    {
+      "id": "RBE-DAT-071",
+      "line_end": 170,
+      "line_start": 169,
+      "section": "14.11 Migrations and Schema Evolution",
+      "source": "architecture/chapters/14-persistence-and-data-architecture.md",
+      "statement": "A migration SHALL NOT rewrite historical decision meaning to conform to a newer taxonomy."
+    },
+    {
+      "id": "RBE-DEC-001",
+      "line_end": 24,
+      "line_start": 24,
+      "section": "6.1 Decision Philosophy",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Decision logic SHALL be versioned, deterministic, inspectable and replayable."
+    },
+    {
+      "id": "RBE-DEC-002",
+      "line_end": 26,
+      "line_start": 25,
+      "section": "6.1 Decision Philosophy",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "No statistical model, language model or opaque score SHALL issue the binding board verdict."
+    },
+    {
+      "id": "RBE-DEC-003",
+      "line_end": 28,
+      "line_start": 27,
+      "section": "6.1 Decision Philosophy",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Every outcome SHALL include a machine-readable basis identifying the exact rules and findings that produced it."
+    },
+    {
+      "id": "RBE-DEC-010",
+      "line_end": 90,
+      "line_start": 89,
+      "section": "6.3 Finding Severity and Effect",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Severity SHALL be assigned by explicit methodology criteria and SHALL NOT be increased or decreased to obtain a desired verdict."
+    },
+    {
+      "id": "RBE-DEC-011",
+      "line_end": 92,
+      "line_start": 91,
+      "section": "6.3 Finding Severity and Effect",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Governance-critical findings SHALL not be offset by high commercial relevance or large evidence volume."
+    },
+    {
+      "id": "RBE-DEC-020",
+      "line_end": 105,
+      "line_start": 104,
+      "section": "6.4.1 PASS",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "PASS SHALL NOT be issued merely because the conclusion is plausible or commercially attractive."
+    },
+    {
+      "id": "RBE-DEC-030",
+      "line_end": 114,
+      "line_start": 113,
+      "section": "6.4.2 PASS WITH FINDINGS",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Each condition attached to PASS WITH FINDINGS SHALL be specific, measurable, attributable and bounded in time or event."
+    },
+    {
+      "id": "RBE-DEC-031",
+      "line_end": 116,
+      "line_start": 115,
+      "section": "6.4.2 PASS WITH FINDINGS",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "A condition SHALL NOT conceal a defect that should have produced FAIL, DEFER or INSUFFICIENT EVIDENCE."
+    },
+    {
+      "id": "RBE-DEC-040",
+      "line_end": 128,
+      "line_start": 127,
+      "section": "6.4.3 FAIL",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "FAIL rationale SHALL identify the minimum decisive defects and SHALL not add persuasive or punitive language."
+    },
+    {
+      "id": "RBE-DEC-050",
+      "line_end": 140,
+      "line_start": 139,
+      "section": "6.4.4 INSUFFICIENT EVIDENCE",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "INSUFFICIENT EVIDENCE SHALL state what evidence class is missing and why it is material, without prescribing a desired eventual outcome."
+    },
+    {
+      "id": "RBE-DEC-060",
+      "line_end": 146,
+      "line_start": 145,
+      "section": "6.4.5 DEFER FOR FURTHER RESEARCH",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "A DEFER decision SHALL define the research question, required artifact or verification action, responsible role, and re-entry condition."
+    },
+    {
+      "id": "RBE-DEC-061",
+      "line_end": 147,
+      "line_start": 147,
+      "section": "6.4.5 DEFER FOR FURTHER RESEARCH",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "DEFER SHALL NOT be used to avoid issuing an otherwise required FAIL."
+    },
+    {
+      "id": "RBE-DEC-062",
+      "line_end": 150,
+      "line_start": 148,
+      "section": "6.4.5 DEFER FOR FURTHER RESEARCH",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Every ACTIVE methodology profile SHALL permit `INSUFFICIENT_EVIDENCE`; if it omits `DEFER_FOR_FURTHER_RESEARCH`, every bounded research gap SHALL map to `INSUFFICIENT_EVIDENCE` and SHALL NOT map to PASS, PASS WITH FINDINGS or FAIL."
+    },
+    {
+      "id": "RBE-DEC-070",
+      "line_end": 193,
+      "line_start": 193,
+      "section": "6.5 Deterministic Precedence",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Decision precedence SHALL be encoded in the rule set and covered by automated tests."
+    },
+    {
+      "id": "RBE-DEC-080",
+      "line_end": 218,
+      "line_start": 217,
+      "section": "6.6 Decision Rationale Contract",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "The rationale SHALL explain rather than persuade and SHALL avoid promotional, celebratory, adversarial or punitive language."
+    },
+    {
+      "id": "RBE-DEC-081",
+      "line_end": 220,
+      "line_start": 219,
+      "section": "6.6 Decision Rationale Contract",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "A published rationale SHALL not claim greater certainty or scope than the accepted evidence supports."
+    },
+    {
+      "id": "RBE-DEC-090",
+      "line_end": 242,
+      "line_start": 241,
+      "section": "6.7 Confidence and Uncertainty",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Confidence SHALL be reported separately from outcome and SHALL not override blocking rules."
+    },
+    {
+      "id": "RBE-DEC-100",
+      "line_end": 254,
+      "line_start": 253,
+      "section": "6.8 Recommendations",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Recommendations SHALL be clearly labeled non-binding unless a methodology rule makes a condition mandatory for the stated decision."
+    },
+    {
+      "id": "RBE-DEC-101",
+      "line_end": 256,
+      "line_start": 255,
+      "section": "6.8 Recommendations",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "The Review Board SHALL NOT recommend a specific product, vendor or implementation unless that subject was explicitly within the approved review scope."
+    },
+    {
+      "id": "RBE-DEC-110",
+      "line_end": 259,
+      "line_start": 258,
+      "section": "6.9 Appeals and Decision Lineage",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "Every decision SHALL have a stable identifier, content digest, predecessor reference where applicable and status indicating current or superseded authority."
+    },
+    {
+      "id": "RBE-DEC-111",
+      "line_end": 261,
+      "line_start": 260,
+      "section": "6.9 Appeals and Decision Lineage",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "A superseding decision SHALL explain the appeal or new evidence basis and preserve the full prior rationale."
+    },
+    {
+      "id": "RBE-DEC-120",
+      "line_end": 297,
+      "line_start": 295,
+      "section": "6.11 Normalized Outcome and Process-Status Contract",
+      "source": "architecture/chapters/06-decision-framework.md",
+      "statement": "The decision engine SHALL return process status separately from substantive outcome and SHALL reject a profile that does not define a total deterministic mapping for its permitted outcomes."
+    },
+    {
+      "id": "RBE-DOC-200",
+      "line_end": 272,
+      "line_start": 270,
+      "section": "19.18 Normalized Release Status",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Sections 20–23 SHALL be interpreted together with the preceding architecture sections and SHALL NOT override earlier constitutional, governance, security, evidence-integrity or separation-of-duties requirements."
+    },
+    {
+      "id": "RBE-DOC-201",
+      "line_end": 278,
+      "line_start": 276,
+      "section": "19.18 Normalized Release Status",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Where an implementation instruction conflicts with a constitutional principle, the constitutional principle SHALL prevail and the conflict SHALL be escalated as an architecture defect."
+    },
+    {
+      "id": "RBE-DOM-001",
+      "line_end": 23,
+      "line_start": 22,
+      "section": "7.1 Domain Modeling Principles",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Domain entities SHALL preserve the constitutional separation between source material, reviewer judgment, normalized findings and board decision."
+    },
+    {
+      "id": "RBE-DOM-002",
+      "line_end": 25,
+      "line_start": 24,
+      "section": "7.1 Domain Modeling Principles",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Sealed or published substantive records SHALL be immutable; correction SHALL occur through versioning and supersession."
+    },
+    {
+      "id": "RBE-DOM-003",
+      "line_end": 27,
+      "line_start": 26,
+      "section": "7.1 Domain Modeling Principles",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Every externally visible identifier SHALL be stable, opaque and unique within its entity type."
+    },
+    {
+      "id": "RBE-DOM-010",
+      "line_end": 76,
+      "line_start": 75,
+      "section": "7.3 ReviewCase",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "A ReviewCase SHALL not directly store mutable “final verdict” text; authoritative decisions belong to BoardDecision."
+    },
+    {
+      "id": "RBE-DOM-020",
+      "line_end": 93,
+      "line_start": 93,
+      "section": "7.4 SubmissionVersion",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "SubmissionVersion SHALL be immutable after submission."
+    },
+    {
+      "id": "RBE-DOM-030",
+      "line_end": 120,
+      "line_start": 119,
+      "section": "7.5 EvidencePackage and EvidenceItem",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Mutable external URLs SHALL not be treated as sufficient long-term evidence identity without captured representation or verifiable archival reference."
+    },
+    {
+      "id": "RBE-DOM-031",
+      "line_end": 122,
+      "line_start": 121,
+      "section": "7.5 EvidencePackage and EvidenceItem",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Evidence independence metadata SHALL distinguish distinct URLs from genuinely independent underlying sources."
+    },
+    {
+      "id": "RBE-DOM-040",
+      "line_end": 140,
+      "line_start": 139,
+      "section": "7.6 BoardSession",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "A BoardSession SHALL reference exactly one locked submission version and one locked evidence package baseline."
+    },
+    {
+      "id": "RBE-DOM-050",
+      "line_end": 156,
+      "line_start": 155,
+      "section": "7.7 Reviewer and ReviewerAssignment",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "ReviewerAssignment SHALL be the sole source of substantive artifact access authority for a reviewer."
+    },
+    {
+      "id": "RBE-DOM-051",
+      "line_end": 157,
+      "line_start": 157,
+      "section": "7.7 Reviewer and ReviewerAssignment",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Removal from assignment SHALL not delete prior access or activity records."
+    },
+    {
+      "id": "RBE-DOM-060",
+      "line_end": 177,
+      "line_start": 176,
+      "section": "7.8 AssessmentReport",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "A sealed AssessmentReport SHALL be immutable and SHALL retain its exact visible artifact set."
+    },
+    {
+      "id": "RBE-DOM-070",
+      "line_end": 193,
+      "line_start": 192,
+      "section": "7.9 SourceFinding and NormalizedFinding",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Normalization SHALL NOT overwrite the source finding text, author, severity recommendation or rationale."
+    },
+    {
+      "id": "RBE-DOM-071",
+      "line_end": 195,
+      "line_start": 194,
+      "section": "7.9 SourceFinding and NormalizedFinding",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "A disposition that rejects or downgrades a finding SHALL state the governing basis and accountable actor or rule."
+    },
+    {
+      "id": "RBE-DOM-080",
+      "line_end": 214,
+      "line_start": 213,
+      "section": "7.10 DecisionRuleSet and DecisionEvaluation",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "DecisionRuleSet SHALL be content-addressed or cryptographically digested and immutable once used by a session."
+    },
+    {
+      "id": "RBE-DOM-081",
+      "line_end": 216,
+      "line_start": 215,
+      "section": "7.10 DecisionRuleSet and DecisionEvaluation",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Rule evaluation SHALL be pure with respect to substantive outcome: no network calls, mutable external state or hidden model output."
+    },
+    {
+      "id": "RBE-DOM-090",
+      "line_end": 232,
+      "line_start": 232,
+      "section": "7.11 BoardDecision",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "BoardDecision SHALL not contain editable fields after signing."
+    },
+    {
+      "id": "RBE-DOM-091",
+      "line_end": 234,
+      "line_start": 233,
+      "section": "7.11 BoardDecision",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Published narrative and machine-readable decision SHALL share the same decision identifier and digest linkage."
+    },
+    {
+      "id": "RBE-DOM-100",
+      "line_end": 251,
+      "line_start": 251,
+      "section": "7.12 AppealCase",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "AppealCase SHALL reference, never modify, the original BoardDecision."
+    },
+    {
+      "id": "RBE-DOM-110",
+      "line_end": 267,
+      "line_start": 266,
+      "section": "7.13 GovernanceIncident",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "GovernanceIncident facts and disposition SHALL be separated from speculation and narrative commentary."
+    },
+    {
+      "id": "RBE-DOM-120",
+      "line_end": 284,
+      "line_start": 283,
+      "section": "7.14 AuditEvent",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Audit events SHALL be append-only and SHALL not contain secrets or unnecessary personal data."
+    },
+    {
+      "id": "RBE-DOM-121",
+      "line_end": 286,
+      "line_start": 285,
+      "section": "7.14 AuditEvent",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "The audit ledger SHALL support chronological reconstruction and causal reconstruction of every decision."
+    },
+    {
+      "id": "RBE-DOM-130",
+      "line_end": 302,
+      "line_start": 301,
+      "section": "7.15 ReviewReport and ReplayBundle",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "ReplayBundle SHALL be sufficient to verify decision determinism without relying on mutable application database state."
+    },
+    {
+      "id": "RBE-DOM-140",
+      "line_end": 376,
+      "line_start": 375,
+      "section": "7.18 Domain Events",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Domain event names and payload schemas SHALL be versioned and stable enough for audit, integration and replay consumers."
+    },
+    {
+      "id": "RBE-DOM-150",
+      "line_end": 394,
+      "line_start": 393,
+      "section": "7.19 Codex Implementation Boundaries for Chapters 4–7",
+      "source": "architecture/chapters/07-domain-model.md",
+      "statement": "Codex SHALL treat the two constitutional principles as acceptance criteria for every implementation decision made from these chapters."
+    },
+    {
+      "id": "RBE-ES-API-001",
+      "line_end": 884,
+      "line_start": 884,
+      "section": "11.3 Error model",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The API SHALL never return raw stack traces, secrets or database paths."
+    },
+    {
+      "id": "RBE-ES-API-002",
+      "line_end": 886,
+      "line_start": 886,
+      "section": "11.3 Error model",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Validation errors SHALL identify the rejected field or prerequisite."
+    },
+    {
+      "id": "RBE-ES-API-003",
+      "line_end": 888,
+      "line_start": 888,
+      "section": "11.3 Error model",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Decision publication SHALL require an explicit command; reading a session SHALL never trigger decision calculation."
+    },
+    {
+      "id": "RBE-ES-API-004",
+      "line_end": 890,
+      "line_start": 890,
+      "section": "11.3 Error model",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The OpenAPI document SHALL be generated or validated in CI."
+    },
+    {
+      "id": "RBE-ES-ARC-001",
+      "line_end": 285,
+      "line_start": 285,
+      "section": "3.3 Reference technology profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The implementation SHALL maintain explicit boundaries between domain logic, persistence adapters, API handlers and presentation code."
+    },
+    {
+      "id": "RBE-ES-ARC-002",
+      "line_end": 287,
+      "line_start": 287,
+      "section": "3.3 Reference technology profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The implementation SHALL support headless command-line execution for test and automation use."
+    },
+    {
+      "id": "RBE-ES-ARC-003",
+      "line_end": 289,
+      "line_start": 289,
+      "section": "3.3 Reference technology profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL operate without network access after all review package inputs have been registered locally."
+    },
+    {
+      "id": "RBE-ES-ARC-004",
+      "line_end": 291,
+      "line_start": 291,
+      "section": "3.3 Reference technology profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "External services SHALL be optional adapters and SHALL NOT be necessary to compute a decision."
+    },
+    {
+      "id": "RBE-ES-AUD-001",
+      "line_end": 705,
+      "line_start": 705,
+      "section": "8.3 Append-only and hash chaining",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Audit entries SHALL never be updated or deleted through normal application interfaces."
+    },
+    {
+      "id": "RBE-ES-AUD-002",
+      "line_end": 707,
+      "line_start": 707,
+      "section": "8.3 Append-only and hash chaining",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL provide an audit verification command that recomputes and validates every hash link."
+    },
+    {
+      "id": "RBE-ES-AUD-003",
+      "line_end": 709,
+      "line_start": 709,
+      "section": "8.3 Append-only and hash chaining",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Administrative database repair SHALL be out of band, documented and detectable through subsequent verification."
+    },
+    {
+      "id": "RBE-ES-AUD-004",
+      "line_end": 711,
+      "line_start": 711,
+      "section": "8.3 Append-only and hash chaining",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Sensitive values that must not be logged SHALL be represented by stable redacted placeholders or hashes."
+    },
+    {
+      "id": "RBE-ES-CON-001",
+      "line_end": 156,
+      "line_start": 156,
+      "section": "1.4 Conformance classes",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A conforming RBE v1 implementation SHALL satisfy all requirements marked mandatory and SHALL pass all acceptance tests in Section 15."
+    },
+    {
+      "id": "RBE-ES-CON-002",
+      "line_end": 158,
+      "line_start": 158,
+      "section": "1.4 Conformance classes",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A deviation SHALL be documented as an approved exception with requirement identifier, rationale, risk, owner and expiry or remediation date."
+    },
+    {
+      "id": "RBE-ES-DEC-001",
+      "line_end": 596,
+      "line_start": 595,
+      "section": "7.3 Methodology Profile Contract",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Decision evaluation SHALL use a frozen, canonically serialized and hashed input snapshot."
+    },
+    {
+      "id": "RBE-ES-DEC-002",
+      "line_end": 599,
+      "line_start": 598,
+      "section": "7.3 Methodology Profile Contract",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL reject an inactive, unknown, checksum-invalid, incomplete, or architecture-incompatible methodology profile."
+    },
+    {
+      "id": "RBE-ES-DEC-003",
+      "line_end": 602,
+      "line_start": 601,
+      "section": "7.3 Methodology Profile Contract",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A profile rule set SHALL define total deterministic precedence for every valid normalized input combination in its declared scope."
+    },
+    {
+      "id": "RBE-ES-DEC-004",
+      "line_end": 605,
+      "line_start": 604,
+      "section": "7.3 Methodology Profile Contract",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The core SHALL NOT infer severity effects, evidence sufficiency, quorum, or an outcome absent from the active profile."
+    },
+    {
+      "id": "RBE-ES-DEC-005",
+      "line_end": 608,
+      "line_start": 607,
+      "section": "7.3 Methodology Profile Contract",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Every evaluation SHALL record rules applied, findings considered, counter-evidence, reason codes, profile version, engine version, and snapshot hash."
+    },
+    {
+      "id": "RBE-ES-DEC-006",
+      "line_end": 611,
+      "line_start": 610,
+      "section": "7.3 Methodology Profile Contract",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Reviewer recommendations, votes, averages, commercial preference, timestamps, and database row order SHALL NOT determine the outcome."
+    },
+    {
+      "id": "RBE-ES-DEC-007",
+      "line_end": 614,
+      "line_start": 613,
+      "section": "7.3 Methodology Profile Contract",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Explanation text SHALL be generated from versioned deterministic templates and shall not claim greater scope or certainty than the frozen record supports."
+    },
+    {
+      "id": "RBE-ES-DEC-008",
+      "line_end": 643,
+      "line_start": 642,
+      "section": "7.5 Ratification and Publication",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Re-evaluation of a published decision SHALL require a governed successor review; historical decisions remain immutable."
+    },
+    {
+      "id": "RBE-ES-DES-001",
+      "line_end": 195,
+      "line_start": 195,
+      "section": "Portability",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The deterministic core SHALL be implemented as side-effect-free decision functions that can be executed independently of the API, database and user interface."
+    },
+    {
+      "id": "RBE-ES-DES-002",
+      "line_end": 197,
+      "line_start": 197,
+      "section": "Portability",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Artificial intelligence output MAY be stored as reviewer-assistance metadata, but SHALL NOT directly set severity, finding status, quorum status or board decision."
+    },
+    {
+      "id": "RBE-ES-DES-003",
+      "line_end": 199,
+      "line_start": 199,
+      "section": "Portability",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL reject any attempt to finalize a decision when the methodology version or decision rule set is unknown."
+    },
+    {
+      "id": "RBE-ES-DES-004",
+      "line_end": 201,
+      "line_start": 201,
+      "section": "Portability",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "All identifiers used in exported artifacts SHALL be stable and globally unique within the Review Board system."
+    },
+    {
+      "id": "RBE-ES-DOM-001",
+      "line_end": 506,
+      "line_start": 506,
+      "section": "5.9 Cross-entity invariants",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Each report SHALL belong to exactly one assignment and one session through that assignment."
+    },
+    {
+      "id": "RBE-ES-DOM-002",
+      "line_end": 508,
+      "line_start": 508,
+      "section": "5.9 Cross-entity invariants",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A finding SHALL reference the report that introduced it and SHALL retain lineage when superseded."
+    },
+    {
+      "id": "RBE-ES-DOM-003",
+      "line_end": 510,
+      "line_start": 510,
+      "section": "5.9 Cross-entity invariants",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Only one non-superseded decision SHALL exist for a session."
+    },
+    {
+      "id": "RBE-ES-DOM-004",
+      "line_end": 512,
+      "line_start": 512,
+      "section": "5.9 Cross-entity invariants",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A report correction SHALL create a new report version; the prior report SHALL remain immutable."
+    },
+    {
+      "id": "RBE-ES-DOM-005",
+      "line_end": 514,
+      "line_start": 514,
+      "section": "5.9 Cross-entity invariants",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A finding severity change SHALL create a superseding finding record or a versioned finding event; it SHALL NOT erase the original severity."
+    },
+    {
+      "id": "RBE-ES-DOM-006",
+      "line_end": 516,
+      "line_start": 516,
+      "section": "5.9 Cross-entity invariants",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "All exported timestamps SHALL use RFC 3339 UTC with a Z suffix."
+    },
+    {
+      "id": "RBE-ES-FUT-001",
+      "line_end": 1163,
+      "line_start": 1163,
+      "section": "18.2 Future-compatible extension points",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Extension points SHALL preserve the deterministic core and SHALL not permit adapters to override a computed verdict."
+    },
+    {
+      "id": "RBE-ES-FUT-002",
+      "line_end": 1165,
+      "line_start": 1165,
+      "section": "18.2 Future-compatible extension points",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Any future AI-assisted function SHALL record model, prompt, version, source inputs and accountable reviewer acceptance."
+    },
+    {
+      "id": "RBE-ES-HUM-001",
+      "line_end": 807,
+      "line_start": 807,
+      "section": "10.1 Review report structure",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The Markdown report SHALL be generated from the same frozen decision snapshot used by the decision engine."
+    },
+    {
+      "id": "RBE-ES-HUM-002",
+      "line_end": 809,
+      "line_start": 809,
+      "section": "10.1 Review report structure",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The report SHALL not contain facts that are absent from the structured records."
+    },
+    {
+      "id": "RBE-ES-HUM-003",
+      "line_end": 811,
+      "line_start": 811,
+      "section": "10.1 Review report structure",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Finding order SHALL be deterministic: severity, category, stable finding identifier."
+    },
+    {
+      "id": "RBE-ES-HUM-004",
+      "line_end": 813,
+      "line_start": 813,
+      "section": "10.1 Review report structure",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The report SHALL clearly distinguish reviewer recommendations from the final board decision."
+    },
+    {
+      "id": "RBE-ES-HUM-005",
+      "line_end": 815,
+      "line_start": 815,
+      "section": "10.1 Review report structure",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The report SHALL identify unresolved findings and their remediation status."
+    },
+    {
+      "id": "RBE-ES-LIF-001",
+      "line_end": 316,
+      "line_start": 315,
+      "section": "4.2 Transition Rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The implementation SHALL load and enforce the versioned canonical state-machine register without defining a second state enumeration."
+    },
+    {
+      "id": "RBE-ES-LIF-002",
+      "line_end": 320,
+      "line_start": 318,
+      "section": "4.2 Transition Rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Every transition SHALL pass through one domain transition service that validates prior state, target state, actor authority, expected aggregate version, prerequisites, and required artifacts."
+    },
+    {
+      "id": "RBE-ES-LIF-003",
+      "line_end": 323,
+      "line_start": 322,
+      "section": "4.2 Transition Rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A failed transition SHALL leave authoritative state unchanged, return stable failed- precondition codes, and append a rejected-transition audit event where governance-relevant."
+    },
+    {
+      "id": "RBE-ES-LIF-004",
+      "line_end": 325,
+      "line_start": 325,
+      "section": "4.2 Transition Rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The accepted transition and its audit event SHALL commit atomically."
+    },
+    {
+      "id": "RBE-ES-LIF-005",
+      "line_end": 328,
+      "line_start": 327,
+      "section": "4.2 Transition Rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Retrying an accepted transition with the same idempotency key and payload SHALL return the original result; payload mismatch SHALL be rejected and audited."
+    },
+    {
+      "id": "RBE-ES-LIF-006",
+      "line_end": 330,
+      "line_start": 330,
+      "section": "4.2 Transition Rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "`ARCHIVED`, `VOID`, and `WITHDRAWN` SHALL be terminal under ordinary commands."
+    },
+    {
+      "id": "RBE-ES-LIF-007",
+      "line_end": 334,
+      "line_start": 332,
+      "section": "4.2 Transition Rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Appeal, remand, and re-review SHALL preserve the original decision, create the successor records required by the canonical state and lineage contracts, and route `REMANDED` through `ASSIGNMENT` without bypassing role or evidence controls."
+    },
+    {
+      "id": "RBE-ES-LIF-008",
+      "line_end": 349,
+      "line_start": 348,
+      "section": "4.4 Recovery",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Recovery SHALL not create duplicate assignments, reports, findings, decisions, or state transitions."
+    },
+    {
+      "id": "RBE-ES-LIF-009",
+      "line_end": 352,
+      "line_start": 351,
+      "section": "4.4 Recovery",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Failure after decision evaluation but before governed ratification SHALL preserve the evaluation as non-authoritative and leave the case in `GOVERNANCE_VALIDATION` or `BLOCKED`."
+    },
+    {
+      "id": "RBE-ES-LIF-010",
+      "line_end": 355,
+      "line_start": 354,
+      "section": "4.4 Recovery",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Failure during publication SHALL leave a ratified `DECIDED` record intact and retry publication without recalculating or mutating the decision."
+    },
+    {
+      "id": "RBE-ES-NFR-001",
+      "line_end": 961,
+      "line_start": 961,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "For a session containing up to 1,000 findings and 50 reports, deterministic decision calculation SHOULD complete in under one second on a typical developer workstation."
+    },
+    {
+      "id": "RBE-ES-NFR-002",
+      "line_end": 963,
+      "line_start": 963,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Core unit tests SHALL run without network access."
+    },
+    {
+      "id": "RBE-ES-NFR-003",
+      "line_end": 965,
+      "line_start": 965,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The application SHALL start, migrate an empty database and execute a complete golden review on Linux in CI."
+    },
+    {
+      "id": "RBE-ES-NFR-004",
+      "line_end": 967,
+      "line_start": 967,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "All logs SHALL include correlation_id and session_id when applicable."
+    },
+    {
+      "id": "RBE-ES-NFR-005",
+      "line_end": 969,
+      "line_start": 969,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Log messages SHALL use structured JSON in production mode and readable text in development mode."
+    },
+    {
+      "id": "RBE-ES-NFR-006",
+      "line_end": 971,
+      "line_start": 971,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The application SHALL expose health, readiness and version information."
+    },
+    {
+      "id": "RBE-ES-NFR-007",
+      "line_end": 973,
+      "line_start": 973,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL use UTC internally and SHALL not derive decision behavior from local time zone."
+    },
+    {
+      "id": "RBE-ES-NFR-008",
+      "line_end": 975,
+      "line_start": 975,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The implementation SHALL be formatted, linted, type-checked and tested in CI."
+    },
+    {
+      "id": "RBE-ES-NFR-009",
+      "line_end": 977,
+      "line_start": 977,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A clean checkout SHALL be buildable using documented commands without hidden local dependencies."
+    },
+    {
+      "id": "RBE-ES-NFR-010",
+      "line_end": 979,
+      "line_start": 979,
+      "section": "14. Reliability and Non-Functional Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Generated files, caches, virtual environments, build output and local databases SHALL be excluded from source control."
+    },
+    {
+      "id": "RBE-ES-OBS-001",
+      "line_end": 995,
+      "line_start": 995,
+      "section": "14.1 Observability",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Metrics and logs SHALL not alter deterministic domain outputs."
+    },
+    {
+      "id": "RBE-ES-OBS-002",
+      "line_end": 997,
+      "line_start": 997,
+      "section": "14.1 Observability",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Every failed command SHALL produce a correlation identifier suitable for tracing the request through logs and audit events."
+    },
+    {
+      "id": "RBE-ES-OPS-001",
+      "line_end": 1096,
+      "line_start": 1096,
+      "section": "17.1 v1 deployment profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The application SHALL validate configuration and writable storage before accepting commands."
+    },
+    {
+      "id": "RBE-ES-OPS-002",
+      "line_end": 1098,
+      "line_start": 1098,
+      "section": "17.1 v1 deployment profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Startup SHALL verify database migration state and audit-chain health for active sessions."
+    },
+    {
+      "id": "RBE-ES-OPS-003",
+      "line_end": 1100,
+      "line_start": 1100,
+      "section": "17.1 v1 deployment profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Shutdown SHALL stop accepting new commands and complete or roll back active transactions."
+    },
+    {
+      "id": "RBE-ES-OPS-004",
+      "line_end": 1102,
+      "line_start": 1102,
+      "section": "17.1 v1 deployment profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Backup documentation SHALL include database and artifact consistency requirements."
+    },
+    {
+      "id": "RBE-ES-OPS-005",
+      "line_end": 1104,
+      "line_start": 1104,
+      "section": "17.1 v1 deployment profile",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The repository SHALL include an operator runbook covering startup, migration, backup, restore, export validation and incident recovery."
+    },
+    {
+      "id": "RBE-ES-OPS-006",
+      "line_end": 1120,
+      "line_start": 1120,
+      "section": "17.2 Repository quality",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Codex SHALL implement on a dedicated feature branch and SHALL not merge without review."
+    },
+    {
+      "id": "RBE-ES-OPS-007",
+      "line_end": 1122,
+      "line_start": 1122,
+      "section": "17.2 Repository quality",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The pull request SHALL contain a requirement-to-test summary and SHALL call out any non-conformance explicitly."
+    },
+    {
+      "id": "RBE-ES-ORC-001",
+      "line_end": 525,
+      "line_start": 525,
+      "section": "6.1 Role and phase configuration",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The board configuration SHALL have a stable identifier, semantic version and checksum."
+    },
+    {
+      "id": "RBE-ES-ORC-002",
+      "line_end": 527,
+      "line_start": 527,
+      "section": "6.1 Role and phase configuration",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The orchestrator SHALL create exactly one required assignment for every required role unless the configuration explicitly permits multiple seats."
+    },
+    {
+      "id": "RBE-ES-ORC-003",
+      "line_end": 529,
+      "line_start": 529,
+      "section": "6.1 Role and phase configuration",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A reviewer actor SHALL NOT satisfy two independence-conflicting roles in the same session."
+    },
+    {
+      "id": "RBE-ES-ORC-004",
+      "line_end": 531,
+      "line_start": 531,
+      "section": "6.1 Role and phase configuration",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL validate reviewer-role eligibility before assignment."
+    },
+    {
+      "id": "RBE-ES-ORC-005",
+      "line_end": 533,
+      "line_start": 533,
+      "section": "6.1 Role and phase configuration",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The next phase SHALL not open until all mandatory assignments in the current phase are completed or formally waived under an approved methodology rule."
+    },
+    {
+      "id": "RBE-ES-ORC-006",
+      "line_end": 537,
+      "line_start": 537,
+      "section": "6.2 Report submission",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A report submission SHALL validate schema, assignment status, actor identity, methodology version and evidence references."
+    },
+    {
+      "id": "RBE-ES-ORC-007",
+      "line_end": 539,
+      "line_start": 539,
+      "section": "6.2 Report submission",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Reports with unknown evidence references SHALL be rejected."
+    },
+    {
+      "id": "RBE-ES-ORC-008",
+      "line_end": 541,
+      "line_start": 541,
+      "section": "6.2 Report submission",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A completed assignment SHALL become read-only except through a superseding report workflow."
+    },
+    {
+      "id": "RBE-ES-ORC-009",
+      "line_end": 543,
+      "line_start": 543,
+      "section": "6.2 Report submission",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL distinguish reviewer recommendation from board verdict; recommendation SHALL never be treated as a vote."
+    },
+    {
+      "id": "RBE-ES-ORC-010",
+      "line_end": 545,
+      "line_start": 545,
+      "section": "6.2 Report submission",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Free-text report content SHALL be preserved verbatim in the immutable source report while normalized fields are stored separately."
+    },
+    {
+      "id": "RBE-ES-ORC-011",
+      "line_end": 559,
+      "line_start": 559,
+      "section": "6.3 Missing, late or invalid reviews",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The orchestrator SHALL fail closed when a required report is absent."
+    },
+    {
+      "id": "RBE-ES-ORC-012",
+      "line_end": 561,
+      "line_start": 561,
+      "section": "6.3 Missing, late or invalid reviews",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The orchestrator SHALL expose a deterministic readiness assessment listing every unmet prerequisite."
+    },
+    {
+      "id": "RBE-ES-PER-001",
+      "line_end": 669,
+      "line_start": 669,
+      "section": "8.2 Transaction boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "SQLite foreign key enforcement SHALL be enabled on every connection."
+    },
+    {
+      "id": "RBE-ES-PER-002",
+      "line_end": 671,
+      "line_start": 671,
+      "section": "8.2 Transaction boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "State transition and corresponding audit entry SHALL commit in the same transaction."
+    },
+    {
+      "id": "RBE-ES-PER-003",
+      "line_end": 673,
+      "line_start": 673,
+      "section": "8.2 Transaction boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Decision record, input snapshot hash, generated artifact manifest and decision audit event SHALL commit atomically."
+    },
+    {
+      "id": "RBE-ES-PER-004",
+      "line_end": 675,
+      "line_start": 675,
+      "section": "8.2 Transaction boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Database migrations SHALL be ordered, checksum-verified and reversible where practical."
+    },
+    {
+      "id": "RBE-ES-PER-005",
+      "line_end": 677,
+      "line_start": 677,
+      "section": "8.2 Transaction boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The system SHALL refuse startup when the database schema is newer than the running engine supports."
+    },
+    {
+      "id": "RBE-ES-PRI-001",
+      "line_end": 952,
+      "line_start": 952,
+      "section": "13.2 Privacy",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL store only reviewer identity information necessary for accountability."
+    },
+    {
+      "id": "RBE-ES-PRI-002",
+      "line_end": 954,
+      "line_start": 954,
+      "section": "13.2 Privacy",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Audit payloads SHALL avoid duplicating full sensitive report bodies where stable identifiers and hashes are sufficient."
+    },
+    {
+      "id": "RBE-ES-PRI-003",
+      "line_end": 956,
+      "line_start": 956,
+      "section": "13.2 Privacy",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Retention and deletion policy SHALL operate at the controlled archive or system level and SHALL not silently remove individual material records from a surviving session."
+    },
+    {
+      "id": "RBE-ES-PUR-001",
+      "line_end": 102,
+      "line_start": 102,
+      "section": "1.1 Purpose",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL execute only governance rules that are explicitly defined in the approved methodology or this implementation specification."
+    },
+    {
+      "id": "RBE-ES-PUR-002",
+      "line_end": 104,
+      "line_start": 104,
+      "section": "1.1 Purpose",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL produce the same canonical decision and artifact content for identical normalized inputs, methodology version and engine version."
+    },
+    {
+      "id": "RBE-ES-PUR-003",
+      "line_end": 106,
+      "line_start": 106,
+      "section": "1.1 Purpose",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL persist sufficient information to reconstruct why every session state, finding status and decision occurred."
+    },
+    {
+      "id": "RBE-ES-PUR-004",
+      "line_end": 108,
+      "line_start": 108,
+      "section": "1.1 Purpose",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL produce both machine-readable JSON artifacts and human-readable review artifacts."
+    },
+    {
+      "id": "RBE-ES-SCH-001",
+      "line_end": 718,
+      "line_start": 718,
+      "section": "9.1 General schema rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Every exported object SHALL include schema_id and schema_version."
+    },
+    {
+      "id": "RBE-ES-SCH-002",
+      "line_end": 720,
+      "line_start": 720,
+      "section": "9.1 General schema rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Schemas SHALL set additionalProperties to false for normative objects unless extensibility is explicitly defined."
+    },
+    {
+      "id": "RBE-ES-SCH-003",
+      "line_end": 722,
+      "line_start": 722,
+      "section": "9.1 General schema rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Enumerations SHALL be closed and versioned."
+    },
+    {
+      "id": "RBE-ES-SCH-004",
+      "line_end": 724,
+      "line_start": 724,
+      "section": "9.1 General schema rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Canonical JSON serialization SHALL use UTF-8, sorted object keys, no insignificant whitespace and normalized numeric representation."
+    },
+    {
+      "id": "RBE-ES-SCH-005",
+      "line_end": 726,
+      "line_start": 726,
+      "section": "9.1 General schema rules",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Artifact file names SHALL be deterministic and safe for cross-platform file systems."
+    },
+    {
+      "id": "RBE-ES-SCH-006",
+      "line_end": 772,
+      "line_start": 772,
+      "section": "9.3 Canonical bundle manifest",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The exported bundle SHALL include a manifest containing SHA-256 for every artifact."
+    },
+    {
+      "id": "RBE-ES-SCH-007",
+      "line_end": 774,
+      "line_start": 774,
+      "section": "9.3 Canonical bundle manifest",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The bundle root hash SHALL be computed over the canonical ordered artifact manifest."
+    },
+    {
+      "id": "RBE-ES-SCH-008",
+      "line_end": 776,
+      "line_start": 776,
+      "section": "9.3 Canonical bundle manifest",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "An import validator SHALL validate schemas, checksums, versions and identifier consistency without modifying the source bundle."
+    },
+    {
+      "id": "RBE-ES-SEC-001",
+      "line_end": 934,
+      "line_start": 934,
+      "section": "13.1 Trust boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL validate file paths and SHALL prevent path traversal during package import and bundle export."
+    },
+    {
+      "id": "RBE-ES-SEC-002",
+      "line_end": 936,
+      "line_start": 936,
+      "section": "13.1 Trust boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL enforce configurable maximum sizes for files, JSON bodies, reports and artifact bundles."
+    },
+    {
+      "id": "RBE-ES-SEC-003",
+      "line_end": 938,
+      "line_start": 938,
+      "section": "13.1 Trust boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Rendered Markdown SHALL be sanitized; embedded scripts and unsafe HTML SHALL be disabled."
+    },
+    {
+      "id": "RBE-ES-SEC-004",
+      "line_end": 940,
+      "line_start": 940,
+      "section": "13.1 Trust boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Checksums SHALL be recomputed by the engine and SHALL not be trusted solely because they were supplied by a client."
+    },
+    {
+      "id": "RBE-ES-SEC-005",
+      "line_end": 942,
+      "line_start": 942,
+      "section": "13.1 Trust boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Secrets SHALL be supplied through environment or approved secret storage and SHALL not be committed to the repository."
+    },
+    {
+      "id": "RBE-ES-SEC-006",
+      "line_end": 944,
+      "line_start": 944,
+      "section": "13.1 Trust boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Database backups and exported bundles MAY contain sensitive review material and SHALL be protected accordingly."
+    },
+    {
+      "id": "RBE-ES-SEC-007",
+      "line_end": 946,
+      "line_start": 946,
+      "section": "13.1 Trust boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The application SHALL apply least-privilege authorization for operator, reviewer, publisher and auditor actions."
+    },
+    {
+      "id": "RBE-ES-SEC-008",
+      "line_end": 948,
+      "line_start": 948,
+      "section": "13.1 Trust boundaries",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Publication of a decision SHALL require an authenticated accountable actor even though the verdict itself is machine-computed."
+    },
+    {
+      "id": "RBE-ES-TST-001",
+      "line_end": 1037,
+      "line_start": 1036,
+      "section": "15.3 Acceptance Gates",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "All mandatory golden, negative authorization, migration, package-integrity, and deterministic replay scenarios SHALL pass."
+    },
+    {
+      "id": "RBE-ES-TST-002",
+      "line_end": 1039,
+      "line_start": 1039,
+      "section": "15.3 Acceptance Gates",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Decision and state-machine branch coverage SHALL be 100 percent."
+    },
+    {
+      "id": "RBE-ES-TST-003",
+      "line_end": 1041,
+      "line_start": 1041,
+      "section": "15.3 Acceptance Gates",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A replay suite SHALL compare canonical artifact hashes across at least 100 runs."
+    },
+    {
+      "id": "RBE-ES-TST-004",
+      "line_end": 1044,
+      "line_start": 1043,
+      "section": "15.3 Acceptance Gates",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The requirement register SHALL link every mandatory architecture and engineering requirement to an implemented test or an explicit non-conformance record."
+    },
+    {
+      "id": "RBE-ES-TST-005",
+      "line_end": 1047,
+      "line_start": 1046,
+      "section": "15.3 Acceptance Gates",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "No high or critical dependency vulnerability may remain without a named, time-bounded approved exception."
+    },
+    {
+      "id": "RBE-ES-TST-006",
+      "line_end": 1050,
+      "line_start": 1049,
+      "section": "15.3 Acceptance Gates",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A clean migration and complete non-live foundation workflow SHALL run on Linux in CI without network access."
+    },
+    {
+      "id": "RBE-ES-UI-001",
+      "line_end": 909,
+      "line_start": 909,
+      "section": "12. User Interface Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The interface SHALL display the current session state and unmet prerequisites prominently."
+    },
+    {
+      "id": "RBE-ES-UI-002",
+      "line_end": 911,
+      "line_start": 911,
+      "section": "12. User Interface Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The interface SHALL not present reviewer recommendations as votes or aggregate approval percentages."
+    },
+    {
+      "id": "RBE-ES-UI-003",
+      "line_end": 913,
+      "line_start": 913,
+      "section": "12. User Interface Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Destructive-looking actions SHALL state their actual append-only behavior."
+    },
+    {
+      "id": "RBE-ES-UI-004",
+      "line_end": 915,
+      "line_start": 915,
+      "section": "12. User Interface Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The interface SHALL provide keyboard-accessible navigation and semantic labels for controls."
+    },
+    {
+      "id": "RBE-ES-UI-005",
+      "line_end": 917,
+      "line_start": 917,
+      "section": "12. User Interface Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The decision action SHALL present a deterministic preview of the input counts and blockers before publication."
+    },
+    {
+      "id": "RBE-ES-UI-006",
+      "line_end": 919,
+      "line_start": 919,
+      "section": "12. User Interface Requirements",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The interface SHALL not allow direct editing of published reports, findings, decisions or audit entries."
+    },
+    {
+      "id": "RBE-ES-VER-001",
+      "line_end": 1065,
+      "line_start": 1065,
+      "section": "16.1 Independent version axes",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL declare every methodology version and rule-set version it supports."
+    },
+    {
+      "id": "RBE-ES-VER-002",
+      "line_end": 1067,
+      "line_start": 1067,
+      "section": "16.1 Independent version axes",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Unsupported methodology versions SHALL fail validation before review begins."
+    },
+    {
+      "id": "RBE-ES-VER-003",
+      "line_end": 1069,
+      "line_start": 1069,
+      "section": "16.1 Independent version axes",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "A breaking schema change SHALL increment the major version."
+    },
+    {
+      "id": "RBE-ES-VER-004",
+      "line_end": 1071,
+      "line_start": 1071,
+      "section": "16.1 Independent version axes",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Artifact bundles SHALL remain self-describing and independently validatable."
+    },
+    {
+      "id": "RBE-ES-VER-005",
+      "line_end": 1073,
+      "line_start": 1073,
+      "section": "16.1 Independent version axes",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "The engine SHALL preserve the original engine, methodology and schema versions on imported sessions."
+    },
+    {
+      "id": "RBE-ES-VER-006",
+      "line_end": 1075,
+      "line_start": 1075,
+      "section": "16.1 Independent version axes",
+      "source": "engineering/RBE-001_Engineering_Specification_v1.1.0.md",
+      "statement": "Upgrading the software SHALL not rewrite historical decision artifacts."
+    },
+    {
+      "id": "RBE-EVT-001",
+      "line_end": 22,
+      "line_start": 22,
+      "section": "15.1 Purpose",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Only committed authoritative changes SHALL produce integration events."
+    },
+    {
+      "id": "RBE-EVT-002",
+      "line_end": 24,
+      "line_start": 23,
+      "section": "15.1 Purpose",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "An event consumer SHALL NOT infer permission to mutate governed state outside an authorized command."
+    },
+    {
+      "id": "RBE-EVT-010",
+      "line_end": 57,
+      "line_start": 56,
+      "section": "15.3 Event Envelope",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Event payloads SHALL contain the minimum information required by declared consumers and SHALL prefer references over duplicating restricted content."
+    },
+    {
+      "id": "RBE-EVT-020",
+      "line_end": 83,
+      "line_start": 82,
+      "section": "15.5 Transactional Outbox",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Direct broker publication inside the authoritative database transaction SHALL NOT be relied on for atomic delivery."
+    },
+    {
+      "id": "RBE-EVT-021",
+      "line_end": 85,
+      "line_start": 84,
+      "section": "15.5 Transactional Outbox",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Outbox consumers SHALL tolerate duplicate delivery and preserve event order where the contract declares ordering significant."
+    },
+    {
+      "id": "RBE-EVT-030",
+      "line_end": 110,
+      "line_start": 109,
+      "section": "15.7 Workflow Orchestration",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Workflow state SHALL be disposable and reconstructable from authoritative case state and events."
+    },
+    {
+      "id": "RBE-EVT-031",
+      "line_end": 112,
+      "line_start": 111,
+      "section": "15.7 Workflow Orchestration",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "A scheduler or worker SHALL NOT force a substantive transition solely because a timer expired."
+    },
+    {
+      "id": "RBE-EVT-040",
+      "line_end": 127,
+      "line_start": 127,
+      "section": "15.8 Saga and Compensation Rules",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Compensation SHALL be auditable, reason-coded and linked to the action it addresses."
+    },
+    {
+      "id": "RBE-EVT-050",
+      "line_end": 138,
+      "line_start": 137,
+      "section": "15.9 External Integration Principles",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "No external integration SHALL be required to reconstruct the authoritative decision unless it is itself a governed evidence source whose content is preserved."
+    },
+    {
+      "id": "RBE-EVT-060",
+      "line_end": 143,
+      "line_start": 143,
+      "section": "15.10 Notifications",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Notification delivery failure SHALL NOT roll back a valid substantive transaction."
+    },
+    {
+      "id": "RBE-EVT-061",
+      "line_end": 148,
+      "line_start": 147,
+      "section": "15.10 Notifications",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Notification templates SHALL be versioned, audience-aware and free from outcome- promotional language."
+    },
+    {
+      "id": "RBE-EVT-070",
+      "line_end": 159,
+      "line_start": 158,
+      "section": "15.11 Replay and Backfill",
+      "source": "architecture/chapters/15-event-integration-and-orchestration-architecture.md",
+      "statement": "Replay SHALL NOT create a second substantive domain effect for an already-applied event."
+    },
+    {
+      "id": "RBE-FRZ-001",
+      "line_end": 260,
+      "line_start": 259,
+      "section": "19.17 Codex Implementation Contract",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Any conflict between these chapters and the constitutional principles SHALL be resolved in favour of the constitutional principles."
+    },
+    {
+      "id": "RBE-FRZ-002",
+      "line_end": 262,
+      "line_start": 261,
+      "section": "19.17 Codex Implementation Contract",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Any implementation ambiguity capable of changing substantive review outcomes SHALL be returned for architecture clarification rather than inferred by Codex."
+    },
+    {
+      "id": "RBE-GOV-001",
+      "line_end": 24,
+      "line_start": 23,
+      "section": "4.1 Purpose and Constitutional Status",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "The governance framework SHALL be binding on every review case, reviewer, administrator, methodology owner, sponsor and system operator."
+    },
+    {
+      "id": "RBE-GOV-002",
+      "line_end": 26,
+      "line_start": 25,
+      "section": "4.1 Purpose and Constitutional Status",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "No project urgency, commercial opportunity, executive preference or engineering investment SHALL suspend the constitutional principles."
+    },
+    {
+      "id": "RBE-GOV-003",
+      "line_end": 28,
+      "line_start": 27,
+      "section": "4.1 Purpose and Constitutional Status",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "Where governance rules conflict with convenience or throughput, governance rules SHALL prevail."
+    },
+    {
+      "id": "RBE-GOV-010",
+      "line_end": 108,
+      "line_start": 107,
+      "section": "4.3 Functional Separation",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "A reviewer SHALL NOT hold incompatible assignments in the same case unless an explicitly versioned methodology rule permits it and the exception is recorded before review begins."
+    },
+    {
+      "id": "RBE-GOV-011",
+      "line_end": 110,
+      "line_start": 109,
+      "section": "4.3 Functional Separation",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "Commercial review SHALL occur only after methodology, evidence and reasoning inputs required by the rule set are complete."
+    },
+    {
+      "id": "RBE-GOV-012",
+      "line_end": 112,
+      "line_start": 111,
+      "section": "4.3 Functional Separation",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "Decision consolidation SHALL consume signed structured outputs; it SHALL NOT privately reinterpret reviewer intent."
+    },
+    {
+      "id": "RBE-GOV-020",
+      "line_end": 129,
+      "line_start": 128,
+      "section": "4.4 Independence and Information Barriers",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "The system SHALL record exactly which artifacts were visible to each reviewer at the time of assessment."
+    },
+    {
+      "id": "RBE-GOV-021",
+      "line_end": 131,
+      "line_start": 130,
+      "section": "4.4 Independence and Information Barriers",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "The system SHALL NOT reveal another reviewer’s outcome before independent submission unless the methodology explicitly defines a controlled joint stage."
+    },
+    {
+      "id": "RBE-GOV-022",
+      "line_end": 133,
+      "line_start": 132,
+      "section": "4.4 Independence and Information Barriers",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "Any unauthorized disclosure or communication capable of influencing a reviewer SHALL be logged as a governance incident and evaluated before finalization."
+    },
+    {
+      "id": "RBE-GOV-030",
+      "line_end": 151,
+      "line_start": 150,
+      "section": "4.5 Reviewer Eligibility",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "Eligibility SHALL be evaluated per assignment, not assumed permanently from prior participation."
+    },
+    {
+      "id": "RBE-GOV-031",
+      "line_end": 153,
+      "line_start": 152,
+      "section": "4.5 Reviewer Eligibility",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "A reviewer who authored, materially directed or materially benefited from the submitted conclusion SHALL NOT review that conclusion in an independent function."
+    },
+    {
+      "id": "RBE-GOV-040",
+      "line_end": 193,
+      "line_start": 193,
+      "section": "4.6 Conflict-of-Interest Framework",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "Conflict declarations SHALL be completed before substantive artifact access."
+    },
+    {
+      "id": "RBE-GOV-041",
+      "line_end": 195,
+      "line_start": 194,
+      "section": "4.6 Conflict-of-Interest Framework",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "Conflict rulings SHALL identify the declared facts, governing rule, decision, decision- maker and timestamp."
+    },
+    {
+      "id": "RBE-GOV-042",
+      "line_end": 197,
+      "line_start": 196,
+      "section": "4.6 Conflict-of-Interest Framework",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "A conflicted reviewer SHALL lose access to sealed case materials when removed from an assignment, subject to audit retention."
+    },
+    {
+      "id": "RBE-GOV-050",
+      "line_end": 218,
+      "line_start": 217,
+      "section": "4.7 Quorum and Decision Authority",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "The system SHALL calculate quorum from role coverage and governance state, not from a simple reviewer count."
+    },
+    {
+      "id": "RBE-GOV-051",
+      "line_end": 220,
+      "line_start": 219,
+      "section": "4.7 Quorum and Decision Authority",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "No user SHALL manually set quorum to satisfied without an authorized, rule-based waiver record."
+    },
+    {
+      "id": "RBE-GOV-060",
+      "line_end": 254,
+      "line_start": 253,
+      "section": "4.8 Authority and Prohibited Overrides",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "The engine SHALL have no “executive override”, “manual approval”, “force pass” or equivalent capability."
+    },
+    {
+      "id": "RBE-GOV-061",
+      "line_end": 259,
+      "line_start": 258,
+      "section": "4.8 Authority and Prohibited Overrides",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "A decision may be superseded only by a new governed decision that preserves lineage to the prior decision."
+    },
+    {
+      "id": "RBE-GOV-070",
+      "line_end": 276,
+      "line_start": 276,
+      "section": "4.9 Escalation and Governance Incidents",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "Every governance incident SHALL produce an immutable incident record and disposition."
+    },
+    {
+      "id": "RBE-GOV-071",
+      "line_end": 278,
+      "line_start": 277,
+      "section": "4.9 Escalation and Governance Incidents",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "A blocking incident SHALL prevent decision publication at the state-machine level, not merely through user guidance."
+    },
+    {
+      "id": "RBE-GOV-080",
+      "line_end": 300,
+      "line_start": 300,
+      "section": "4.10 Governance Metrics and Anti-Metrics",
+      "source": "architecture/chapters/04-governance-framework.md",
+      "statement": "The platform SHALL NOT optimize reviewer performance against outcome distribution."
+    },
+    {
+      "id": "RBE-IAM-001",
+      "line_end": 22,
+      "line_start": 21,
+      "section": "9.1 Security and Governance Objective",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Every protected action SHALL be authorized against identity, role, case scope, lifecycle state, conflict status and artefact classification."
+    },
+    {
+      "id": "RBE-IAM-002",
+      "line_end": 23,
+      "line_start": 23,
+      "section": "9.1 Security and Governance Objective",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "No role SHALL receive authority solely because it is organizationally senior."
+    },
+    {
+      "id": "RBE-IAM-003",
+      "line_end": 24,
+      "line_start": 24,
+      "section": "9.1 Security and Governance Objective",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Permissions SHALL default to deny."
+    },
+    {
+      "id": "RBE-IAM-020",
+      "line_end": 160,
+      "line_start": 159,
+      "section": "9.4 Permission Model",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Permissions SHALL be action-specific; broad “edit case” or “admin all” grants SHALL NOT authorize substantive mutations."
+    },
+    {
+      "id": "RBE-IAM-021",
+      "line_end": 162,
+      "line_start": 161,
+      "section": "9.4 Permission Model",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Every permission grant SHALL be case-scoped unless the action is explicitly platform- scoped."
+    },
+    {
+      "id": "RBE-IAM-030",
+      "line_end": 189,
+      "line_start": 188,
+      "section": "9.5 Separation-of-Duties Rules",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "The authorization engine SHALL evaluate incompatible-role combinations before assignment and again before every sensitive action."
+    },
+    {
+      "id": "RBE-IAM-031",
+      "line_end": 190,
+      "line_start": 190,
+      "section": "9.5 Separation-of-Duties Rules",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Separation-of-duties violations SHALL be blocking governance incidents."
+    },
+    {
+      "id": "RBE-IAM-050",
+      "line_end": 231,
+      "line_start": 231,
+      "section": "9.7 Information Barriers",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "The system SHALL log every disclosure of sealed or restricted artefacts."
+    },
+    {
+      "id": "RBE-IAM-051",
+      "line_end": 233,
+      "line_start": 232,
+      "section": "9.7 Information Barriers",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Outcome labels and commercial desirability signals SHALL be withheld where they are not required for the reviewer’s function."
+    },
+    {
+      "id": "RBE-IAM-060",
+      "line_end": 244,
+      "line_start": 243,
+      "section": "9.8 Conflict-of-Interest Controls",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Conflict declarations SHALL occur before substantive access and be renewed when material circumstances change."
+    },
+    {
+      "id": "RBE-IAM-061",
+      "line_end": 245,
+      "line_start": 245,
+      "section": "9.8 Conflict-of-Interest Controls",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "The conflicted individual SHALL NOT adjudicate their own conflict."
+    },
+    {
+      "id": "RBE-IAM-062",
+      "line_end": 247,
+      "line_start": 246,
+      "section": "9.8 Conflict-of-Interest Controls",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Conflict disposition SHALL be immutable, reasoned and visible to governance reviewers and auditors."
+    },
+    {
+      "id": "RBE-IAM-070",
+      "line_end": 266,
+      "line_start": 265,
+      "section": "9.9 Privileged Administration and Break-Glass",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Break-glass access SHALL never permit alteration of sealed or decided substantive artefacts."
+    },
+    {
+      "id": "RBE-IAM-080",
+      "line_end": 285,
+      "line_start": 284,
+      "section": "9.10 AI Permission Boundary",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Every AI-produced substantive draft SHALL be labeled as machine-assisted and attributed to the accountable human approver."
+    },
+    {
+      "id": "RBE-IAM-081",
+      "line_end": 287,
+      "line_start": 286,
+      "section": "9.10 AI Permission Boundary",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "AI service identities SHALL have no permission to finalize, sign, publish, appeal, void or supersede a decision."
+    },
+    {
+      "id": "RBE-IAM-090",
+      "line_end": 296,
+      "line_start": 295,
+      "section": "9.11 Access Review and Revocation",
+      "source": "architecture/chapters/09-roles-permissions-and-separation-of-duties.md",
+      "statement": "Revocation SHALL affect future access immediately while preserving attributable historical records."
+    },
+    {
+      "id": "RBE-IBR-001",
+      "line_end": 124,
+      "line_start": 123,
+      "section": "2.17 Information Barriers",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The engine SHOULD implement staged disclosure so that downstream recommendations cannot anchor upstream independent reviews."
+    },
+    {
+      "id": "RBE-IMP-001",
+      "line_end": 23,
+      "line_start": 22,
+      "section": "22.1 Purpose",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Implementation SHALL conform to the frozen architecture and SHALL NOT infer new decision authority, governance policy or evidence standards from UI requirements or example data."
+    },
+    {
+      "id": "RBE-IMP-002",
+      "line_end": 25,
+      "line_start": 24,
+      "section": "22.1 Purpose",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Codex and other coding agents SHALL stop and surface ambiguity when a requested implementation could change substantive review meaning or violate a constitutional principle."
+    },
+    {
+      "id": "RBE-IMP-010",
+      "line_end": 37,
+      "line_start": 36,
+      "section": "22.2 Order of Authority",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "When implementation artefacts conflict, the higher-order authority SHALL prevail and the inconsistency SHALL be recorded for correction."
+    },
+    {
+      "id": "RBE-IMP-020",
+      "line_end": 83,
+      "line_start": 82,
+      "section": "22.3 Repository and Module Structure",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Domain modules SHALL NOT depend on UI frameworks, transport protocols, persistence implementations, message brokers, AI SDKs or deployment tooling."
+    },
+    {
+      "id": "RBE-IMP-021",
+      "line_end": 85,
+      "line_start": 84,
+      "section": "22.3 Repository and Module Structure",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Only designated infrastructure adapters SHALL access authoritative databases, object stores, message brokers, key services or external integrations."
+    },
+    {
+      "id": "RBE-IMP-030",
+      "line_end": 97,
+      "line_start": 96,
+      "section": "22.4 Domain Modeling Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "A domain object SHALL NOT expose a mutation that can place it in a state prohibited by the Chapter 8 state machine."
+    },
+    {
+      "id": "RBE-IMP-040",
+      "line_end": 107,
+      "line_start": 105,
+      "section": "22.5 Command and Query Implementation",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Every substantive command handler SHALL perform schema validation, authentication context validation, authorization, state/precondition validation, domain execution, durable persistence and audit/outbox recording in a controlled transaction boundary."
+    },
+    {
+      "id": "RBE-IMP-041",
+      "line_end": 108,
+      "line_start": 108,
+      "section": "22.5 Command and Query Implementation",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Command handlers SHALL be idempotent where client or infrastructure retry is possible."
+    },
+    {
+      "id": "RBE-IMP-042",
+      "line_end": 109,
+      "line_start": 109,
+      "section": "22.5 Command and Query Implementation",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Queries SHALL NOT silently repair, finalize or otherwise mutate authoritative state."
+    },
+    {
+      "id": "RBE-IMP-050",
+      "line_end": 120,
+      "line_start": 119,
+      "section": "22.6 Persistence Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Persistence code SHALL preserve the audit and provenance semantics defined in Chapters 10 and 14 even when the underlying technology changes."
+    },
+    {
+      "id": "RBE-IMP-060",
+      "line_end": 131,
+      "line_start": 130,
+      "section": "22.7 API Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "The API SHALL NOT expose an endpoint whose purpose is to force a decision, rewrite final history, bypass quorum or suppress required findings."
+    },
+    {
+      "id": "RBE-IMP-070",
+      "line_end": 146,
+      "line_start": 145,
+      "section": "22.8 Event and Orchestration Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Every event representing a substantive state change SHALL originate from an authoritative domain transaction and carry sufficient identifiers for provenance reconstruction."
+    },
+    {
+      "id": "RBE-IMP-080",
+      "line_end": 157,
+      "line_start": 156,
+      "section": "22.9 Security Implementation Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "No code path, test helper or administrative utility SHALL introduce a permanent universal bypass of authorization or governance policy."
+    },
+    {
+      "id": "RBE-IMP-090",
+      "line_end": 171,
+      "line_start": 170,
+      "section": "22.10 AI and Automation Implementation Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "AI output SHALL be stored as attributed advisory material distinct from reviewer- authored and Board-authoritative records."
+    },
+    {
+      "id": "RBE-IMP-091",
+      "line_end": 173,
+      "line_start": 172,
+      "section": "22.10 AI and Automation Implementation Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "An AI component SHALL NOT possess credentials capable of finalizing decisions, signing reports, changing methodology or altering immutable evidence."
+    },
+    {
+      "id": "RBE-IMP-100",
+      "line_end": 188,
+      "line_start": 188,
+      "section": "22.11 User Interface Implementation Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "The UI SHALL NOT preselect PASS, FAIL or any substantive outcome."
+    },
+    {
+      "id": "RBE-IMP-101",
+      "line_end": 189,
+      "line_start": 189,
+      "section": "22.11 User Interface Implementation Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Neutral presentation requirements SHALL be covered by acceptance and usability testing."
+    },
+    {
+      "id": "RBE-IMP-110",
+      "line_end": 200,
+      "line_start": 199,
+      "section": "22.12 Coding Standards",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Code implementing substantive governance rules SHALL reference the relevant requirement or approved decision record in tests or documentation."
+    },
+    {
+      "id": "RBE-IMP-120",
+      "line_end": 206,
+      "line_start": 205,
+      "section": "22.13 Logging and Error Handling",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "The application SHALL NOT log raw secrets, unrestricted evidence content, authentication tokens or unnecessary personal data."
+    },
+    {
+      "id": "RBE-IMP-121",
+      "line_end": 208,
+      "line_start": 207,
+      "section": "22.13 Logging and Error Handling",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Failures after a substantive command is accepted SHALL resolve to a known durable state and SHALL be recoverable without double application."
+    },
+    {
+      "id": "RBE-IMP-130",
+      "line_end": 217,
+      "line_start": 216,
+      "section": "22.14 Migration and Compatibility Rules",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "A migration SHALL NOT reinterpret historical substantive data under a new methodology or decision rule unless a governed re-review explicitly requires it."
+    },
+    {
+      "id": "RBE-IMP-140",
+      "line_end": 244,
+      "line_start": 242,
+      "section": "22.16 Pull Request and Review Requirements",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Changes affecting constitutional controls, decision authority, evidence integrity or audit semantics SHALL require review by both engineering and designated governance or architecture authority."
+    },
+    {
+      "id": "RBE-IMP-150",
+      "line_end": 259,
+      "line_start": 258,
+      "section": "22.17 Codex Task Packet",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Codex SHALL NOT be instructed with outcome-only prompts such as “make the test pass” or “add an approve button” without the governing requirements and constraints."
+    },
+    {
+      "id": "RBE-IMP-160",
+      "line_end": 291,
+      "line_start": 290,
+      "section": "22.20 Architecture Exception Process",
+      "source": "architecture/chapters/22-implementation-guidance-and-codex-build-contract.md",
+      "statement": "Architecture exceptions SHALL be explicit, time-bounded, versioned and approved before release; undocumented divergence is a defect."
+    },
+    {
+      "id": "RBE-INF-001",
+      "line_end": 24,
+      "line_start": 23,
+      "section": "19.1 Purpose",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Deployment architecture SHALL preserve the security, audit, separation-of-duties and reproducibility requirements defined in Chapters 8–18."
+    },
+    {
+      "id": "RBE-INF-002",
+      "line_end": 126,
+      "line_start": 125,
+      "section": "2.17 Information Barriers",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "Any departure from staged disclosure SHALL be recorded with reason and risk classification."
+    },
+    {
+      "id": "RBE-INF-010",
+      "line_end": 51,
+      "line_start": 50,
+      "section": "19.2 Environment Model",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Production data and secrets SHALL NOT be copied into lower environments except through formally approved, controlled and auditable masking processes."
+    },
+    {
+      "id": "RBE-INF-020",
+      "line_end": 67,
+      "line_start": 66,
+      "section": "19.3 Baseline Production Topology",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "All production components SHALL be deployed from versioned infrastructure definitions and approved release artefacts."
+    },
+    {
+      "id": "RBE-INF-030",
+      "line_end": 79,
+      "line_start": 78,
+      "section": "19.4 Infrastructure as Code",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Unreviewed manual infrastructure drift SHALL be treated as a configuration incident and either reverted or codified through normal change control."
+    },
+    {
+      "id": "RBE-INF-040",
+      "line_end": 100,
+      "line_start": 99,
+      "section": "19.5 Build and Release Pipeline",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "The pipeline SHALL promote the same signed artefact digest from staging to production; production SHALL NOT rebuild source independently."
+    },
+    {
+      "id": "RBE-INF-041",
+      "line_end": 102,
+      "line_start": 101,
+      "section": "19.5 Build and Release Pipeline",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "A deployment SHALL fail if provenance, signature or policy validation cannot be completed."
+    },
+    {
+      "id": "RBE-INF-050",
+      "line_end": 117,
+      "line_start": 116,
+      "section": "19.6 Release Strategies",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Feature flags SHALL NOT be used to bypass constitutional, decision, audit or separation-of- duties requirements."
+    },
+    {
+      "id": "RBE-INF-060",
+      "line_end": 123,
+      "line_start": 122,
+      "section": "19.7 Database Migration Architecture",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Every production migration SHALL be versioned, repeatable, tested against representative data and linked to a release record."
+    },
+    {
+      "id": "RBE-INF-061",
+      "line_end": 125,
+      "line_start": 124,
+      "section": "19.7 Database Migration Architecture",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "A migration SHALL NOT rewrite finalized decisions, audit events or evidence hashes except through an explicitly approved corrective procedure that preserves the original record."
+    },
+    {
+      "id": "RBE-INF-070",
+      "line_end": 139,
+      "line_start": 138,
+      "section": "19.8 Configuration Management",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "The application SHALL resolve decision-affecting configuration by explicit version identifier, not mutable environment default."
+    },
+    {
+      "id": "RBE-INF-080",
+      "line_end": 152,
+      "line_start": 151,
+      "section": "19.9 Container and Runtime Controls",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Production workloads SHALL run with the minimum operating-system and platform privileges required for their declared function."
+    },
+    {
+      "id": "RBE-INF-090",
+      "line_end": 162,
+      "line_start": 161,
+      "section": "19.10 Network, DNS and Certificate Management",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "All documented production network flows SHALL have an owner, purpose, source, destination, protocol and security control."
+    },
+    {
+      "id": "RBE-INF-100",
+      "line_end": 169,
+      "line_start": 168,
+      "section": "19.11 Observability Infrastructure",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Production logs SHALL be structured, time-synchronized, tamper-resistant within the retention period and protected from unauthorized deletion."
+    },
+    {
+      "id": "RBE-INF-101",
+      "line_end": 171,
+      "line_start": 170,
+      "section": "19.11 Observability Infrastructure",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Release identifiers SHALL be included in telemetry so incidents can be correlated to deployed code and configuration."
+    },
+    {
+      "id": "RBE-INF-110",
+      "line_end": 180,
+      "line_start": 179,
+      "section": "19.12 Backup and Recovery Infrastructure",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "A backup SHALL not be considered successful until restoration and integrity verification have been demonstrated on the approved schedule."
+    },
+    {
+      "id": "RBE-INF-120",
+      "line_end": 198,
+      "line_start": 197,
+      "section": "19.13 Change and Release Governance",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Emergency deployment authority SHALL NOT include authority to alter review outcomes, finalized reports or immutable governance history."
+    },
+    {
+      "id": "RBE-INF-130",
+      "line_end": 204,
+      "line_start": 203,
+      "section": "19.14 Rollback and Recovery",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Rollback procedures SHALL preserve all valid audit events and shall not silently discard acknowledged substantive commands."
+    },
+    {
+      "id": "RBE-INF-140",
+      "line_end": 210,
+      "line_start": 209,
+      "section": "19.15 Multi-Tenancy and Environment Isolation",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Tenant or study identifiers SHALL be propagated and enforced on every governed data path."
+    },
+    {
+      "id": "RBE-INF-150",
+      "line_end": 221,
+      "line_start": 220,
+      "section": "19.16 Infrastructure Acceptance Criteria",
+      "source": "architecture/chapters/19-deployment-and-infrastructure-architecture.md",
+      "statement": "Production readiness SHALL be evidenced by completed acceptance records, not verbal assurance or unrecorded manual checks."
+    },
+    {
+      "id": "RBE-LIF-001",
+      "line_end": 22,
+      "line_start": 22,
+      "section": "5.1 Lifecycle Objective",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Every case SHALL exist in exactly one authoritative lifecycle state at a time."
+    },
+    {
+      "id": "RBE-LIF-002",
+      "line_end": 24,
+      "line_start": 23,
+      "section": "5.1 Lifecycle Objective",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Every transition SHALL identify the triggering actor or rule, prior state, new state, timestamp and supporting reason."
+    },
+    {
+      "id": "RBE-LIF-003",
+      "line_end": 26,
+      "line_start": 25,
+      "section": "5.1 Lifecycle Objective",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Invalid transitions SHALL be rejected by the domain layer and recorded as security- relevant events where appropriate."
+    },
+    {
+      "id": "RBE-LIF-010",
+      "line_end": 112,
+      "line_start": 111,
+      "section": "5.3 Submission and Intake Validation",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Submission SHALL create an immutable submission version; later corrections SHALL create a successor version."
+    },
+    {
+      "id": "RBE-LIF-011",
+      "line_end": 113,
+      "line_start": 113,
+      "section": "5.3 Submission and Intake Validation",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Intake validation SHALL assess reviewability, not substantive merit."
+    },
+    {
+      "id": "RBE-LIF-012",
+      "line_end": 115,
+      "line_start": 114,
+      "section": "5.3 Submission and Intake Validation",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "A returned submission SHALL state each missing or invalid requirement without suggesting a preferred substantive conclusion."
+    },
+    {
+      "id": "RBE-LIF-020",
+      "line_end": 133,
+      "line_start": 132,
+      "section": "5.4 Evidence Lock",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "No evidence item SHALL be replaced after lock. New material SHALL be introduced through a governed amendment with lineage."
+    },
+    {
+      "id": "RBE-LIF-021",
+      "line_end": 135,
+      "line_start": 134,
+      "section": "5.4 Evidence Lock",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "The system SHALL compute and verify an evidence package digest before every decision replay."
+    },
+    {
+      "id": "RBE-LIF-030",
+      "line_end": 141,
+      "line_start": 140,
+      "section": "5.5 Assignment and Conflict Adjudication",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "A reviewer SHALL receive no substantive package access until assignment acceptance and conflict declaration are complete."
+    },
+    {
+      "id": "RBE-LIF-031",
+      "line_end": 143,
+      "line_start": 142,
+      "section": "5.5 Assignment and Conflict Adjudication",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Assignment changes after access SHALL preserve the original assignment, access history and removal reason."
+    },
+    {
+      "id": "RBE-LIF-040",
+      "line_end": 164,
+      "line_start": 163,
+      "section": "5.6 Independent Review Stage",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Independent assessments SHALL be sealed before other reviewer conclusions are disclosed."
+    },
+    {
+      "id": "RBE-LIF-041",
+      "line_end": 166,
+      "line_start": 165,
+      "section": "5.6 Independent Review Stage",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "An assessment SHALL NOT be accepted unless all material findings contain a traceable basis."
+    },
+    {
+      "id": "RBE-LIF-042",
+      "line_end": 168,
+      "line_start": 167,
+      "section": "5.6 Independent Review Stage",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "A reviewer may conclude that no finding exists, but SHALL still provide scope acknowledgment and reasoning sufficiency attestation."
+    },
+    {
+      "id": "RBE-LIF-050",
+      "line_end": 181,
+      "line_start": 180,
+      "section": "5.7 Challenge Phase",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Challenge findings SHALL be evaluated on articulated basis, not accepted merely because they are skeptical."
+    },
+    {
+      "id": "RBE-LIF-051",
+      "line_end": 183,
+      "line_start": 182,
+      "section": "5.7 Challenge Phase",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "The board SHALL NOT require every challenge to be resolved in favor of the submission; unresolved material challenges SHALL affect the deterministic outcome."
+    },
+    {
+      "id": "RBE-LIF-060",
+      "line_end": 211,
+      "line_start": 210,
+      "section": "5.8 Clarification and Amendment",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Material amendments SHALL trigger re-evaluation of every assessment materially affected by the change."
+    },
+    {
+      "id": "RBE-LIF-061",
+      "line_end": 213,
+      "line_start": 212,
+      "section": "5.8 Clarification and Amendment",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "The engine SHALL record which prior findings were invalidated, retained or superseded by an amendment."
+    },
+    {
+      "id": "RBE-LIF-070",
+      "line_end": 225,
+      "line_start": 224,
+      "section": "5.9 Consolidation",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "A normalized finding SHALL retain links to every contributing and dissenting source finding."
+    },
+    {
+      "id": "RBE-LIF-071",
+      "line_end": 227,
+      "line_start": 226,
+      "section": "5.9 Consolidation",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Consensus SHALL NOT be manufactured by majority vote unless the methodology explicitly uses voting for the relevant question."
+    },
+    {
+      "id": "RBE-LIF-080",
+      "line_end": 242,
+      "line_start": 241,
+      "section": "5.10 Governance Validation and Decision",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "The decision SHALL be calculated only from authorized signed inputs and the locked rule set."
+    },
+    {
+      "id": "RBE-LIF-081",
+      "line_end": 244,
+      "line_start": 243,
+      "section": "5.10 Governance Validation and Decision",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "A human-readable rationale may explain the calculated outcome but SHALL NOT contradict or replace the machine-readable decision basis."
+    },
+    {
+      "id": "RBE-LIF-090",
+      "line_end": 257,
+      "line_start": 256,
+      "section": "5.11 Publication",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Publication SHALL freeze a signed decision artifact and a machine-readable decision record with matching integrity identifiers."
+    },
+    {
+      "id": "RBE-LIF-091",
+      "line_end": 258,
+      "line_start": 258,
+      "section": "5.11 Publication",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "The presentation layer SHALL use neutral visual treatment for every outcome."
+    },
+    {
+      "id": "RBE-LIF-100",
+      "line_end": 275,
+      "line_start": 274,
+      "section": "5.12 Appeal and Re-review",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "Appeal reviewers SHALL be independent of the original decision to the extent defined by methodology and availability rules."
+    },
+    {
+      "id": "RBE-LIF-101",
+      "line_end": 277,
+      "line_start": 276,
+      "section": "5.12 Appeal and Re-review",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "An appeal outcome SHALL be UPHELD, REMANDED or SUPERSEDED; it SHALL NOT edit the original record."
+    },
+    {
+      "id": "RBE-LIF-110",
+      "line_end": 284,
+      "line_start": 282,
+      "section": "5.13 Closure, Retention and Replay",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "A final case SHALL retain every submission version, evidence manifest, access record, assessment version, finding, incident, decision input, rule-set digest, decision output and appeal artifact."
+    },
+    {
+      "id": "RBE-LIF-111",
+      "line_end": 286,
+      "line_start": 285,
+      "section": "5.13 Closure, Retention and Replay",
+      "source": "architecture/chapters/05-review-lifecycle.md",
+      "statement": "The engine SHALL support deterministic replay without network access to mutable third- party content, using retained evidence representations and hashes."
+    },
+    {
+      "id": "RBE-MAN-001",
+      "line_end": 24,
+      "line_start": 23,
+      "section": "1.1 Purpose",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "The engine SHALL exist to execute an approved Review Board Methodology, not to create, amend or reinterpret that methodology during a live review."
+    },
+    {
+      "id": "RBE-MAN-002",
+      "line_end": 26,
+      "line_start": 25,
+      "section": "1.1 Purpose",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "The engine SHALL preserve a strict distinction between evidence, reviewer analysis, findings, recommendations and the final board decision."
+    },
+    {
+      "id": "RBE-MAN-003",
+      "line_end": 28,
+      "line_start": 27,
+      "section": "1.1 Purpose",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "The engine SHALL prevent any desired business, commercial or engineering outcome from becoming an input to the decision calculation."
+    },
+    {
+      "id": "RBE-NFR-001",
+      "line_end": 23,
+      "line_start": 22,
+      "section": "18.1 Purpose",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Performance optimization SHALL NOT bypass authorization, validation, audit persistence, integrity verification or separation-of-duties controls."
+    },
+    {
+      "id": "RBE-NFR-010",
+      "line_end": 63,
+      "line_start": 62,
+      "section": "18.3 Workload Model",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Capacity models SHALL distinguish transactional metadata, evidence object storage, search indexing, audit events and generated artefacts."
+    },
+    {
+      "id": "RBE-NFR-020",
+      "line_end": 80,
+      "line_start": 79,
+      "section": "18.4 Scalability Strategy",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Horizontal scaling SHALL preserve idempotency, optimistic concurrency and single authoritative transition semantics."
+    },
+    {
+      "id": "RBE-NFR-021",
+      "line_end": 82,
+      "line_start": 81,
+      "section": "18.4 Scalability Strategy",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "No cached or replicated value SHALL be treated as authoritative for a substantive decision command."
+    },
+    {
+      "id": "RBE-NFR-030",
+      "line_end": 93,
+      "line_start": 92,
+      "section": "18.5 Concurrency and Consistency",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "A stale command SHALL fail with a resolvable concurrency response and SHALL NOT overwrite newer governed state."
+    },
+    {
+      "id": "RBE-NFR-040",
+      "line_end": 125,
+      "line_start": 124,
+      "section": "18.6 Availability and Degraded Operation",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "The system SHALL fail closed for substantive writes when durable audit or authoritative persistence cannot be confirmed."
+    },
+    {
+      "id": "RBE-NFR-050",
+      "line_end": 135,
+      "line_start": 134,
+      "section": "18.7 Resilience Patterns",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Retries SHALL NOT create duplicate state transitions, reports, reviewer assignments or notifications."
+    },
+    {
+      "id": "RBE-NFR-060",
+      "line_end": 167,
+      "line_start": 166,
+      "section": "18.8 Backup, Recovery and Disaster Recovery",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Recovery exercises SHALL verify both technical restoration and preservation of governance provenance."
+    },
+    {
+      "id": "RBE-NFR-061",
+      "line_end": 172,
+      "line_start": 171,
+      "section": "18.8 Backup, Recovery and Disaster Recovery",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Recovered systems SHALL validate audit-chain and evidence-integrity status before accepting substantive writes."
+    },
+    {
+      "id": "RBE-NFR-070",
+      "line_end": 177,
+      "line_start": 176,
+      "section": "18.9 Data Integrity and Corruption Handling",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Integrity validation failures SHALL quarantine the affected artefact, block dependent decisions and create an incident record."
+    },
+    {
+      "id": "RBE-NFR-080",
+      "line_end": 186,
+      "line_start": 185,
+      "section": "18.10 Capacity Management",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Capacity alarms SHALL be set early enough to avoid emergency changes that bypass normal governance."
+    },
+    {
+      "id": "RBE-NFR-090",
+      "line_end": 202,
+      "line_start": 201,
+      "section": "18.11 Performance Testing",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Performance tests SHALL include authorization, audit and integrity controls; synthetic bypass modes SHALL NOT be used for acceptance results."
+    },
+    {
+      "id": "RBE-NFR-100",
+      "line_end": 217,
+      "line_start": 216,
+      "section": "18.12 Observability and Reliability Indicators",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "Operational metrics SHALL not expose protected evidence content or reviewer- confidential material."
+    },
+    {
+      "id": "RBE-NFR-110",
+      "line_end": 223,
+      "line_start": 222,
+      "section": "18.13 Reliability Governance",
+      "source": "architecture/chapters/18-performance-scalability-and-reliability-architecture.md",
+      "statement": "A release SHALL be blocked when known defects can cause untraceable mutation, incorrect authorization, duplicate finalization or integrity loss."
+    },
+    {
+      "id": "RBE-NON-001",
+      "line_end": 81,
+      "line_start": 80,
+      "section": "1.4 Explicit Non-Goals",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "A conforming implementation SHALL NOT expose an “approve anyway” control or equivalent bypass."
+    },
+    {
+      "id": "RBE-NON-002",
+      "line_end": 83,
+      "line_start": 82,
+      "section": "1.4 Explicit Non-Goals",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "A disputed outcome SHALL be addressed through correction, appeal, new evidence or re- review, never through mutation of the historical decision."
+    },
+    {
+      "id": "RBE-OPS-001",
+      "line_end": 23,
+      "line_start": 22,
+      "section": "21.1 Purpose",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Operational procedures SHALL preserve the constitutional principles during normal, degraded, emergency and recovery conditions."
+    },
+    {
+      "id": "RBE-OPS-002",
+      "line_end": 25,
+      "line_start": 24,
+      "section": "21.1 Purpose",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "No operational role SHALL gain authority to create, alter or suppress a substantive Board outcome merely because it maintains the platform."
+    },
+    {
+      "id": "RBE-OPS-010",
+      "line_end": 50,
+      "line_start": 48,
+      "section": "21.3 Service Catalogue and Ownership",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "A production component without a named accountable owner and documented support path SHALL be considered non-operational and SHALL NOT be relied upon for authoritative review processing."
+    },
+    {
+      "id": "RBE-OPS-020",
+      "line_end": 68,
+      "line_start": 67,
+      "section": "21.4 Standard Operating Procedures",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Every procedure that can affect authoritative records SHALL specify prerequisites, authorized roles, validation checks, audit evidence, rollback or recovery, and post-action review."
+    },
+    {
+      "id": "RBE-OPS-030",
+      "line_end": 87,
+      "line_start": 86,
+      "section": "21.5 Monitoring and Observability",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Monitoring SHALL alert on integrity and governance failures even when conventional availability metrics remain healthy."
+    },
+    {
+      "id": "RBE-OPS-031",
+      "line_end": 89,
+      "line_start": 88,
+      "section": "21.5 Monitoring and Observability",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Operational telemetry SHALL avoid recording protected evidence content, secrets or unnecessary personal data."
+    },
+    {
+      "id": "RBE-OPS-040",
+      "line_end": 101,
+      "line_start": 100,
+      "section": "21.6 Alerting and Escalation",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "An alert suggesting possible alteration of evidence, audit history, decision authority or signed reports SHALL be treated as a potential governance incident until disproved."
+    },
+    {
+      "id": "RBE-OPS-050",
+      "line_end": 122,
+      "line_start": 121,
+      "section": "21.7 Incident Management",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Incident response SHALL preserve forensic and governance evidence even where preservation delays convenience-oriented restoration steps."
+    },
+    {
+      "id": "RBE-OPS-051",
+      "line_end": 124,
+      "line_start": 123,
+      "section": "21.7 Incident Management",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "A technically resolved incident SHALL remain open until potential impact on evidence, reviews, decisions and reports has been assessed and documented."
+    },
+    {
+      "id": "RBE-OPS-060",
+      "line_end": 140,
+      "line_start": 139,
+      "section": "21.8 Degraded Mode and Safe Failure",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "The engine SHALL fail closed for substantive actions when authorization, audit durability, evidence integrity or decision validation cannot be established."
+    },
+    {
+      "id": "RBE-OPS-070",
+      "line_end": 153,
+      "line_start": 152,
+      "section": "21.9 Change and Release Management",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Emergency changes SHALL be time-bounded, fully audited and retrospectively reviewed; emergency status SHALL NOT remove constitutional or evidence-integrity controls."
+    },
+    {
+      "id": "RBE-OPS-080",
+      "line_end": 158,
+      "line_start": 157,
+      "section": "21.10 Configuration and Feature-Flag Governance",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Production configuration SHALL be versioned, reviewed, promoted through controlled automation and attributable to an approved change."
+    },
+    {
+      "id": "RBE-OPS-081",
+      "line_end": 160,
+      "line_start": 159,
+      "section": "21.10 Configuration and Feature-Flag Governance",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "A feature flag SHALL NOT disable mandatory review, challenge, quorum, audit, signing or separation-of-duties controls."
+    },
+    {
+      "id": "RBE-OPS-090",
+      "line_end": 170,
+      "line_start": 169,
+      "section": "21.11 Identity Lifecycle and Access Reviews",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Access recertification SHALL verify both technical permission and continued eligibility under independence and conflict-of-interest rules."
+    },
+    {
+      "id": "RBE-OPS-100",
+      "line_end": 186,
+      "line_start": 185,
+      "section": "21.12 Evidence Operations",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Operational correction of evidence metadata SHALL create a new attributable version or amendment record and SHALL preserve the prior state."
+    },
+    {
+      "id": "RBE-OPS-110",
+      "line_end": 191,
+      "line_start": 190,
+      "section": "21.13 Backup, Restore and Disaster Recovery Operations",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Recovery exercises SHALL validate cross-store consistency and provenance, not merely successful restoration of individual technologies."
+    },
+    {
+      "id": "RBE-OPS-111",
+      "line_end": 193,
+      "line_start": 192,
+      "section": "21.13 Backup, Restore and Disaster Recovery Operations",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "After disaster recovery, substantive processing SHALL resume only after integrity, authorization policy, audit continuity and report-signing capability are validated."
+    },
+    {
+      "id": "RBE-OPS-120",
+      "line_end": 199,
+      "line_start": 198,
+      "section": "21.14 Data Retention, Archival and Disposal",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Deletion SHALL create an auditable disposal record identifying authority, scope, rule, execution result and any retained tombstone or provenance reference."
+    },
+    {
+      "id": "RBE-OPS-121",
+      "line_end": 201,
+      "line_start": 200,
+      "section": "21.14 Data Retention, Archival and Disposal",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Retention reduction SHALL NOT make a finalized decision materially unreconstructable while its governing retention obligation remains active."
+    },
+    {
+      "id": "RBE-OPS-130",
+      "line_end": 207,
+      "line_start": 206,
+      "section": "21.15 Methodology and Policy Operations",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "A new methodology or policy version SHALL NOT retroactively alter the meaning or status of a finalized historical review."
+    },
+    {
+      "id": "RBE-OPS-131",
+      "line_end": 209,
+      "line_start": 208,
+      "section": "21.15 Methodology and Policy Operations",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Activation records SHALL identify the approved version, effective time, approving authority, affected case classes and rollback limitations."
+    },
+    {
+      "id": "RBE-OPS-140",
+      "line_end": 225,
+      "line_start": 224,
+      "section": "21.16 Routine Governance Reviews",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Operational metrics SHALL NOT be converted into approval, rejection or throughput targets that pressure substantive outcomes."
+    },
+    {
+      "id": "RBE-OPS-150",
+      "line_end": 231,
+      "line_start": 230,
+      "section": "21.17 Service-Level Objectives and Error Budgets",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Integrity, unauthorized-decision and audit-loss events SHALL have a zero-tolerance objective independent of general availability error budgets."
+    },
+    {
+      "id": "RBE-OPS-160",
+      "line_end": 249,
+      "line_start": 248,
+      "section": "21.19 Chapter 21 Codex Build Contract",
+      "source": "architecture/chapters/21-operational-procedures-and-service-governance.md",
+      "statement": "Operational automation generated by coding agents SHALL be subject to the same review, testing, least-privilege and audit requirements as production application code."
+    },
+    {
+      "id": "RBE-OUT-001",
+      "line_end": 121,
+      "line_start": 120,
+      "section": "1.6 Board Outcomes",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "Outcome labels and their decision conditions SHALL be defined by a versioned methodology rule set and SHALL NOT be invented by application code."
+    },
+    {
+      "id": "RBE-OUT-002",
+      "line_end": 123,
+      "line_start": 122,
+      "section": "1.6 Board Outcomes",
+      "source": "architecture/chapters/01-executive-summary-and-architecture-mandate.md",
+      "statement": "The user interface SHALL present all outcomes neutrally and SHALL NOT visually celebrate PASS or stigmatize FAIL."
+    },
+    {
+      "id": "RBE-OUT-003",
+      "line_end": 26,
+      "line_start": 26,
+      "section": "11.1 Purpose",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "PASS and FAIL outputs SHALL use neutral presentation and equivalent evidentiary rigor."
+    },
+    {
+      "id": "RBE-OUT-010",
+      "line_end": 23,
+      "line_start": 22,
+      "section": "11.1 Purpose",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "Every published output SHALL be generated from the same sealed decision record and share one decision digest."
+    },
+    {
+      "id": "RBE-OUT-011",
+      "line_end": 25,
+      "line_start": 24,
+      "section": "11.1 Purpose",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "Reports SHALL distinguish fact, finding, inference, limitation, recommendation and decision."
+    },
+    {
+      "id": "RBE-OUT-020",
+      "line_end": 84,
+      "line_start": 83,
+      "section": "11.3 Decision Notice Specification",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "The Decision Notice SHALL NOT omit a material limitation merely to make the outcome easier to communicate."
+    },
+    {
+      "id": "RBE-OUT-030",
+      "line_end": 132,
+      "line_start": 131,
+      "section": "11.5 Findings Register",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "A finding SHALL NOT be included in a decision basis unless its provenance and supporting references validate."
+    },
+    {
+      "id": "RBE-OUT-040",
+      "line_end": 169,
+      "line_start": 168,
+      "section": "11.6 Decision Taxonomy Presentation",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "Outcome wording SHALL describe justification status, not organizational enthusiasm or disappointment."
+    },
+    {
+      "id": "RBE-OUT-050",
+      "line_end": 187,
+      "line_start": 187,
+      "section": "11.7 Recommendations",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "A recommendation SHALL cite the finding or decision rule that justifies it."
+    },
+    {
+      "id": "RBE-OUT-051",
+      "line_end": 189,
+      "line_start": 188,
+      "section": "11.7 Recommendations",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "Commercial attractiveness SHALL NOT be used to soften or contradict the recorded decision."
+    },
+    {
+      "id": "RBE-OUT-070",
+      "line_end": 217,
+      "line_start": 216,
+      "section": "11.9 Machine-Readable Decision Package",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "The machine-readable package SHALL be the canonical structured source for all human- readable reports."
+    },
+    {
+      "id": "RBE-OUT-071",
+      "line_end": 218,
+      "line_start": 218,
+      "section": "11.9 Machine-Readable Decision Package",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "Schema evolution SHALL be versioned and backward-readable."
+    },
+    {
+      "id": "RBE-OUT-080",
+      "line_end": 238,
+      "line_start": 237,
+      "section": "11.10 Report Generation and Rendering",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "Manual edits after rendering SHALL invalidate the report signature and require regeneration or governed re-signing."
+    },
+    {
+      "id": "RBE-OUT-090",
+      "line_end": 250,
+      "line_start": 250,
+      "section": "11.11 Publication and Audience Controls",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "Redaction SHALL not change the substantive meaning of the decision."
+    },
+    {
+      "id": "RBE-OUT-091",
+      "line_end": 252,
+      "line_start": 251,
+      "section": "11.11 Publication and Audience Controls",
+      "source": "architecture/chapters/11-review-reports-and-decision-outputs.md",
+      "statement": "Every publication event SHALL record recipient class, artefact digest and authorization basis."
+    },
+    {
+      "id": "RBE-REA-001",
+      "line_end": 154,
+      "line_start": 153,
+      "section": "2.19 Decision Reasoning Standard",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "Decision reasoning SHALL identify the decisive evidence, applicable rule, accepted finding and logical connection to the outcome."
+    },
+    {
+      "id": "RBE-REA-002",
+      "line_end": 156,
+      "line_start": 155,
+      "section": "2.19 Decision Reasoning Standard",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "Decision reasoning SHALL distinguish facts, interpretations, assumptions, uncertainties and methodology judgments."
+    },
+    {
+      "id": "RBE-REA-003",
+      "line_end": 158,
+      "line_start": 157,
+      "section": "2.19 Decision Reasoning Standard",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The board SHALL state material weaknesses plainly even when the overall outcome is PASS."
+    },
+    {
+      "id": "RBE-REA-004",
+      "line_end": 159,
+      "line_start": 159,
+      "section": "2.19 Decision Reasoning Standard",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The board SHALL state material strengths plainly even when the overall outcome is FAIL."
+    },
+    {
+      "id": "RBE-REA-005",
+      "line_end": 161,
+      "line_start": 160,
+      "section": "2.19 Decision Reasoning Standard",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The board SHALL document what additional evidence or correction could change a non- PASS outcome where this can be specified without prejudging a future review."
+    },
+    {
+      "id": "RBE-REP-001",
+      "line_end": 278,
+      "line_start": 277,
+      "section": "3.9 Recommended Repository Structure",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "Dependency direction SHALL point inward: presentation and adapters may depend on application and domain code; domain code SHALL NOT depend on outer layers."
+    },
+    {
+      "id": "RBE-REP-002",
+      "line_end": 280,
+      "line_start": 279,
+      "section": "3.9 Recommended Repository Structure",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "Decision rules, board profiles and schemas SHALL be versioned resources with checksums, not hard-coded conditionals scattered through handlers."
+    },
+    {
+      "id": "RBE-SEC-001",
+      "line_end": 24,
+      "line_start": 23,
+      "section": "16.1 Purpose",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Security controls SHALL protect evidential integrity, reviewer independence, decision provenance and reproducibility as first-class protection objectives."
+    },
+    {
+      "id": "RBE-SEC-002",
+      "line_end": 26,
+      "line_start": 25,
+      "section": "16.1 Purpose",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "No security exception SHALL create a capability to force, suppress or rewrite a substantive review outcome."
+    },
+    {
+      "id": "RBE-SEC-010",
+      "line_end": 97,
+      "line_start": 96,
+      "section": "16.4 Identity and Authentication",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "The system SHALL reject authentication assertions that cannot be validated against a trusted issuer, intended audience and current revocation state."
+    },
+    {
+      "id": "RBE-SEC-011",
+      "line_end": 99,
+      "line_start": 98,
+      "section": "16.4 Identity and Authentication",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Privileged human access SHALL require phishing-resistant multi-factor authentication and SHALL be re-authenticated for high-impact operations."
+    },
+    {
+      "id": "RBE-SEC-012",
+      "line_end": 101,
+      "line_start": 100,
+      "section": "16.4 Identity and Authentication",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Service-to-service authentication SHALL use managed workload identity or equivalently short-lived credentials."
+    },
+    {
+      "id": "RBE-SEC-020",
+      "line_end": 134,
+      "line_start": 133,
+      "section": "16.5 Authorization and Policy Enforcement",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Every mutating command SHALL be authorized within the authoritative application or domain boundary immediately before state change."
+    },
+    {
+      "id": "RBE-SEC-021",
+      "line_end": 136,
+      "line_start": 135,
+      "section": "16.5 Authorization and Policy Enforcement",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Authorization decisions SHALL be logged with actor, policy version, target, result and correlation identifiers without exposing protected content."
+    },
+    {
+      "id": "RBE-SEC-022",
+      "line_end": 138,
+      "line_start": 137,
+      "section": "16.5 Authorization and Policy Enforcement",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "No generic administrator role SHALL bypass case-state, conflict, quorum or separation-of- duties controls."
+    },
+    {
+      "id": "RBE-SEC-030",
+      "line_end": 150,
+      "line_start": 149,
+      "section": "16.6 Privileged Access Management",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Emergency access SHALL NOT permit alteration of finalized decisions, signed reports or immutable audit history."
+    },
+    {
+      "id": "RBE-SEC-031",
+      "line_end": 152,
+      "line_start": 151,
+      "section": "16.6 Privileged Access Management",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Use of break-glass access SHALL trigger an independent post-event review and security incident record."
+    },
+    {
+      "id": "RBE-SEC-040",
+      "line_end": 176,
+      "line_start": 175,
+      "section": "16.7 Data Classification and Handling",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Every evidence object and report artefact SHALL carry an explicit classification and handling policy."
+    },
+    {
+      "id": "RBE-SEC-041",
+      "line_end": 178,
+      "line_start": 177,
+      "section": "16.7 Data Classification and Handling",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Data classification SHALL propagate to derived artefacts, exports, search indexes and AI- processing requests."
+    },
+    {
+      "id": "RBE-SEC-050",
+      "line_end": 188,
+      "line_start": 187,
+      "section": "16.8 Encryption and Key Management",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Cryptographic keys SHALL be managed outside application source code, container images and ordinary configuration repositories."
+    },
+    {
+      "id": "RBE-SEC-051",
+      "line_end": 190,
+      "line_start": 189,
+      "section": "16.8 Encryption and Key Management",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Evidence and signed report artefacts SHALL retain verifiable content hashes independent of the storage provider."
+    },
+    {
+      "id": "RBE-SEC-060",
+      "line_end": 196,
+      "line_start": 195,
+      "section": "16.9 Secrets Management",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Secret access SHALL be least-privilege, attributable, short-lived where supported and auditable."
+    },
+    {
+      "id": "RBE-SEC-061",
+      "line_end": 197,
+      "line_start": 197,
+      "section": "16.9 Secrets Management",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Production secrets SHALL NOT be copied into lower environments."
+    },
+    {
+      "id": "RBE-SEC-070",
+      "line_end": 211,
+      "line_start": 210,
+      "section": "16.10 Application and API Security",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Evidence files SHALL be quarantined until validation, integrity hashing and malware scanning complete successfully."
+    },
+    {
+      "id": "RBE-SEC-071",
+      "line_end": 213,
+      "line_start": 212,
+      "section": "16.10 Application and API Security",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Security validation failure SHALL prevent authoritative ingestion and SHALL create a traceable rejection record."
+    },
+    {
+      "id": "RBE-SEC-080",
+      "line_end": 219,
+      "line_start": 218,
+      "section": "16.11 Network and Infrastructure Security",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Authoritative databases, object stores and brokers SHALL NOT be directly exposed to the public internet."
+    },
+    {
+      "id": "RBE-SEC-081",
+      "line_end": 221,
+      "line_start": 220,
+      "section": "16.11 Network and Infrastructure Security",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Network policy SHALL restrict service communication to documented flows defined by the architecture."
+    },
+    {
+      "id": "RBE-SEC-090",
+      "line_end": 231,
+      "line_start": 230,
+      "section": "16.12 Software Supply-Chain Security",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Production deployments SHALL consume only artefacts produced by the approved, attestable build pipeline."
+    },
+    {
+      "id": "RBE-SEC-091",
+      "line_end": 233,
+      "line_start": 232,
+      "section": "16.12 Software Supply-Chain Security",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "A critical unresolved supply-chain vulnerability SHALL block release unless a formally approved, time-bounded risk exception exists."
+    },
+    {
+      "id": "RBE-SEC-100",
+      "line_end": 254,
+      "line_start": 253,
+      "section": "16.13 Security Logging, Detection and Response",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "The incident response process SHALL preserve evidence required to determine whether governance outcomes were affected."
+    },
+    {
+      "id": "RBE-SEC-101",
+      "line_end": 256,
+      "line_start": 255,
+      "section": "16.13 Security Logging, Detection and Response",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "A security incident with possible decision impact SHALL trigger case-impact assessment and, where necessary, re-review."
+    },
+    {
+      "id": "RBE-SEC-110",
+      "line_end": 263,
+      "line_start": 262,
+      "section": "16.14 Privacy and Data Minimization",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Exports and AI-processing requests SHALL contain the minimum data necessary for the declared purpose."
+    },
+    {
+      "id": "RBE-SEC-111",
+      "line_end": 265,
+      "line_start": 264,
+      "section": "16.14 Privacy and Data Minimization",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Retention and deletion SHALL follow approved schedules while preserving legally or methodologically required provenance."
+    },
+    {
+      "id": "RBE-SEC-120",
+      "line_end": 274,
+      "line_start": 273,
+      "section": "16.15 Security Assurance and Acceptance",
+      "source": "architecture/chapters/16-security-architecture.md",
+      "statement": "Security acceptance SHALL include evidence that governance controls remain effective under attack, failure and privileged misuse scenarios."
+    },
+    {
+      "id": "RBE-SEP-001",
+      "line_end": 92,
+      "line_start": 91,
+      "section": "2.16 Board Functional Separation",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "A reviewer SHALL be assigned to one logical board function per session unless RBM-001 explicitly permits a non-conflicting combination."
+    },
+    {
+      "id": "RBE-SEP-002",
+      "line_end": 94,
+      "line_start": 93,
+      "section": "2.16 Board Functional Separation",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The same actor SHALL NOT perform both evidence review and final governance approval in the same session."
+    },
+    {
+      "id": "RBE-SEP-003",
+      "line_end": 96,
+      "line_start": 95,
+      "section": "2.16 Board Functional Separation",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The same actor SHALL NOT author the submitted research package and serve as an independent board reviewer for that package."
+    },
+    {
+      "id": "RBE-SEP-004",
+      "line_end": 98,
+      "line_start": 97,
+      "section": "2.16 Board Functional Separation",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "The same actor SHALL NOT perform reasoning review and decision assembly when the methodology requires independent aggregation."
+    },
+    {
+      "id": "RBE-SEP-005",
+      "line_end": 100,
+      "line_start": 99,
+      "section": "2.16 Board Functional Separation",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "Commercial review SHALL occur only after evidence and reasoning validity are established; commercial attractiveness SHALL NOT cure evidentiary or logical defects."
+    },
+    {
+      "id": "RBE-SEP-006",
+      "line_end": 102,
+      "line_start": 101,
+      "section": "2.16 Board Functional Separation",
+      "source": "architecture/chapters/02-architectural-principles-and-board-constitution.md",
+      "statement": "No board function SHALL alter another function’s accepted report. Disagreement SHALL be recorded as a separate finding, challenge or escalation."
+    },
+    {
+      "id": "RBE-STM-001",
+      "line_end": 22,
+      "line_start": 22,
+      "section": "8.1 Purpose",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "Every review case SHALL have one and only one authoritative state."
+    },
+    {
+      "id": "RBE-STM-002",
+      "line_end": 23,
+      "line_start": 23,
+      "section": "8.1 Purpose",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "State SHALL be derived from accepted transition events, not editable free text."
+    },
+    {
+      "id": "RBE-STM-003",
+      "line_end": 25,
+      "line_start": 24,
+      "section": "8.1 Purpose",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "A transition SHALL execute only when its preconditions, actor authority, required artefacts and invariants all pass."
+    },
+    {
+      "id": "RBE-STM-020",
+      "line_end": 246,
+      "line_start": 246,
+      "section": "8.4 Transition Contract",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "State change and transition audit event SHALL commit atomically."
+    },
+    {
+      "id": "RBE-STM-021",
+      "line_end": 248,
+      "line_start": 247,
+      "section": "8.4 Transition Contract",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "A failed transition SHALL leave the case state unchanged and SHALL return the exact failed precondition."
+    },
+    {
+      "id": "RBE-STM-022",
+      "line_end": 250,
+      "line_start": 249,
+      "section": "8.4 Transition Contract",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "Retrying a transition with the same idempotency key SHALL NOT create duplicate state changes."
+    },
+    {
+      "id": "RBE-STM-040",
+      "line_end": 356,
+      "line_start": 356,
+      "section": "8.6 Forbidden Transitions",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "Forbidden transitions SHALL be impossible through both user interface and API."
+    },
+    {
+      "id": "RBE-STM-041",
+      "line_end": 357,
+      "line_start": 357,
+      "section": "8.6 Forbidden Transitions",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "Administrative privilege SHALL NOT bypass the transition matrix."
+    },
+    {
+      "id": "RBE-STM-050",
+      "line_end": 407,
+      "line_start": 406,
+      "section": "8.8 Timeouts, Stalls and Recovery",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "Timeouts SHALL affect workflow management only unless the methodology explicitly assigns substantive meaning."
+    },
+    {
+      "id": "RBE-STM-051",
+      "line_end": 409,
+      "line_start": 408,
+      "section": "8.8 Timeouts, Stalls and Recovery",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "Recovery SHALL be event-replayable and shall not rely on undocumented operator judgement."
+    },
+    {
+      "id": "RBE-STM-060",
+      "line_end": 451,
+      "line_start": 450,
+      "section": "8.9 Appeal and Re-review Semantics",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "Every successor session SHALL declare why it exists and identify the prior session it supersedes, remands or re-examines."
+    },
+    {
+      "id": "RBE-STM-061",
+      "line_end": 453,
+      "line_start": 452,
+      "section": "8.9 Appeal and Re-review Semantics",
+      "source": "architecture/chapters/08-review-state-machine.md",
+      "statement": "A remanded case SHALL re-enter through ASSIGNMENT in a linked successor session and SHALL NOT bypass role eligibility, conflict, independence, evidence-lock, or assignment controls."
+    },
+    {
+      "id": "RBE-SYS-001",
+      "line_end": 23,
+      "line_start": 22,
+      "section": "12.1 Purpose",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "The system architecture SHALL enforce governance rules in domain services rather than relying on user-interface convention."
+    },
+    {
+      "id": "RBE-SYS-002",
+      "line_end": 25,
+      "line_start": 24,
+      "section": "12.1 Purpose",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "No infrastructure or application component SHALL possess an undocumented capability to force a substantive decision outcome."
+    },
+    {
+      "id": "RBE-SYS-003",
+      "line_end": 27,
+      "line_start": 26,
+      "section": "12.1 Purpose",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Every service boundary SHALL preserve case identity, session identity, methodology version, actor identity and correlation identifiers."
+    },
+    {
+      "id": "RBE-SYS-010",
+      "line_end": 39,
+      "line_start": 39,
+      "section": "12.2 Architectural Style",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Deployment topology SHALL NOT weaken module boundaries defined by this architecture."
+    },
+    {
+      "id": "RBE-SYS-011",
+      "line_end": 41,
+      "line_start": 40,
+      "section": "12.2 Architectural Style",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Service extraction SHALL require an architecture decision record demonstrating preserved atomicity, traceability and separation of duties."
+    },
+    {
+      "id": "RBE-SYS-020",
+      "line_end": 107,
+      "line_start": 106,
+      "section": "12.4 Trust Boundaries",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "A trust-boundary crossing SHALL be observable through correlated logs and, where governance-relevant, an immutable audit event."
+    },
+    {
+      "id": "RBE-SYS-021",
+      "line_end": 109,
+      "line_start": 108,
+      "section": "12.4 Trust Boundaries",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "External systems SHALL receive only the minimum data required for their declared purpose."
+    },
+    {
+      "id": "RBE-SYS-030",
+      "line_end": 145,
+      "line_start": 144,
+      "section": "12.6 Availability and Degraded Modes",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "The system SHALL fail closed for any operation that would change governance state without a durable audit record."
+    },
+    {
+      "id": "RBE-SYS-031",
+      "line_end": 147,
+      "line_start": 146,
+      "section": "12.6 Availability and Degraded Modes",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Degraded-mode banners and machine-readable health responses SHALL distinguish unavailable, read-only and partially degraded states."
+    },
+    {
+      "id": "RBE-SYS-040",
+      "line_end": 153,
+      "line_start": 152,
+      "section": "12.7 Configuration and Methodology Control",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Decision-affecting configuration SHALL be immutable after activation and SHALL carry effective-from metadata and an approval record."
+    },
+    {
+      "id": "RBE-SYS-041",
+      "line_end": 155,
+      "line_start": 154,
+      "section": "12.7 Configuration and Methodology Control",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Ordinary operational administrators SHALL NOT modify active decision rules directly in production."
+    },
+    {
+      "id": "RBE-SYS-042",
+      "line_end": 157,
+      "line_start": 156,
+      "section": "12.7 Configuration and Methodology Control",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Every case SHALL resolve decision-affecting configuration by explicit version identifier, never by “latest” at replay time."
+    },
+    {
+      "id": "RBE-SYS-050",
+      "line_end": 172,
+      "line_start": 171,
+      "section": "12.8 AI Assistance Boundary",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Disabling all AI assistance SHALL leave the complete governed review process operational."
+    },
+    {
+      "id": "RBE-SYS-051",
+      "line_end": 173,
+      "line_start": 173,
+      "section": "12.8 AI Assistance Boundary",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "AI failure SHALL degrade convenience only, not substantive governance capability."
+    },
+    {
+      "id": "RBE-SYS-060",
+      "line_end": 193,
+      "line_start": 193,
+      "section": "12.9 Observability Architecture",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Sensitive evidence content SHALL NOT be copied into ordinary application logs."
+    },
+    {
+      "id": "RBE-SYS-061",
+      "line_end": 195,
+      "line_start": 194,
+      "section": "12.9 Observability Architecture",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Observability identifiers SHALL permit correlation to an audit event without exposing protected content."
+    },
+    {
+      "id": "RBE-SYS-070",
+      "line_end": 206,
+      "line_start": 205,
+      "section": "12.10 Security Architecture Baseline",
+      "source": "architecture/chapters/12-system-and-service-architecture.md",
+      "statement": "Security controls SHALL preserve evidential integrity and reviewer independence as explicit protection objectives."
+    },
+    {
+      "id": "RBE-TEC-001",
+      "line_end": 227,
+      "line_start": 226,
+      "section": "3.8 Reference Technology Profile",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "The engine SHALL operate without external network access after all required package content, schemas and rule sets are registered locally."
+    },
+    {
+      "id": "RBE-TEC-002",
+      "line_end": 229,
+      "line_start": 228,
+      "section": "3.8 Reference Technology Profile",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "External identity, notification, storage or AI services SHALL be optional adapters and SHALL NOT be necessary for decision calculation or replay."
+    },
+    {
+      "id": "RBE-TEC-003",
+      "line_end": 231,
+      "line_start": 230,
+      "section": "3.8 Reference Technology Profile",
+      "source": "architecture/chapters/03-system-context-trust-boundaries-and-c4-architecture.md",
+      "statement": "Database-generated ordering SHALL NOT be used where canonical artifact ordering is required; explicit deterministic sort keys SHALL be defined."
+    },
+    {
+      "id": "RBE-TST-001",
+      "line_end": 25,
+      "line_start": 23,
+      "section": "20.1 Purpose",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "The release process SHALL provide objective evidence that functional, security, governance, traceability and operational requirements have been verified before production promotion."
+    },
+    {
+      "id": "RBE-TST-002",
+      "line_end": 27,
+      "line_start": 26,
+      "section": "20.1 Purpose",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "A test result SHALL NOT be considered sufficient when it proves only that a user interface path works while the authoritative domain rule remains unverified."
+    },
+    {
+      "id": "RBE-TST-010",
+      "line_end": 88,
+      "line_start": 86,
+      "section": "20.4 Requirements Traceability",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Every SHALL requirement in the frozen architecture SHALL have a verification status of automated, manually verified, deferred with approved rationale, or not applicable with approved rationale."
+    },
+    {
+      "id": "RBE-TST-011",
+      "line_end": 91,
+      "line_start": 89,
+      "section": "20.4 Requirements Traceability",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "The release candidate SHALL include a machine-readable requirements traceability matrix identifying requirement ID, test ID, test type, execution result, environment, build identifier and evidence location."
+    },
+    {
+      "id": "RBE-TST-012",
+      "line_end": 93,
+      "line_start": 92,
+      "section": "20.4 Requirements Traceability",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "A failed constitutional, evidence-integrity, authorization, audit or separation-of-duties test SHALL block release regardless of aggregate pass rate."
+    },
+    {
+      "id": "RBE-TST-020",
+      "line_end": 107,
+      "line_start": 106,
+      "section": "20.5 Domain and State-Machine Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "The test suite SHALL prove that no command can move a case directly to a final outcome while bypassing mandatory review or challenge stages."
+    },
+    {
+      "id": "RBE-TST-021",
+      "line_end": 112,
+      "line_start": 111,
+      "section": "20.5 Domain and State-Machine Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "State-machine tests SHALL include randomized valid and invalid command sequences and SHALL verify invariants after every operation."
+    },
+    {
+      "id": "RBE-TST-030",
+      "line_end": 125,
+      "line_start": 124,
+      "section": "20.6 Decision and Reasoning Verification",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Golden decision fixtures SHALL be reviewed by governance owners and SHALL represent all decision classes, material boundary conditions and known anti-patterns."
+    },
+    {
+      "id": "RBE-TST-031",
+      "line_end": 127,
+      "line_start": 126,
+      "section": "20.6 Decision and Reasoning Verification",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Changes to decision rules SHALL require regression execution against all golden fixtures and explicit review of every changed result."
+    },
+    {
+      "id": "RBE-TST-040",
+      "line_end": 142,
+      "line_start": 141,
+      "section": "20.7 Authorization and Separation-of-Duties Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Authorization regression tests SHALL execute against every mutating command and every protected read path."
+    },
+    {
+      "id": "RBE-TST-041",
+      "line_end": 144,
+      "line_start": 143,
+      "section": "20.7 Authorization and Separation-of-Duties Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "The quality gate SHALL include explicit tests proving that generic administrative access cannot override substantive governance rules."
+    },
+    {
+      "id": "RBE-TST-050",
+      "line_end": 157,
+      "line_start": 156,
+      "section": "20.8 Evidence Integrity and Provenance Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "The test suite SHALL prove that changing an evidence object after evidence lock cannot silently change the evidence set associated with a review."
+    },
+    {
+      "id": "RBE-TST-051",
+      "line_end": 159,
+      "line_start": 158,
+      "section": "20.8 Evidence Integrity and Provenance Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "A full provenance replay test SHALL reconstruct at least one representative case from audit events, governed records and immutable artefacts in every release candidate environment."
+    },
+    {
+      "id": "RBE-TST-060",
+      "line_end": 172,
+      "line_start": 171,
+      "section": "20.9 API, Contract and Schema Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Breaking contract changes SHALL require a new version, migration plan and coexistence period or explicit coordinated cutover approval."
+    },
+    {
+      "id": "RBE-TST-070",
+      "line_end": 185,
+      "line_start": 183,
+      "section": "20.10 Security Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Critical security findings affecting evidence integrity, decision authority, authentication, authorization or signing SHALL block production release until remediated or formally accepted by designated security and governance authorities."
+    },
+    {
+      "id": "RBE-TST-080",
+      "line_end": 203,
+      "line_start": 202,
+      "section": "20.11 AI and Automation Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "No AI test fixture SHALL be accepted as proving decision correctness unless the authoritative non-AI decision rules and human approvals are also verified."
+    },
+    {
+      "id": "RBE-TST-081",
+      "line_end": 205,
+      "line_start": 204,
+      "section": "20.11 AI and Automation Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "The system SHALL test that AI output cannot directly mutate evidence, findings, reviewer assessments, decisions or signed reports."
+    },
+    {
+      "id": "RBE-TST-090",
+      "line_end": 223,
+      "line_start": 222,
+      "section": "20.12 Performance, Reliability and Recovery Testing",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Recovery testing SHALL verify not only service availability but also consistency of case state, evidence references, audit history and signed outputs."
+    },
+    {
+      "id": "RBE-TST-100",
+      "line_end": 229,
+      "line_start": 228,
+      "section": "20.13 Test Data Governance",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Production secrets and unrestricted production evidence SHALL NOT be copied into test environments."
+    },
+    {
+      "id": "RBE-TST-101",
+      "line_end": 234,
+      "line_start": 233,
+      "section": "20.13 Test Data Governance",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Test fixtures used as normative golden cases SHALL be version-controlled, reviewed and immutable within a released test baseline."
+    },
+    {
+      "id": "RBE-TST-110",
+      "line_end": 245,
+      "line_start": 244,
+      "section": "20.14 Environments and Test Independence",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "A release SHALL NOT be certified using a build artefact different from the artefact promoted to production."
+    },
+    {
+      "id": "RBE-TST-120",
+      "line_end": 278,
+      "line_start": 277,
+      "section": "20.15 Defect Classification and Release Gates",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Release approval SHALL be evidence-based and SHALL identify all open defects, risk acceptances, deferred tests and accountable owners."
+    },
+    {
+      "id": "RBE-TST-130",
+      "line_end": 294,
+      "line_start": 293,
+      "section": "20.16 Quality Evidence Package",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Quality evidence SHALL be retained as a versioned release artefact and SHALL remain independently verifiable after the release is superseded."
+    },
+    {
+      "id": "RBE-TST-140",
+      "line_end": 301,
+      "line_start": 300,
+      "section": "20.17 Architecture Conformance Tests",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "The CI pipeline SHALL fail when code violates mechanically enforceable architecture boundaries."
+    },
+    {
+      "id": "RBE-TST-141",
+      "line_end": 303,
+      "line_start": 302,
+      "section": "20.17 Architecture Conformance Tests",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Architecture tests SHALL be maintained as production code and reviewed whenever module boundaries or service responsibilities change."
+    },
+    {
+      "id": "RBE-TST-150",
+      "line_end": 316,
+      "line_start": 315,
+      "section": "20.18 Chapter 20 Codex Build Contract",
+      "source": "architecture/chapters/20-testing-and-quality-assurance-architecture.md",
+      "statement": "Automated coding agents SHALL treat failing governance and integrity tests as evidence of a defect, not as obstacles to be bypassed."
+    }
+  ],
+  "schema_id": "rbe.requirement-register",
+  "schema_version": "1.0.0"
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provena-foundry/review-board/tpl-rrr/2.2.0",
+  "title": "TPL-RRR Reviewer Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "report_id", "review_id", "reviewer", "reviewer_role", "reviewer_spec_id", "reviewer_spec_version", "artefact_sha", "finding_ids", "evidence_sufficiency", "missing_evidence", "ai_assistance", "human_signature_ref"],
+  "properties": {
+    "schema_version": {"const": "2.2.0"},
+    "report_id": {"type": "string", "minLength": 1},
+    "review_id": {"type": "string", "minLength": 1},
+    "reviewer": {"type": "string", "minLength": 1},
+    "reviewer_role": {"type": "string", "minLength": 1},
+    "reviewer_spec_id": {"type": "string", "pattern": "^RBS-00[1-8]$"},
+    "reviewer_spec_version": {"const": "2.2.0"},
+    "artefact_sha": {"type": "string", "minLength": 7},
+    "finding_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "evidence_sufficiency": {"enum": ["SUFFICIENT", "INSUFFICIENT", "NOT_APPLICABLE"]},
+    "missing_evidence": {"type": "array", "items": {"type": "string"}},
+    "ai_assistance": {"type": "object"},
+    "human_signature_ref": {"type": "string", "minLength": 1}
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "2.2.0",
+  "review_id": "RBE-GSCF001-0002",
+  "review_date": "2026-07-26T10:00:00Z",
+  "trigger": "Second review: GS-CF001-C re-run with two independent source families",
+  "tier": 2,
+  "tier_rationale": "Research proof bundle informing a commercial opportunity assessment; data, evidence, commercial and architecture seats required.",
+  "artefact_sha": "11ec72b53fca8a5eb0e0e0a2f0a1c8b6d9e4f7a3",
+  "repository": "ianmcguane681-netizen/GS-CF001",
+  "architecture_authority": "RBE-001 v1.1.0",
+  "methodology_profile_id": "RBM-001",
+  "methodology_version": "2.2.0",
+  "methodology_status": "RELEASE_CANDIDATE",
+  "methodology_checksum": "sha256:9d6cd7cf305b3a415d664ec61ebe691e06439591257a2e86617880c39b7f8461",
+  "manifest_root_sha256": "sha256:cd65a509f40f5907bbd361afa1dbc6f16ef88714ed01089a79afdfbcf3f6b154",
+  "human_approval_record": null,
+  "binding": false,
+  "board_chair": "ian.mcguane",
+  "methodology_auditor": "agent:ma",
+  "sceptical_reviewer": "agent:sr",
+  "specialists": {
+    "saa": "agent:saa",
+    "bca": "agent:bca",
+    "dea": "agent:dea",
+    "qra": "agent:qra",
+    "spa": null,
+    "poa": null
+  },
+  "input_process_status": "READY"
+}

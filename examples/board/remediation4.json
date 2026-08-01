@@ -1,0 +1,20 @@
+{
+  "schema_version": "2.2.0",
+  "document_id": "RMP-GSCF001-0002",
+  "review_id": "RBE-GSCF001-0004",
+  "authoring_team_contact": "ian.mcguane",
+  "date_submitted": "2026-07-26T10:30:00Z",
+  "items": [
+    {
+      "finding_id": "FND4-SR-001",
+      "root_cause": "Both integrated source families record allegations. Neither a consumer complaint nor a filed claim is an adjudicated finding of fact.",
+      "planned_changes": "State the allegation limit explicitly in the study report, and require a judgment, consent order or examination finding before asserting that an alleged failure occurred.",
+      "responsible_person": "ian.mcguane",
+      "target_completion_date": "2026-09-30",
+      "planned_resolution_evidence": "An adjudicated or regulator-issued finding admitted as a third source family."
+    }
+  ],
+  "ma_reviewer": "agent:ma",
+  "ma_decision": "ACCEPTED",
+  "ma_signature_ref": "SIG-VERIFY-MA-RMP"
+}

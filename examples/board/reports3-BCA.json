@@ -1,0 +1,68 @@
+{
+  "reviewer_role": "BCA",
+  "summary": "Commercial position remains correctly unproven; no market research is integrated into this run.",
+  "recommendation": "Research",
+  "evidence_reference_ids": [
+    "EVI-0586FD615DA0B8EDD88EB278",
+    "EVI-2632AD175F2786F6042440BF",
+    "EVI-360B507A9EE78394B116D9AC",
+    "EVI-4FE976001DCDF6116D1FBAD6",
+    "EVI-5C77DEE6D4ADF143844A1BB3",
+    "EVI-74D7255D0BF4532DF2CFEA0F",
+    "EVI-A0FB55DF62DF479AD12187B0",
+    "EVI-A3D6FCA37F78F7CAB36F4DB9",
+    "EVI-DBEC7CE8BF64698576D7A10B",
+    "EVI-EC4B64295CAB5CFFFC8FF9F8",
+    "EVI-EFE4B13B6E19EF22D044B34F"
+  ],
+  "finding_categories": {
+    "FND3-BCA-001": "COMMERCIAL"
+  },
+  "findings": [
+    {
+      "schema_version": "2.2.0",
+      "finding_id": "FND3-BCA-001",
+      "review_id": "RBE-GSCF001-0003",
+      "reviewer": "agent:bca",
+      "reviewer_role": "BCA",
+      "artefact_version": "11ec72b53fca8a5eb0e0e0a2f0a1c8b6d9e4f7a3",
+      "date_raised": "2026-07-26T10:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-003 section 7",
+      "title": "Commercial relevance remains unevidenced in either direction",
+      "detail": "PG-11 and PG-12 still record no solution-market research. Honest, but the bundle cannot support a commercial claim.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-0586FD615DA0B8EDD88EB278",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": null,
+      "target_resolution_date": null,
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "2.2.0",
+    "report_id": "RPT-RBE-GSCF001-0003-BCA",
+    "review_id": "RBE-GSCF001-0003",
+    "reviewer": "agent:bca",
+    "reviewer_role": "BCA",
+    "reviewer_spec_id": "RBS-003",
+    "reviewer_spec_version": "2.2.0",
+    "artefact_sha": "11ec72b53fca8a5eb0e0e0a2f0a1c8b6d9e4f7a3",
+    "finding_ids": [
+      "FND3-BCA-001"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-review-d/BCA-001"
+    },
+    "human_signature_ref": "SIG-VERIFY-BCA"
+  }
+}

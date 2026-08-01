@@ -1,0 +1,13 @@
+{
+  "schema_id": "rbe.golden-scenario",
+  "schema_version": "1.0.0",
+  "scenario": "BLOCKED",
+  "finding_severity": null,
+  "specialist_evidence_sufficiency": "SUFFICIENT",
+  "accepted_remediation": false,
+  "process_blockers": [
+    "INTEGRITY_REVIEW_REQUIRED"
+  ],
+  "expected_process_status": "BLOCKED",
+  "expected_outcome": null
+}

@@ -1,0 +1,39 @@
+{
+  "reviewer_role": "QRA",
+  "summary": "Deterministic rules and gate outputs are reproducible from the recorded inputs.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-3236AF873769A5A847C52526",
+    "EVI-48E72B0729D8101B3C95CE52",
+    "EVI-6526989E2B4037DFCAAC4ACB",
+    "EVI-69FC8D6C101E3F5BCAE66D5B",
+    "EVI-7A8C7AAE515570D8C6545149",
+    "EVI-8FF770D41A38773E00EA935D",
+    "EVI-919B1781734DA3404E4A1378",
+    "EVI-9F5C7623E933FDF84814B6B5",
+    "EVI-AEE0E53920747B8DCB994743",
+    "EVI-B79F4EFA47C354BDFA88836B",
+    "EVI-D299477ED70D0509A4C0652B"
+  ],
+  "finding_categories": {},
+  "findings": [],
+  "report": {
+    "schema_version": "2.1.0",
+    "report_id": "RPT-RBE-GSCF001-0001-QRA",
+    "review_id": "RBE-GSCF001-0001",
+    "reviewer": "agent:qra",
+    "reviewer_role": "QRA",
+    "reviewer_spec_id": "RBS-005",
+    "reviewer_spec_version": "2.1.0",
+    "artefact_sha": "9bb288cfad99e16425f98000a906f8ca1a35eeac",
+    "finding_ids": [],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-review-b/QRA-001"
+    },
+    "human_signature_ref": "SIG-VERIFY-QRA"
+  }
+}

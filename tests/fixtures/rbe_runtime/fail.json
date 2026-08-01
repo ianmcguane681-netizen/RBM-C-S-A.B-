@@ -1,0 +1,11 @@
+{
+  "schema_id": "rbe.golden-scenario",
+  "schema_version": "1.0.0",
+  "scenario": "FAIL",
+  "finding_severity": "SEV-1",
+  "specialist_evidence_sufficiency": "SUFFICIENT",
+  "accepted_remediation": false,
+  "process_blockers": [],
+  "expected_process_status": "READY",
+  "expected_outcome": "FAIL"
+}

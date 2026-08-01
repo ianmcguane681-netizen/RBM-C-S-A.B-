@@ -1,0 +1,225 @@
+{
+  "profile_id": "RBM-001",
+  "version": "2.2.0",
+  "status": "RELEASE_CANDIDATE",
+  "architecture_authority": {
+    "document_id": "RBE-001",
+    "minimum_compatible_version": "1.1.0",
+    "named_human_approval_required": true
+  },
+  "owner": "Provena Foundry Governance",
+  "human_approval_record": null,
+  "checksum": "sha256:9d6cd7cf305b3a415d664ec61ebe691e06439591257a2e86617880c39b7f8461",
+  "manifest": "MANIFEST.json",
+  "binding": false,
+  "permitted_outcomes": [
+    "PASS",
+    "PASS_WITH_FINDINGS",
+    "FAIL",
+    "INSUFFICIENT_EVIDENCE"
+  ],
+  "omitted_outcome_mapping": {
+    "DEFER_FOR_FURTHER_RESEARCH": "INSUFFICIENT_EVIDENCE"
+  },
+  "process_statuses": [
+    "READY",
+    "PROCEDURALLY_INCOMPLETE",
+    "BLOCKED",
+    "VOID"
+  ],
+  "unresolved_finding_statuses": [
+    "OPEN",
+    "CONTESTED",
+    "UNDER_REVIEW"
+  ],
+  "decision_precedence": [
+    {
+      "priority": 1,
+      "rule_id": "RBM-DEC-001",
+      "condition": "unresolved_sev1 >= 1",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 2,
+      "rule_id": "RBM-DEC-002",
+      "condition": "unresolved_sev2 >= 2",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 3,
+      "rule_id": "RBM-DEC-003",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 0",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 4,
+      "rule_id": "RBM-DEC-004",
+      "condition": "substantive_evidence_sufficient == false",
+      "outcome": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "priority": 5,
+      "rule_id": "RBM-DEC-005",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 1",
+      "outcome": "PASS_WITH_FINDINGS"
+    },
+    {
+      "priority": 6,
+      "rule_id": "RBM-DEC-006",
+      "condition": "unresolved_sev1 == 0 and unresolved_sev2 == 0 and substantive_evidence_sufficient == true",
+      "outcome": "PASS"
+    }
+  ],
+  "role_policy": {
+    "distinct_human_per_board_role": true,
+    "ai_counts_toward_quorum": false,
+    "board_chair_may_hold_other_role": false,
+    "methodology_auditor_may_hold_other_role": false,
+    "board_chair_and_governance_validator_must_differ": true,
+    "decision_assembler_and_publication_control_must_differ": true,
+    "governance_validator_and_publication_control_must_differ": true,
+    "distinct_actor_per_board_role": true
+  },
+  "quorum": {
+    "tier_1": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 2,
+      "specialist_pool": [
+        "SAA",
+        "QRA",
+        "POA"
+      ]
+    },
+    "tier_2": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 4,
+      "specialist_pool": [
+        "SAA",
+        "BCA",
+        "DEA",
+        "QRA",
+        "SPA",
+        "POA"
+      ]
+    },
+    "tier_3": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SAA",
+        "BCA",
+        "DEA",
+        "QRA",
+        "SPA",
+        "POA",
+        "SR"
+      ],
+      "specialists_required": 6,
+      "specialist_pool": [
+        "SAA",
+        "BCA",
+        "DEA",
+        "QRA",
+        "SPA",
+        "POA"
+      ]
+    }
+  },
+  "canonical_lifecycle_mapping": {
+    "pre_review": [
+      "DRAFT",
+      "SUBMITTED",
+      "INTAKE_VALIDATION",
+      "RETURNED",
+      "ACCEPTED",
+      "EVIDENCE_LOCKED",
+      "ASSIGNMENT"
+    ],
+    "specialist_review": [
+      "INDEPENDENT_REVIEW"
+    ],
+    "challenge": [
+      "CHALLENGE",
+      "CLARIFICATION"
+    ],
+    "decision": [
+      "CONSOLIDATION",
+      "GOVERNANCE_VALIDATION",
+      "BLOCKED",
+      "DECIDED",
+      "PUBLISHED"
+    ],
+    "appeal": [
+      "APPEALED",
+      "APPEAL_REVIEW",
+      "UPHELD",
+      "SUPERSEDED",
+      "REMANDED"
+    ],
+    "terminal": [
+      "FINAL",
+      "ARCHIVED",
+      "VOID",
+      "WITHDRAWN"
+    ]
+  },
+  "activation_requirements": [
+    "approved_rbe_release",
+    "valid_profile_checksum",
+    "valid_package_manifest",
+    "named_human_principal_architect_approval",
+    "named_human_methodology_owner_approval",
+    "active_status_commit",
+    "immutable_release_tag"
+  ],
+  "supersedes": "RBM-001 v2.1.0",
+  "amendment_rationale": "v2.1.0 let agents hold reviewer seats but kept ratification human, and ratification requires two separated humans. An organisation with one human could therefore conduct a complete review and never sign the result, leaving governed decisions permanently unratified. v2.2.0 permits a single named human to ratify while the profile is non-binding, recording the decision as single-authority so it is never mistaken for a two-signature decision. It cannot be used once the profile is ACTIVE.",
+  "agent_seat_policy": {
+    "agent_seats_permitted": true,
+    "permitted_agent_roles": [
+      "MA",
+      "SAA",
+      "BCA",
+      "DEA",
+      "QRA",
+      "SPA",
+      "POA",
+      "SR"
+    ],
+    "prohibited_agent_roles": [
+      "BC"
+    ],
+    "agent_actor_prefixes": [
+      "agent:"
+    ],
+    "named_human_verifier_required": true,
+    "ratification_authority_must_be_human": true,
+    "publication_authority_must_be_human": true,
+    "agent_seat_review_is_advisory_only": true,
+    "independence_requirements": {
+      "distinct_instruction_version_per_seat": true,
+      "sceptical_seat_is_blind_to_proposed_outcome": true,
+      "record_model_and_instruction_version_per_seat": true,
+      "shared_model_across_seats_must_be_recorded": true
+    }
+  },
+  "single_authority_policy": {
+    "single_authority_permitted": true,
+    "permitted_only_when_profile_non_binding": true,
+    "never_binding": true,
+    "never_merge_permitted": true,
+    "authority_must_be_human": true,
+    "authority_must_be_board_chair": true,
+    "recorded_flag": "single_authority",
+    "supersedable_by_two_signature_decision": true,
+    "rationale_required": true
+  }
+}

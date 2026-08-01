@@ -1,0 +1,7 @@
+streamlit>=1.36
+pytest>=8.0
+pypdf>=4.0
+python-dotenv>=1.0
+jsonschema>=4.23
+fastapi>=0.111
+uvicorn>=0.30

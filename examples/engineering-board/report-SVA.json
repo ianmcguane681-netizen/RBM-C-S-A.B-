@@ -1,0 +1,85 @@
+{
+  "reviewer_role": "SVA",
+  "summary": "One sentinel in this artefact can match another sentinel and be treated as an identity.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-70203028606D1C2255094AA1",
+    "EVI-87668345C78903AF9D3C5D2C",
+    "EVI-9143CC24C64B52964E695F19",
+    "EVI-E3342429DEBC4A8DB294D753",
+    "EVI-EC59EB6ADBF6A16542BFDEF7"
+  ],
+  "finding_categories": {},
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "EG001-SVA-EG-05",
+      "review_id": "RBM002-GSCF001-0001",
+      "reviewer": "agent:sva",
+      "reviewer_role": "SVA",
+      "artefact_version": "1048b11",
+      "date_raised": "2026-07-31T12:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-006 section 7 (EG-05)",
+      "title": "Two unidentifiable records share one resume key",
+      "detail": "_resume_key returns f\"{row.get('court') or '?'}/{row.get('docket') or '?'}\". The '?' is a sentinel meaning 'this record could not be identified'. Two records that both fail to produce a court and a docket therefore produce the identical key '?/?', and the resume map treats the second as already assessed. The comment above the resume block reasons carefully about docket collisions across districts and then introduces a collision of its own, in the case where the least is known about the records involved. This is the same shape as the defect this repository already found in its mechanism classifier, where two records that both failed to classify matched each other on the fallback value and produced a corroboration PASS.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "An unidentifiable record must not be keyed at all. Exclude it from the resume map and record it separately, so 'could not identify' never reads as 'already done'.",
+      "target_resolution_date": "2026-08-31",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "EG002-SVA-EG-05",
+      "review_id": "RBM002-GSCF001-0001",
+      "reviewer": "agent:sva",
+      "reviewer_role": "SVA",
+      "artefact_version": "1048b11",
+      "date_raised": "2026-07-31T12:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-006 section 7 (EG-05)",
+      "title": "A missing strata field defaults to a specific strata",
+      "detail": "cached.get('judgment', '1') treats the absence of a strata declaration as a declaration of plaintiff-only. Absence is not a value. The committed analysis/adjudication_pool.json at this commit has no judgment field and is in fact plaintiff-only, so the default is correct by luck rather than by record.",
+      "evidence_tier": "T3",
+      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Treat an undeclared strata as unknown and refuse to reuse the cache, rather than assuming one.",
+      "target_resolution_date": "2026-08-31",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM002-GSCF001-0001-SVA",
+    "review_id": "RBM002-GSCF001-0001",
+    "reviewer": "agent:sva",
+    "reviewer_role": "SVA",
+    "reviewer_spec_id": "RBS-006",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "1048b11",
+    "finding_ids": [
+      "EG001-SVA-EG-05",
+      "EG002-SVA-EG-05"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-eng-c/SVA-001"
+    },
+    "human_signature_ref": "SIG-PENDING-SVA"
+  }
+}

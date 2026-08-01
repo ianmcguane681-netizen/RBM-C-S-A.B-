@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provena-foundry/engineering-board/tpl-rir/1.0.0",
+  "title": "TPL-RIR Review Initiation Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "review_date",
+    "trigger",
+    "tier",
+    "tier_rationale",
+    "artefact_sha",
+    "repository",
+    "architecture_authority",
+    "methodology_profile_id",
+    "methodology_version",
+    "methodology_status",
+    "methodology_checksum",
+    "manifest_root_sha256",
+    "human_approval_record",
+    "binding",
+    "board_chair",
+    "methodology_auditor",
+    "sceptical_reviewer",
+    "specialists",
+    "input_process_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "review_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "trigger": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tier": {
+      "type": "integer",
+      "enum": [
+        1,
+        2,
+        3
+      ]
+    },
+    "tier_rationale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artefact_sha": {
+      "type": "string",
+      "minLength": 7
+    },
+    "repository": {
+      "type": "string",
+      "minLength": 1
+    },
+    "architecture_authority": {
+      "type": "string",
+      "minLength": 1
+    },
+    "methodology_profile_id": {
+      "const": "RBM-002"
+    },
+    "methodology_version": {
+      "const": "1.0.0"
+    },
+    "methodology_status": {
+      "enum": [
+        "RELEASE_CANDIDATE",
+        "ACTIVE",
+        "RETIRED"
+      ]
+    },
+    "methodology_checksum": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "manifest_root_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "human_approval_record": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "binding": {
+      "type": "boolean"
+    },
+    "board_chair": {
+      "type": "string",
+      "minLength": 1
+    },
+    "methodology_auditor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sceptical_reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "specialists": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gca",
+        "mca",
+        "efa",
+        "ata",
+        "sva",
+        "rpa"
+      ],
+      "properties": {
+        "gca": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mca": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "efa": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ata": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sva": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rpa": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "input_process_status": {
+      "enum": [
+        "READY",
+        "PROCEDURALLY_INCOMPLETE"
+      ]
+    },
+    "omitted_roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "justification"
+        ],
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "justification": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

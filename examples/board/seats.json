@@ -1,0 +1,38 @@
+[
+  {
+    "role": "MA",
+    "model": "provena-review-a",
+    "instruction_version": "MA-001",
+    "name": "ma"
+  },
+  {
+    "role": "DEA",
+    "model": "provena-review-b",
+    "instruction_version": "DEA-001",
+    "name": "dea"
+  },
+  {
+    "role": "QRA",
+    "model": "provena-review-b",
+    "instruction_version": "QRA-001",
+    "name": "qra"
+  },
+  {
+    "role": "BCA",
+    "model": "provena-review-d",
+    "instruction_version": "BCA-001",
+    "name": "bca"
+  },
+  {
+    "role": "SAA",
+    "model": "provena-review-d",
+    "instruction_version": "SAA-001",
+    "name": "saa"
+  },
+  {
+    "role": "SR",
+    "model": "provena-review-c",
+    "instruction_version": "SR-001",
+    "name": "sr"
+  }
+]

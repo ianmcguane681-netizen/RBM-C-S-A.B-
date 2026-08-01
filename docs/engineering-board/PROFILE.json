@@ -1,0 +1,269 @@
+{
+  "profile_id": "RBM-002",
+  "version": "1.0.0",
+  "status": "RELEASE_CANDIDATE",
+  "architecture_authority": {
+    "document_id": "RBE-001",
+    "minimum_compatible_version": "1.1.0",
+    "named_human_approval_required": true
+  },
+  "owner": "Provena Foundry Governance",
+  "human_approval_record": null,
+  "checksum": "sha256:064422edb67638316a470195071a2cf9915509027b1132ebdee039c75d59d8da",
+  "manifest": "MANIFEST.json",
+  "binding": false,
+  "permitted_outcomes": [
+    "PASS",
+    "PASS_WITH_FINDINGS",
+    "FAIL",
+    "INSUFFICIENT_EVIDENCE"
+  ],
+  "omitted_outcome_mapping": {
+    "DEFER_FOR_FURTHER_RESEARCH": "INSUFFICIENT_EVIDENCE"
+  },
+  "process_statuses": [
+    "READY",
+    "PROCEDURALLY_INCOMPLETE",
+    "BLOCKED",
+    "VOID"
+  ],
+  "unresolved_finding_statuses": [
+    "OPEN",
+    "CONTESTED",
+    "UNDER_REVIEW"
+  ],
+  "decision_precedence": [
+    {
+      "priority": 1,
+      "rule_id": "RBM-DEC-001",
+      "condition": "unresolved_sev1 >= 1",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 2,
+      "rule_id": "RBM-DEC-002",
+      "condition": "unresolved_sev2 >= 2",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 3,
+      "rule_id": "RBM-DEC-003",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 0",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 4,
+      "rule_id": "RBM-DEC-004",
+      "condition": "substantive_evidence_sufficient == false",
+      "outcome": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "priority": 5,
+      "rule_id": "RBM-DEC-005",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 1",
+      "outcome": "PASS_WITH_FINDINGS"
+    },
+    {
+      "priority": 6,
+      "rule_id": "RBM-DEC-006",
+      "condition": "unresolved_sev1 == 0 and unresolved_sev2 == 0 and substantive_evidence_sufficient == true",
+      "outcome": "PASS"
+    }
+  ],
+  "role_policy": {
+    "distinct_human_per_board_role": true,
+    "ai_counts_toward_quorum": false,
+    "board_chair_may_hold_other_role": false,
+    "methodology_auditor_may_hold_other_role": false,
+    "board_chair_and_governance_validator_must_differ": true,
+    "decision_assembler_and_publication_control_must_differ": true,
+    "governance_validator_and_publication_control_must_differ": true,
+    "distinct_actor_per_board_role": true
+  },
+  "quorum": {
+    "tier_1": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 2,
+      "specialist_pool": [
+        "GCA",
+        "MCA",
+        "RPA"
+      ]
+    },
+    "tier_2": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 4,
+      "specialist_pool": [
+        "GCA",
+        "MCA",
+        "EFA",
+        "ATA",
+        "SVA",
+        "RPA"
+      ]
+    },
+    "tier_3": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "GCA",
+        "MCA",
+        "EFA",
+        "ATA",
+        "SVA",
+        "RPA",
+        "SR"
+      ],
+      "specialists_required": 6,
+      "specialist_pool": [
+        "GCA",
+        "MCA",
+        "EFA",
+        "ATA",
+        "SVA",
+        "RPA"
+      ]
+    }
+  },
+  "canonical_lifecycle_mapping": {
+    "pre_review": [
+      "DRAFT",
+      "SUBMITTED",
+      "INTAKE_VALIDATION",
+      "RETURNED",
+      "ACCEPTED",
+      "EVIDENCE_LOCKED",
+      "ASSIGNMENT"
+    ],
+    "specialist_review": [
+      "INDEPENDENT_REVIEW"
+    ],
+    "challenge": [
+      "CHALLENGE",
+      "CLARIFICATION"
+    ],
+    "decision": [
+      "CONSOLIDATION",
+      "GOVERNANCE_VALIDATION",
+      "BLOCKED",
+      "DECIDED",
+      "PUBLISHED"
+    ],
+    "appeal": [
+      "APPEALED",
+      "APPEAL_REVIEW",
+      "UPHELD",
+      "SUPERSEDED",
+      "REMANDED"
+    ],
+    "terminal": [
+      "FINAL",
+      "ARCHIVED",
+      "VOID",
+      "WITHDRAWN"
+    ]
+  },
+  "activation_requirements": [
+    "approved_rbe_release",
+    "valid_profile_checksum",
+    "valid_package_manifest",
+    "named_human_principal_architect_approval",
+    "named_human_methodology_owner_approval",
+    "active_status_commit",
+    "immutable_release_tag"
+  ],
+  "supersedes": null,
+  "amendment_rationale": "First release. RBM-001 governs research conclusions, where the binding constraint is an archive somebody else curates. Engineering review has no such constraint: a test passes or fails, a commit hash is a fact, a build reproduces. RBM-002 exists because that better evidence permits sharper gates, and because the six defect classes it audits were each observed in this system's own code rather than drawn from a checklist.",
+  "agent_seat_policy": {
+    "agent_seats_permitted": true,
+    "permitted_agent_roles": [
+      "MA",
+      "GCA",
+      "MCA",
+      "EFA",
+      "ATA",
+      "SVA",
+      "RPA",
+      "SR"
+    ],
+    "prohibited_agent_roles": [
+      "BC"
+    ],
+    "agent_actor_prefixes": [
+      "agent:"
+    ],
+    "named_human_verifier_required": true,
+    "ratification_authority_must_be_human": true,
+    "publication_authority_must_be_human": true,
+    "agent_seat_review_is_advisory_only": true,
+    "independence_requirements": {
+      "distinct_instruction_version_per_seat": true,
+      "sceptical_seat_is_blind_to_proposed_outcome": true,
+      "record_model_and_instruction_version_per_seat": true,
+      "shared_model_across_seats_must_be_recorded": true
+    }
+  },
+  "single_authority_policy": {
+    "single_authority_permitted": true,
+    "permitted_only_when_profile_non_binding": true,
+    "never_binding": true,
+    "never_merge_permitted": true,
+    "authority_must_be_human": true,
+    "authority_must_be_board_chair": true,
+    "recorded_flag": "single_authority",
+    "supersedable_by_two_signature_decision": true,
+    "rationale_required": true
+  },
+  "engineering_gates": [
+    {
+      "gate_id": "EG-01",
+      "name": "Gate computation",
+      "requirement": "No gate, check, or status may return a pinned constant. Every reported status must be computed from inputs that can change it.",
+      "reviewer_role": "GCA",
+      "observed_instance": "Four proof gates reported FAIL as a hardcoded literal, so they could never have reported anything else."
+    },
+    {
+      "gate_id": "EG-02",
+      "name": "Measurement completeness",
+      "requirement": "No summary, rate, or aggregate may be written over a denominator that was not enumerated, or a numerator with unattempted members.",
+      "reviewer_role": "MCA",
+      "observed_instance": "A coverage census wrote a summary after retrieving zero records; a later run recorded rate limits as absences."
+    },
+    {
+      "gate_id": "EG-03",
+      "name": "Enforcement fidelity",
+      "requirement": "Every stated requirement must name the constant, test, or code path that enforces it. A requirement that exists only as prose is not a requirement.",
+      "reviewer_role": "EFA",
+      "observed_instance": "A three-district corroboration threshold was documented and enforced nowhere."
+    },
+    {
+      "gate_id": "EG-04",
+      "name": "Attestation integrity",
+      "requirement": "No attestation may be recorded by the process that produced the value it attests to, and no actor may sign as another.",
+      "reviewer_role": "ATA",
+      "observed_instance": "A demonstration run recorded a human transcriber's name against a figure the process itself had read."
+    },
+    {
+      "gate_id": "EG-05",
+      "name": "Sentinel handling",
+      "requirement": "Values meaning unknown, unset, or not yet determined must never be equality-matched, compared, or counted as results.",
+      "reviewer_role": "SVA",
+      "observed_instance": "Two records both classified to an unclassified fallback matched each other, producing a false corroboration PASS."
+    },
+    {
+      "gate_id": "EG-06",
+      "name": "Reproducibility",
+      "requirement": "The reviewed commit hash and the observed test result must be recorded, and the result must reproduce from a clean checkout.",
+      "reviewer_role": "RPA",
+      "observed_instance": "Test counts were quoted from memory across sessions rather than from a recorded run."
+    }
+  ]
+}

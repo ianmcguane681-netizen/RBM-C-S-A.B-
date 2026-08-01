@@ -1,0 +1,68 @@
+{
+  "reviewer_role": "SR",
+  "summary": "Reviewed without sight of any proposed outcome. Independence is established; corroboration of the underlying failure is not.",
+  "recommendation": "Research",
+  "evidence_reference_ids": [
+    "EVI-09ECC09DB087470D885266FD",
+    "EVI-1767B78C7F9F403C2AFAA5B4",
+    "EVI-1BA83B0AD96EC3983C9EBBC8",
+    "EVI-356707350E4FB5764312ADC9",
+    "EVI-4C2D52D955C946767D6D67B7",
+    "EVI-72B580A663D5BC4C05567615",
+    "EVI-9B567FECF20A189A91BE1D84",
+    "EVI-AEEA0A5082EB9A31E25DA3FA",
+    "EVI-C2CA9C233DDCEDC814465186",
+    "EVI-CE55E959DCC33DFDC8F901DA",
+    "EVI-D14800561C81A81F17674976"
+  ],
+  "finding_categories": {
+    "FND4-SR-001": "EVIDENCE"
+  },
+  "findings": [
+    {
+      "schema_version": "2.2.0",
+      "finding_id": "FND4-SR-001",
+      "review_id": "RBE-GSCF001-0004",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "11ec72b53fca8a5eb0e0e0a2f0a1c8b6d9e4f7a3",
+      "date_raised": "2026-07-26T10:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-008 section 7",
+      "title": "Both source families record allegations, not established failures",
+      "detail": "Complaints are consumer allegations to a regulator and filings are claims put to a court. Two independent forums now allege the same mechanism, which establishes independence, but neither establishes that the alleged failures occurred.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-09ECC09DB087470D885266FD",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Record the limit explicitly in the study report, and require a judgment, consent order or examination finding before asserting the failure occurred.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "2.2.0",
+    "report_id": "RPT-RBE-GSCF001-0004-SR",
+    "review_id": "RBE-GSCF001-0004",
+    "reviewer": "agent:sr",
+    "reviewer_role": "SR",
+    "reviewer_spec_id": "RBS-008",
+    "reviewer_spec_version": "2.2.0",
+    "artefact_sha": "11ec72b53fca8a5eb0e0e0a2f0a1c8b6d9e4f7a3",
+    "finding_ids": [
+      "FND4-SR-001"
+    ],
+    "evidence_sufficiency": "NOT_APPLICABLE",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-review-c/SR-001"
+    },
+    "human_signature_ref": "SIG-VERIFY-SR"
+  }
+}

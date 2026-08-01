@@ -1,0 +1,27 @@
+# Controlled packages are hashed and their manifests compared byte-for-byte, so a
+# checkout that rewrote line endings would fail validation on Windows and pass on
+# Linux. Pinning eol=lf is what makes "the manifest is stale" mean what it says.
+
+/.gitattributes text eol=lf
+
+# RBE-001 architecture package
+docs/rbe-001/v1.1.0/** text eol=lf
+docs/rbe-001/v1.1.0/*.zip -text -eol
+docs/rbe-001/README.md text eol=lf
+docs/rbe-001/CODEX_REVIEW_INSTRUCTIONS.md text eol=lf
+tests/test_rbe001_package.py text eol=lf
+
+# Methodology profiles. Both are controlled packages with hashed manifests.
+docs/review-board/** text eol=lf
+docs/engineering-board/** text eol=lf
+tests/test_rbm001_package.py text eol=lf
+
+# Runtime, board front door, and the shared guards
+controlled_authority/** text eol=lf
+rbe_runtime/** text eol=lf
+board/** text eol=lf
+guards/** text eol=lf
+lib/** text eol=lf
+docs/rbe-runtime/** text eol=lf
+tests/test_rbe_runtime*.py text eol=lf
+requirements-dev.txt text eol=lf

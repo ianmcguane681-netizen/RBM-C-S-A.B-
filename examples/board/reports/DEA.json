@@ -1,0 +1,68 @@
+{
+  "reviewer_role": "DEA",
+  "summary": "Evidence is traceable and internally consistent; the run predates a second source family.",
+  "recommendation": "Research",
+  "evidence_reference_ids": [
+    "EVI-3236AF873769A5A847C52526",
+    "EVI-48E72B0729D8101B3C95CE52",
+    "EVI-6526989E2B4037DFCAAC4ACB",
+    "EVI-69FC8D6C101E3F5BCAE66D5B",
+    "EVI-7A8C7AAE515570D8C6545149",
+    "EVI-8FF770D41A38773E00EA935D",
+    "EVI-919B1781734DA3404E4A1378",
+    "EVI-9F5C7623E933FDF84814B6B5",
+    "EVI-AEE0E53920747B8DCB994743",
+    "EVI-B79F4EFA47C354BDFA88836B",
+    "EVI-D299477ED70D0509A4C0652B"
+  ],
+  "finding_categories": {
+    "FND-DEA-001": "EVIDENCE"
+  },
+  "findings": [
+    {
+      "schema_version": "2.1.0",
+      "finding_id": "FND-DEA-001",
+      "review_id": "RBE-GSCF001-0001",
+      "reviewer": "agent:dea",
+      "reviewer_role": "DEA",
+      "artefact_version": "9bb288cfad99e16425f98000a906f8ca1a35eeac",
+      "date_raised": "2026-07-26T09:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-004 section 7",
+      "title": "Bundle reflects a single source family",
+      "detail": "The run manifest records only official_cfpb_search_api. A second independent source family (federal court records) is now available and was not present when this bundle was produced, so the evidence ceiling recorded here understates what can now be established.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-3236AF873769A5A847C52526",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Re-run GS-CF001-C with the court records connector and supersede this bundle.",
+      "target_resolution_date": "2026-08-31",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "2.1.0",
+    "report_id": "RPT-RBE-GSCF001-0001-DEA",
+    "review_id": "RBE-GSCF001-0001",
+    "reviewer": "agent:dea",
+    "reviewer_role": "DEA",
+    "reviewer_spec_id": "RBS-004",
+    "reviewer_spec_version": "2.1.0",
+    "artefact_sha": "9bb288cfad99e16425f98000a906f8ca1a35eeac",
+    "finding_ids": [
+      "FND-DEA-001"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-review-b/DEA-001"
+    },
+    "human_signature_ref": "SIG-VERIFY-DEA"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema_id": "rbe.golden-scenario",
+  "schema_version": "1.0.0",
+  "scenario": "PASS_WITH_FINDINGS",
+  "finding_severity": "SEV-2",
+  "specialist_evidence_sufficiency": "SUFFICIENT",
+  "accepted_remediation": true,
+  "process_blockers": [],
+  "expected_process_status": "READY",
+  "expected_outcome": "PASS_WITH_FINDINGS"
+}

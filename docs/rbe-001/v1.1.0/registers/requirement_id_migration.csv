@@ -1,0 +1,132 @@
+source_document,source_version,old_id,new_id,disposition,note
+Reference Architecture Chapter 2,1.0.0,RBE-INF-001,RBE-IBR-001,ARCHITECTURE_COLLISION_RESOLVED,Information-barrier requirement separated from the infrastructure namespace.
+Reference Architecture Chapter 2,1.0.0,RBE-AI-001,RBE-AI-130,ARCHITECTURE_COLLISION_RESOLVED,Later Chapter 17 definition retains RBE-AI-001.
+Reference Architecture Chapter 2,1.0.0,RBE-AI-002,RBE-AI-131,ARCHITECTURE_COLLISION_RESOLVED,Later Chapter 17 definition retains RBE-AI-002.
+Reference Architecture Chapter 11,1.0.0,RBE-OUT-001,RBE-OUT-010,ARCHITECTURE_COLLISION_RESOLVED,Earlier Chapter 1 definition retains RBE-OUT-001.
+Reference Architecture Chapter 11,1.0.0,RBE-OUT-002,RBE-OUT-011,ARCHITECTURE_COLLISION_RESOLVED,Earlier Chapter 1 definition retains RBE-OUT-002.
+RBE-001 Engineering Specification,1.0.0,RBE-API-001,RBE-ES-API-001,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-API-002,RBE-ES-API-002,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-API-003,RBE-ES-API-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-API-004,RBE-ES-API-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ARC-001,RBE-ES-ARC-001,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-ARC-002,RBE-ES-ARC-002,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-ARC-003,RBE-ES-ARC-003,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-ARC-004,RBE-ES-ARC-004,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-AUD-001,RBE-ES-AUD-001,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-AUD-002,RBE-ES-AUD-002,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-AUD-003,RBE-ES-AUD-003,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-AUD-004,RBE-ES-AUD-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-CON-001,RBE-ES-CON-001,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-CON-002,RBE-ES-CON-002,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-DEC-001,RBE-ES-DEC-001,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-DEC-002,RBE-ES-DEC-002,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-DEC-003,RBE-ES-DEC-003,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-DEC-004,RBE-ES-DEC-004,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-DEC-005,RBE-ES-DEC-005,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-DEC-006,RBE-ES-DEC-006,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-DEC-007,RBE-ES-DEC-007,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-DEC-008,RBE-ES-DEC-008,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-DES-001,RBE-ES-DES-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-DES-002,RBE-ES-DES-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-DES-003,RBE-ES-DES-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-DES-004,RBE-ES-DES-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-DOM-001,RBE-ES-DOM-001,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-DOM-002,RBE-ES-DOM-002,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-DOM-003,RBE-ES-DOM-003,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-DOM-004,RBE-ES-DOM-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-DOM-005,RBE-ES-DOM-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-DOM-006,RBE-ES-DOM-006,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-FUT-001,RBE-ES-FUT-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-FUT-002,RBE-ES-FUT-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-HUM-001,RBE-ES-HUM-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-HUM-002,RBE-ES-HUM-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-HUM-003,RBE-ES-HUM-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-HUM-004,RBE-ES-HUM-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-HUM-005,RBE-ES-HUM-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-001,RBE-ES-LIF-001,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-002,RBE-ES-LIF-002,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-003,RBE-ES-LIF-003,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-004,RBE-ES-LIF-004,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-005,RBE-ES-LIF-005,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-006,RBE-ES-LIF-006,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-007,RBE-ES-LIF-007,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-008,RBE-ES-LIF-008,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-009,RBE-ES-LIF-009,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-LIF-010,RBE-ES-LIF-010,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-001,RBE-ES-NFR-001,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-002,RBE-ES-NFR-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-003,RBE-ES-NFR-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-004,RBE-ES-NFR-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-005,RBE-ES-NFR-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-006,RBE-ES-NFR-006,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-007,RBE-ES-NFR-007,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-008,RBE-ES-NFR-008,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-009,RBE-ES-NFR-009,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-NFR-010,RBE-ES-NFR-010,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-OBS-001,RBE-ES-OBS-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-OBS-002,RBE-ES-OBS-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-OPS-001,RBE-ES-OPS-001,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-OPS-002,RBE-ES-OPS-002,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-OPS-003,RBE-ES-OPS-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-OPS-004,RBE-ES-OPS-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-OPS-005,RBE-ES-OPS-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-OPS-006,RBE-ES-OPS-006,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-OPS-007,RBE-ES-OPS-007,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-001,RBE-ES-ORC-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-002,RBE-ES-ORC-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-003,RBE-ES-ORC-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-004,RBE-ES-ORC-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-005,RBE-ES-ORC-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-006,RBE-ES-ORC-006,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-007,RBE-ES-ORC-007,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-008,RBE-ES-ORC-008,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-009,RBE-ES-ORC-009,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-010,RBE-ES-ORC-010,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-011,RBE-ES-ORC-011,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-ORC-012,RBE-ES-ORC-012,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PER-001,RBE-ES-PER-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PER-002,RBE-ES-PER-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PER-003,RBE-ES-PER-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PER-004,RBE-ES-PER-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PER-005,RBE-ES-PER-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PRI-001,RBE-ES-PRI-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PRI-002,RBE-ES-PRI-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PRI-003,RBE-ES-PRI-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PUR-001,RBE-ES-PUR-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PUR-002,RBE-ES-PUR-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PUR-003,RBE-ES-PUR-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-PUR-004,RBE-ES-PUR-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SCH-001,RBE-ES-SCH-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SCH-002,RBE-ES-SCH-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SCH-003,RBE-ES-SCH-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SCH-004,RBE-ES-SCH-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SCH-005,RBE-ES-SCH-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SCH-006,RBE-ES-SCH-006,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SCH-007,RBE-ES-SCH-007,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SCH-008,RBE-ES-SCH-008,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SEC-001,RBE-ES-SEC-001,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-SEC-002,RBE-ES-SEC-002,NAMESPACE_COLLISION_RESOLVED,Architecture retains the historical ID; engineering definition is superseded.
+RBE-001 Engineering Specification,1.0.0,RBE-SEC-003,RBE-ES-SEC-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SEC-004,RBE-ES-SEC-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SEC-005,RBE-ES-SEC-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SEC-006,RBE-ES-SEC-006,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SEC-007,RBE-ES-SEC-007,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-SEC-008,RBE-ES-SEC-008,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-TST-001,RBE-ES-TST-001,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-TST-002,RBE-ES-TST-002,SEMANTIC_NORMALISATION_AND_NAMESPACE_COLLISION_RESOLVED,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-TST-003,RBE-ES-TST-003,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-TST-004,RBE-ES-TST-004,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-TST-005,RBE-ES-TST-005,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-TST-006,RBE-ES-TST-006,SEMANTIC_NORMALISATION_AND_RENAMESPACE,"Requirement was renamespaced and revised by the v1.1.0 canonical state, verdict, or acceptance-test normalization; compare the source-qualified lineage."
+RBE-001 Engineering Specification,1.0.0,RBE-UI-001,RBE-ES-UI-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-UI-002,RBE-ES-UI-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-UI-003,RBE-ES-UI-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-UI-004,RBE-ES-UI-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-UI-005,RBE-ES-UI-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-UI-006,RBE-ES-UI-006,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-VER-001,RBE-ES-VER-001,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-VER-002,RBE-ES-VER-002,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-VER-003,RBE-ES-VER-003,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-VER-004,RBE-ES-VER-004,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-VER-005,RBE-ES-VER-005,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.
+RBE-001 Engineering Specification,1.0.0,RBE-VER-006,RBE-ES-VER-006,RENAMED_WITH_LINEAGE,Engineering requirement moved to the explicit RBE-ES namespace.

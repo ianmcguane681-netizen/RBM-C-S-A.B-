@@ -1,0 +1,39 @@
+{
+  "reviewer_role": "SAA",
+  "summary": "Per-family normalisation is separated from retrieval and dispatches on source family.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-363C427BAAFC8AE056D70EC5",
+    "EVI-41A4265E00EC0BA6A8832D28",
+    "EVI-431A41C37A5358D9709B4FE5",
+    "EVI-6740029E30F5915C8D26DD06",
+    "EVI-7210ACCA9BED2163831176B5",
+    "EVI-7CB5E0D98FA08DCACC92D060",
+    "EVI-7D4C2136BB07C17E02B725F1",
+    "EVI-C63DF2F007F1A081A1315C4E",
+    "EVI-C99262DF4C2B2248A00B39ED",
+    "EVI-E3D5DD2A3ABC2709F7695393",
+    "EVI-FDCF6DAB236ACD96F38EB1CD"
+  ],
+  "finding_categories": {},
+  "findings": [],
+  "report": {
+    "schema_version": "2.2.0",
+    "report_id": "RPT-RBE-GSCF001-0002-SAA",
+    "review_id": "RBE-GSCF001-0002",
+    "reviewer": "agent:saa",
+    "reviewer_role": "SAA",
+    "reviewer_spec_id": "RBS-002",
+    "reviewer_spec_version": "2.2.0",
+    "artefact_sha": "11ec72b53fca8a5eb0e0e0a2f0a1c8b6d9e4f7a3",
+    "finding_ids": [],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-review-d/SAA-001"
+    },
+    "human_signature_ref": "SIG-VERIFY-SAA"
+  }
+}

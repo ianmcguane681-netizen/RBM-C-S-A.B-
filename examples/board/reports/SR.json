@@ -1,0 +1,94 @@
+{
+  "reviewer_role": "SR",
+  "summary": "Reviewed the evidence without sight of any proposed outcome. It does not establish the operational mechanism it describes.",
+  "recommendation": "Research",
+  "evidence_reference_ids": [
+    "EVI-3236AF873769A5A847C52526",
+    "EVI-48E72B0729D8101B3C95CE52",
+    "EVI-6526989E2B4037DFCAAC4ACB",
+    "EVI-69FC8D6C101E3F5BCAE66D5B",
+    "EVI-7A8C7AAE515570D8C6545149",
+    "EVI-8FF770D41A38773E00EA935D",
+    "EVI-919B1781734DA3404E4A1378",
+    "EVI-9F5C7623E933FDF84814B6B5",
+    "EVI-AEE0E53920747B8DCB994743",
+    "EVI-B79F4EFA47C354BDFA88836B",
+    "EVI-D299477ED70D0509A4C0652B"
+  ],
+  "finding_categories": {
+    "FND-SR-001": "EVIDENCE",
+    "FND-SR-002": "EVIDENCE"
+  },
+  "findings": [
+    {
+      "schema_version": "2.1.0",
+      "finding_id": "FND-SR-001",
+      "review_id": "RBE-GSCF001-0001",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "9bb288cfad99e16425f98000a906f8ca1a35eeac",
+      "date_raised": "2026-07-26T09:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-008 section 7",
+      "title": "Evidence does not establish that alleged failures occurred",
+      "detail": "Every record in the bundle is a consumer allegation made to a regulator. Repetition establishes that the same allegation recurs, not that the underlying failure occurred. Nothing in the bundle independently corroborates any single allegation.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-3236AF873769A5A847C52526",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "State the limit explicitly in the report, or add corroborating evidence of a different kind.",
+      "target_resolution_date": "2026-08-31",
+      "closure": null
+    },
+    {
+      "schema_version": "2.1.0",
+      "finding_id": "FND-SR-002",
+      "review_id": "RBE-GSCF001-0001",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "9bb288cfad99e16425f98000a906f8ca1a35eeac",
+      "date_raised": "2026-07-26T09:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-008 section 7",
+      "title": "Company attribution rests on self-reported complaint fields",
+      "detail": "Company names come from the complaint record as submitted. No step verifies that the named company is the operationally responsible party.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-3236AF873769A5A847C52526",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": null,
+      "target_resolution_date": null,
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "2.1.0",
+    "report_id": "RPT-RBE-GSCF001-0001-SR",
+    "review_id": "RBE-GSCF001-0001",
+    "reviewer": "agent:sr",
+    "reviewer_role": "SR",
+    "reviewer_spec_id": "RBS-008",
+    "reviewer_spec_version": "2.1.0",
+    "artefact_sha": "9bb288cfad99e16425f98000a906f8ca1a35eeac",
+    "finding_ids": [
+      "FND-SR-001",
+      "FND-SR-002"
+    ],
+    "evidence_sufficiency": "NOT_APPLICABLE",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-review-c/SR-001"
+    },
+    "human_signature_ref": "SIG-VERIFY-SR"
+  }
+}

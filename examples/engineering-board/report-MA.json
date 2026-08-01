@@ -1,0 +1,60 @@
+{
+  "reviewer_role": "MA",
+  "summary": "The review was procedurally complete. Two seats were omitted with justifications, one of which names a role RBM-002 does not define.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-70203028606D1C2255094AA1",
+    "EVI-87668345C78903AF9D3C5D2C",
+    "EVI-9143CC24C64B52964E695F19",
+    "EVI-E3342429DEBC4A8DB294D753",
+    "EVI-EC59EB6ADBF6A16542BFDEF7"
+  ],
+  "finding_categories": {},
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "EG001-MA-EG-03",
+      "review_id": "RBM002-GSCF001-0001",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "1048b11",
+      "date_raised": "2026-07-31T12:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-001 section 7 (EG-03)",
+      "title": "An omitted seat's justification assigns work to no defined role",
+      "detail": "The initiation record omits RPA with the justification that reproducibility 'is assessed by the board chair against a recorded test run rather than by a seat'. RBM-002 section 4 gives the board chair no audit function -- BC convenes, ratifies and publishes. The justification therefore assigns EG-06 to nobody while reading as though it were covered. The T1 test-run evidence was in fact registered and is sound (276 passed at this commit), so the gate was met; the record of who met it is wrong.",
+      "evidence_tier": "T3",
+      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Either seat the RPA or record EG-06 as not assessed in this review. An omission justified by a role that does not exist is an unassessed gate.",
+      "target_resolution_date": "2026-08-31",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM002-GSCF001-0001-MA",
+    "review_id": "RBM002-GSCF001-0001",
+    "reviewer": "agent:ma",
+    "reviewer_role": "MA",
+    "reviewer_spec_id": "RBS-001",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "1048b11",
+    "finding_ids": [
+      "EG001-MA-EG-03"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-eng-a/EMA-001"
+    },
+    "human_signature_ref": "SIG-PENDING-MA"
+  }
+}

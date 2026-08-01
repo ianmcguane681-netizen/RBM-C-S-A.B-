@@ -1,0 +1,39 @@
+{
+  "reviewer_role": "DEA",
+  "summary": "Two independent source families are present and each traces to its own retrieval. The prior single-family finding is resolved.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-09ECC09DB087470D885266FD",
+    "EVI-1767B78C7F9F403C2AFAA5B4",
+    "EVI-1BA83B0AD96EC3983C9EBBC8",
+    "EVI-356707350E4FB5764312ADC9",
+    "EVI-4C2D52D955C946767D6D67B7",
+    "EVI-72B580A663D5BC4C05567615",
+    "EVI-9B567FECF20A189A91BE1D84",
+    "EVI-AEEA0A5082EB9A31E25DA3FA",
+    "EVI-C2CA9C233DDCEDC814465186",
+    "EVI-CE55E959DCC33DFDC8F901DA",
+    "EVI-D14800561C81A81F17674976"
+  ],
+  "finding_categories": {},
+  "findings": [],
+  "report": {
+    "schema_version": "2.2.0",
+    "report_id": "RPT-RBE-GSCF001-0004-DEA",
+    "review_id": "RBE-GSCF001-0004",
+    "reviewer": "agent:dea",
+    "reviewer_role": "DEA",
+    "reviewer_spec_id": "RBS-004",
+    "reviewer_spec_version": "2.2.0",
+    "artefact_sha": "11ec72b53fca8a5eb0e0e0a2f0a1c8b6d9e4f7a3",
+    "finding_ids": [],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-review-b/DEA-001"
+    },
+    "human_signature_ref": "SIG-VERIFY-DEA"
+  }
+}

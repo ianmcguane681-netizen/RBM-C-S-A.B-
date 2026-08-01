@@ -1,0 +1,68 @@
+{
+  "reviewer_role": "MA",
+  "summary": "The run followed its own methodology; rule versions and gate order are as recorded.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-3236AF873769A5A847C52526",
+    "EVI-48E72B0729D8101B3C95CE52",
+    "EVI-6526989E2B4037DFCAAC4ACB",
+    "EVI-69FC8D6C101E3F5BCAE66D5B",
+    "EVI-7A8C7AAE515570D8C6545149",
+    "EVI-8FF770D41A38773E00EA935D",
+    "EVI-919B1781734DA3404E4A1378",
+    "EVI-9F5C7623E933FDF84814B6B5",
+    "EVI-AEE0E53920747B8DCB994743",
+    "EVI-B79F4EFA47C354BDFA88836B",
+    "EVI-D299477ED70D0509A4C0652B"
+  ],
+  "finding_categories": {
+    "FND-MA-001": "METHODOLOGY"
+  },
+  "findings": [
+    {
+      "schema_version": "2.1.0",
+      "finding_id": "FND-MA-001",
+      "review_id": "RBE-GSCF001-0001",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "9bb288cfad99e16425f98000a906f8ca1a35eeac",
+      "date_raised": "2026-07-26T09:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-001 section 7",
+      "title": "Bundle manifest does not record the reviewing board",
+      "detail": "The run manifest records rule and configuration versions but has no field for a governing review. A reader cannot tell from the bundle alone whether it was ever reviewed.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-3236AF873769A5A847C52526",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": null,
+      "target_resolution_date": null,
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "2.1.0",
+    "report_id": "RPT-RBE-GSCF001-0001-MA",
+    "review_id": "RBE-GSCF001-0001",
+    "reviewer": "agent:ma",
+    "reviewer_role": "MA",
+    "reviewer_spec_id": "RBS-001",
+    "reviewer_spec_version": "2.1.0",
+    "artefact_sha": "9bb288cfad99e16425f98000a906f8ca1a35eeac",
+    "finding_ids": [
+      "FND-MA-001"
+    ],
+    "evidence_sufficiency": "NOT_APPLICABLE",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-review-a/MA-001"
+    },
+    "human_signature_ref": "SIG-VERIFY-MA"
+  }
+}

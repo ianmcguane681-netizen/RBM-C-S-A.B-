@@ -1,0 +1,26 @@
+# Python
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/project_exchange.db
+data/sv_engine.db
+data/exports/
+examples/sv_engine/*.db
+*.log
+*.sqlite3
+.pytest-tmp-rbe/
+rbe-bundles/
+.DS_Store
+
+# Node.js
+node_modules/
+
+# TypeScript build outputs — generated files; must not be committed
+*.tsbuildinfo
+dist/
+*.d.ts.map
+
+# Live review board store (the exported bundle is committed, the database is not)
+data/review_board*.sqlite3

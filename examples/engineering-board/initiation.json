@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "review_id": "RBM002-GSCF001-0001",
+  "review_date": "2026-07-31T12:00:00Z",
+  "trigger": "First engineering review. Target: the GS-CF001 coverage census tool at the commit before the transient-failure fix, chosen because its defect is known and the board should be able to find it.",
+  "tier": 2,
+  "tier_rationale": "The change crosses modules (connectors, core, tools) and touches a guard on a published artefact, which is Tier 2 under RBM-002 section 8.",
+  "artefact_sha": "1048b11",
+  "repository": "ianmcguane681-netizen/GS-CF001",
+  "architecture_authority": "RBE-001 v1.1.0",
+  "methodology_profile_id": "RBM-002",
+  "methodology_version": "1.0.0",
+  "methodology_status": "RELEASE_CANDIDATE",
+  "methodology_checksum": "sha256:064422edb67638316a470195071a2cf9915509027b1132ebdee039c75d59d8da",
+  "manifest_root_sha256": "sha256:38e27740c9ec3c42446fd9b3d31f55bf03f7574adaab6e48aaca173c380f53c9",
+  "human_approval_record": null,
+  "binding": false,
+  "board_chair": "ian.mcguane",
+  "methodology_auditor": "agent:ma",
+  "sceptical_reviewer": "agent:sr",
+  "specialists": {
+    "gca": "agent:gca",
+    "mca": "agent:mca",
+    "efa": "agent:efa",
+    "ata": null,
+    "sva": "agent:sva",
+    "rpa": null
+  },
+  "input_process_status": "READY",
+  "omitted_roles": [
+    {
+      "role": "ATA",
+      "justification": "The artefact records no attestations; no field under review is set by one actor about another's output."
+    },
+    {
+      "role": "RPA",
+      "justification": "Reproducibility is assessed by the board chair against a recorded test run rather than by a seat, for this review only."
+    }
+  ]
+}

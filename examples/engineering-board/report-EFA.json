@@ -1,0 +1,85 @@
+{
+  "reviewer_role": "EFA",
+  "summary": "One stated requirement in this file is detected and then not enforced. Two documented claims in the README have no enforcing code at this commit.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-70203028606D1C2255094AA1",
+    "EVI-87668345C78903AF9D3C5D2C",
+    "EVI-9143CC24C64B52964E695F19",
+    "EVI-E3342429DEBC4A8DB294D753",
+    "EVI-EC59EB6ADBF6A16542BFDEF7"
+  ],
+  "finding_categories": {},
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "EG001-EFA-EG-03",
+      "review_id": "RBM002-GSCF001-0001",
+      "reviewer": "agent:efa",
+      "reviewer_role": "EFA",
+      "artefact_version": "1048b11",
+      "date_raised": "2026-07-31T12:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-004 section 7 (EG-03)",
+      "title": "The strata guard detects a mismatch and proceeds anyway",
+      "detail": "tools/adjudication_coverage.py states 'A cache is only reusable for the strata that produced it. Reusing a plaintiff-only pool for a judgment=1,2 run would report a coverage rate over a population that was never walked, and the file gives no hint.' The code below that comment compares cached_judgment to args.judgment, prints 're-enumerating rather than mixing strata', and continues -- re-enumerating a different population and then overwriting the pool cache the existing results were measured against. Detecting a condition and proceeding is not enforcement. The comment describes a guard that does not exist. Note also that cached.get('judgment', '1') supplies a default for caches written before the field existed, so a file that never declared its strata is treated as plaintiff-only on no evidence.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Refuse the run when the cache belongs to different strata, naming the flag that would resolve it. A detection that does not stop the run enforces nothing.",
+      "target_resolution_date": "2026-08-31",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "EG002-EFA-EG-03",
+      "review_id": "RBM002-GSCF001-0001",
+      "reviewer": "agent:efa",
+      "reviewer_role": "EFA",
+      "artefact_version": "1048b11",
+      "date_raised": "2026-07-31T12:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-004 section 7 (EG-03)",
+      "title": "Resume correctness is asserted in a comment and tested nowhere",
+      "detail": "The resume-key comment explains at length why the key must be court-qualified: 'a ~430-record walk across ninety districts would [collide], and the loss would look like completion.' That reasoning is correct and there is no test for it. The repository's test suite at this commit (276 passing) contains no test of _resume_key, of the resume path, or of the summary refusal. A requirement whose only record is a comment cannot survive a refactor by anyone who has not read the comment.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Add tests covering the resume key, the resume path, and each refusal branch.",
+      "target_resolution_date": "2026-08-31",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM002-GSCF001-0001-EFA",
+    "review_id": "RBM002-GSCF001-0001",
+    "reviewer": "agent:efa",
+    "reviewer_role": "EFA",
+    "reviewer_spec_id": "RBS-004",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "1048b11",
+    "finding_ids": [
+      "EG001-EFA-EG-03",
+      "EG002-EFA-EG-03"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-eng-c/EFA-001"
+    },
+    "human_signature_ref": "SIG-PENDING-EFA"
+  }
+}
