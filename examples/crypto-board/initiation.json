@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "review_id": "RBM003-USDC-0001",
+  "review_date": "2026-08-01T14:00:00Z",
+  "trigger": "First crypto review: USDC upgradeability and supply at a finalized block.",
+  "tier": 2,
+  "tier_rationale": "Tier 2 at initiation: a single token contract whose upgradeability is not yet known. RBM-003 section 8 makes an upgradeable proxy Tier 3 by construction, so if the CAA seat establishes upgradeability this review is under-tiered for its subject and the MA seat should raise it.",
+  "artefact_sha": "25660396",
+  "repository": "ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "architecture_authority": "RBE-001 v1.1.0",
+  "methodology_profile_id": "RBM-003",
+  "methodology_version": "1.0.0",
+  "methodology_status": "RELEASE_CANDIDATE",
+  "methodology_checksum": "sha256:ac299c5aa2dc3aee224f15dbda0a59cf21c37937298ed66390139f8cf9873cb3",
+  "manifest_root_sha256": "sha256:b6902686f1f47a4fdf4f2e5d3a4d902e1e49d8caa1c95f5631c9639f9ab4bbb0",
+  "human_approval_record": null,
+  "binding": false,
+  "board_chair": "ian.mcguane",
+  "methodology_auditor": "agent:ma",
+  "sceptical_reviewer": "agent:sr",
+  "specialists": {
+    "cva": "agent:cva",
+    "ada": null,
+    "tka": "agent:tka",
+    "caa": "agent:caa",
+    "lqa": null,
+    "rpa": "agent:rpa"
+  },
+  "input_process_status": "READY",
+  "omitted_roles": [
+    {
+      "role": "ADA",
+      "justification": "Address clustering requires log walking, which is not yet built."
+    },
+    {
+      "role": "LQA",
+      "justification": "Exit-cost assessment requires pool discovery, which is not yet built."
+    }
+  ]
+}

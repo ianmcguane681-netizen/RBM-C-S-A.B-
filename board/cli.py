@@ -196,6 +196,78 @@ def cmd_commit_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_chain_evidence(args: argparse.Namespace) -> int:
+    """Register chain state as evidence, pinned to a finalized block height.
+
+    The chain analogue of `commit-evidence`. A contract at a block height is the same
+    class of artefact as a commit: immutable, independently retrievable, and verifiable by
+    anyone who was not present when it was read.
+
+    Reads at `finalized` rather than `latest`, so evidence cannot be reorged out from
+    under a record already made.
+    """
+
+    from connectors.chain import ChainClient, best_for
+    from connectors import chain_queries as queries
+
+    runtime = _runtime(args)
+    client = ChainClient(best_for("state"))
+    address = args.contract
+
+    print(f"Reading {address} on {client.provider.chain} via {client.provider.name}")
+
+    def _register(label: str, reading, tier: str) -> None:
+        runtime.register_evidence(
+            args.review,
+            locator=f"{client.provider.chain}:{address}@{reading.block_number}:{label}",
+            content=str(reading.value).encode("utf-8"),
+            description=f"{label} for {address} at block {reading.block_number}",
+            source_tier=tier,
+            provenance={**reading.provenance(), "contract": address, "reading": label},
+            actor=args.actor,
+            idempotency_key=f"chain-{reading.block_number}-{address}-{label}",
+        )
+        print(f"  T1  {label:<14} block {reading.block_number}  {reading.content_sha256[:16]}")
+
+    for label, reading in queries.token_identity(client, address).items():
+        _register(label, reading, "T1")
+    _register("totalSupply", queries.total_supply(client, address), "T1")
+
+    # The proxy finding is not a single reading, so it is registered as an assessment with
+    # its own provenance. Its status is recorded verbatim: NO_PATTERN_MATCHED must reach
+    # the reviewer as itself, never softened into "immutable" on the way.
+    finding = queries.proxy_finding(client, address)
+    runtime.register_evidence(
+        args.review,
+        locator=f"{client.provider.chain}:{address}@{finding.block_number}:upgradeability",
+        content=finding.describe().encode("utf-8"),
+        description=f"Upgradeability probe for {address}",
+        source_tier="T2",
+        provenance={
+            "kind": "CHAIN_STATE",
+            "chain": client.provider.chain,
+            "block_number": finding.block_number,
+            "contract": address,
+            "reading": "upgradeability",
+            "status": finding.status,
+            "matched_patterns": sorted(finding.slots),
+            "unreachable_probes": list(finding.unreachable),
+            "conventions_probed": len(queries.PROXY_SLOTS),
+        },
+        actor=args.actor,
+        idempotency_key=f"chain-{finding.block_number}-{address}-upgradeability",
+    )
+    print(f"  T2  {'upgradeability':<14} {finding.status}")
+    print(f"      {finding.describe()}")
+
+    holders = queries.authority_holders(client, address)
+    print(f"  --  authority       {holders}")
+    print(f"  --  paused          {queries.is_paused(client, address)}")
+
+    _print_next("board advance --to EVIDENCE_LOCKED, then ASSIGNMENT")
+    return 0
+
+
 def cmd_advance(args: argparse.Namespace) -> int:
     """Move the review to its next lifecycle state."""
 
@@ -546,6 +618,14 @@ def build_parser() -> argparse.ArgumentParser:
     commit.add_argument("--test-command", default=None)
     commit.add_argument("--actor", required=True)
     commit.set_defaults(func=cmd_commit_evidence)
+
+    chain = sub.add_parser(
+        "chain-evidence", help="Register chain state at a finalized block (crypto review)"
+    )
+    chain.add_argument("--review", required=True)
+    chain.add_argument("--contract", required=True, help="Contract address to read")
+    chain.add_argument("--actor", required=True)
+    chain.set_defaults(func=cmd_chain_evidence)
 
     advance = sub.add_parser("advance", help="Move to the next lifecycle state")
     advance.add_argument("--review", required=True)
