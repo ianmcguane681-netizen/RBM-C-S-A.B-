@@ -449,6 +449,22 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         BEFORE DELETE ON decision_ratifications BEGIN SELECT RAISE(ABORT, 'decision_ratifications are append-only'); END;
         """,
     ),
+    (
+        4,
+        """
+        -- The single-authority rationale was required by policy, demanded by the CLI,
+        -- passed all the way into save_decision -- and then dropped, because no column
+        -- existed to hold it. A governance control that validates its input and discards
+        -- it records nothing, and both USDC decisions were ratified through that gap.
+        --
+        -- Nullable, and the rows written before this migration stay null. The table
+        -- forbids UPDATE and DELETE, so backfilling is structurally impossible and that
+        -- is correct: a rationale reconstructed after the fact is not the one that was
+        -- given at signing.
+        ALTER TABLE decision_ratifications
+        ADD COLUMN single_authority_rationale TEXT;
+        """,
+    ),
 )
 
 
@@ -1712,8 +1728,9 @@ class SQLiteRepository:
             INSERT INTO decision_ratifications(
                 decision_id, candidate_id, session_id, board_chair,
                 board_chair_signature_ref, governance_validator,
-                governance_validation_ref, ratified_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                governance_validation_ref, ratified_at,
+                single_authority_rationale
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 decision.decision_id,
@@ -1724,6 +1741,7 @@ class SQLiteRepository:
                 ratification.get("governance_validator"),
                 ratification.get("governance_validation_ref"),
                 decision.signed_at,
+                ratification.get("single_authority_rationale") or None,
             ),
         )
 
@@ -1835,6 +1853,138 @@ class SQLiteRepository:
         finally:
             connection.close()
         return tuple(self._decision_from_row(row) for row in rows)
+
+    def link_review_supersession(
+        self,
+        session_id: str,
+        *,
+        supersedes_session_id: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        """Record that one review's decision replaces another review's.
+
+        `supersede_decision` above is the *appeal* path: a panel replacing a decision
+        inside one session, which requires APPEAL_REVIEW. It cannot express what actually
+        happened with USDC, where a second review at a higher tier replaced the first.
+
+        Nothing recorded that. `parent_session_id` existed on `review_sessions` from the
+        first migration and was never written by anything, so a reader of decision 0001
+        found `superseded: False` and believed it.
+
+        Established after both decisions exist rather than claimed at initiation. At open
+        time a review can only *intend* to supersede; whether it does depends on what it
+        finds, and an intent recorded as a fact is the sentinel defect wearing a schema.
+        """
+
+        payload = {"supersedes_session_id": supersedes_session_id}
+
+        def operation(connection: sqlite3.Connection, now: str) -> dict[str, Any]:
+            if session_id == supersedes_session_id:
+                raise RBEError(
+                    "RBE_SUPERSESSION_SELF_REFERENCE",
+                    "A review cannot supersede itself",
+                    "RBE-ES-DEC-005",
+                    {"session_id": session_id},
+                )
+            rows = {
+                row["session_id"]: row
+                for row in connection.execute(
+                    "SELECT * FROM review_sessions WHERE session_id IN (?, ?)",
+                    (session_id, supersedes_session_id),
+                )
+            }
+            for needed in (session_id, supersedes_session_id):
+                if needed not in rows:
+                    raise RBEError(
+                        "RBE_SESSION_NOT_FOUND",
+                        "Review session was not found",
+                        "RBE-ES-LIF-001",
+                        {"session_id": needed},
+                    )
+            successor_row, superseded_row = rows[session_id], rows[supersedes_session_id]
+
+            # A review of one subject says nothing about another. Without this, a decision
+            # about USDC could be recorded as replacing one about a different token.
+            if successor_row["target_id"] != superseded_row["target_id"]:
+                raise RBEError(
+                    "RBE_SUPERSESSION_SUBJECT_MISMATCH",
+                    "A review may only supersede one about the same subject",
+                    "RBE-ES-DEC-005",
+                    {
+                        "successor_target": successor_row["target_id"],
+                        "superseded_target": superseded_row["target_id"],
+                    },
+                )
+
+            decisions = {}
+            for sid in (session_id, supersedes_session_id):
+                found = connection.execute(
+                    "SELECT * FROM board_decisions WHERE session_id = ? AND superseded = 0",
+                    (sid,),
+                ).fetchone()
+                if found is None:
+                    raise RBEError(
+                        "RBE_SUPERSESSION_NOT_OPEN",
+                        "Both reviews must hold a current signed decision",
+                        "RBE-ES-DEC-005",
+                        {"session_id": sid},
+                    )
+                decisions[sid] = found
+
+            # Ratification order, not artefact order. Artefact versions are opaque strings
+            # -- a block height here, a commit sha elsewhere -- and comparing them
+            # generically would be guesswork. When a decision was signed is unambiguous.
+            if decisions[session_id]["signed_at"] < decisions[supersedes_session_id]["signed_at"]:
+                raise RBEError(
+                    "RBE_SUPERSESSION_ORDER",
+                    "A decision cannot supersede one signed after it",
+                    "RBE-ES-DEC-005",
+                    {
+                        "successor_signed_at": decisions[session_id]["signed_at"],
+                        "superseded_signed_at": decisions[supersedes_session_id]["signed_at"],
+                    },
+                )
+
+            connection.execute(
+                """
+                UPDATE board_decisions
+                SET superseded = 1, status = 'SUPERSEDED'
+                WHERE decision_id = ? AND superseded = 0
+                """,
+                (decisions[supersedes_session_id]["decision_id"],),
+            )
+            connection.execute(
+                "UPDATE review_sessions SET parent_session_id = ? WHERE session_id = ?",
+                (supersedes_session_id, session_id),
+            )
+            self._append_audit(
+                connection,
+                session_id=session_id,
+                event_type="REVIEW_SUPERSEDED",
+                actor=actor,
+                occurred_at=now,
+                payload={
+                    "supersedes_session_id": supersedes_session_id,
+                    "superseded_decision_id": decisions[supersedes_session_id]["decision_id"],
+                    "successor_decision_id": decisions[session_id]["decision_id"],
+                },
+            )
+            return {
+                "session_id": session_id,
+                "supersedes_session_id": supersedes_session_id,
+                "superseded_decision_id": decisions[supersedes_session_id]["decision_id"],
+                "successor_decision_id": decisions[session_id]["decision_id"],
+            }
+
+        return self._run_idempotent(
+            session_id=session_id,
+            command_name="link_review_supersession",
+            idempotency_key=idempotency_key,
+            actor=actor,
+            payload=payload,
+            operation=operation,
+        )
 
     def supersede_decision(
         self,
@@ -1959,16 +2109,26 @@ class SQLiteRepository:
             operation=operation,
         )
 
-    def get_ratification(self, session_id: str) -> dict[str, Any] | None:
+    def get_ratification(
+        self, session_id: str, *, decision_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """The current ratification, or a named one.
+
+        `decision_id` reaches a superseded decision's ratification. Without it an export
+        of a superseded review lost its signature entirely.
+        """
+
         connection = self._connect()
         try:
             row = connection.execute(
                 """
                 SELECT r.* FROM decision_ratifications r
                 JOIN board_decisions d ON d.decision_id = r.decision_id
-                WHERE r.session_id = ? AND d.superseded = 0
+                WHERE r.session_id = ? AND (
+                    (? IS NULL AND d.superseded = 0) OR r.decision_id = ?
+                )
                 """,
-                (session_id,),
+                (session_id, decision_id, decision_id),
             ).fetchone()
         finally:
             connection.close()
@@ -2079,19 +2239,26 @@ class SQLiteRepository:
             operation=operation,
         )
 
-    def get_publication(self, session_id: str) -> dict[str, Any] | None:
+    def get_publication(
+        self, session_id: str, *, decision_id: str | None = None
+    ) -> dict[str, Any] | None:
         # The publication of the *current* decision. After a supersession this is
         # None until the successor is published, which is exactly what the
         # SUPERSEDED -> FINAL prerequisite needs to observe.
+        #
+        # `decision_id` names a specific one instead, so an export can still reach the
+        # publication of a decision that has since been replaced.
         connection = self._connect()
         try:
             row = connection.execute(
                 """
                 SELECT p.* FROM publications p
                 JOIN board_decisions d ON d.decision_id = p.decision_id
-                WHERE p.session_id = ? AND d.superseded = 0
+                WHERE p.session_id = ? AND (
+                    (? IS NULL AND d.superseded = 0) OR p.decision_id = ?
+                )
                 """,
-                (session_id,),
+                (session_id, decision_id, decision_id),
             ).fetchone()
         finally:
             connection.close()

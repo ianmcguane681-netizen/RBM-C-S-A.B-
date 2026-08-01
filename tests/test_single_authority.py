@@ -93,6 +93,40 @@ def test_no_governance_validator_is_recorded(tmp_path: Path):
     assert ratification["governance_validation_ref"] is None
 
 
+def test_the_rationale_is_kept(tmp_path: Path):
+    """The profile requires a rationale for signing alone, and it used to be thrown away.
+
+    `--rationale` was accepted by the CLI, required by `single_authority_policy`, passed
+    through the service into `save_decision` -- and dropped, because no column held it.
+    Both USDC decisions were ratified through that gap, each carrying a statement about
+    how much scrutiny the signatory actually gave, and neither statement survived.
+
+    A governance control that validates its input and discards it records nothing.
+    """
+
+    runtime = at_governance_validation(tmp_path)
+    sign_alone(runtime)
+
+    ratification = runtime.repository.get_ratification("REV-SOLO")
+
+    assert ratification["single_authority_rationale"] == "Sole human authority."
+
+
+def test_a_missing_rationale_is_null_rather_than_empty(tmp_path: Path):
+    """Null says nobody gave one. An empty string looks like somebody gave a blank."""
+
+    runtime = at_governance_validation(tmp_path, review_id="REV-NORAT")
+    runtime.ratify_decision(
+        "REV-NORAT",
+        actor="human-chair",
+        board_chair_signature_ref="SIG-CHAIR",
+        idempotency_key="ratify-REV-NORAT",
+        single_authority_rationale="",
+    )
+
+    assert runtime.repository.get_ratification("REV-NORAT")["single_authority_rationale"] is None
+
+
 def test_an_agent_cannot_sign_alone(tmp_path: Path):
     runtime = at_governance_validation(tmp_path, "REV-AGENT-SOLO")
 

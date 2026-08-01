@@ -319,8 +319,8 @@ No remediation plans were recorded.
 
 ## Audit Verification
 
-- Entries verified: 44
-- Audit root hash: `sha256:7ac4edf8307cfe0e2db8f45058782570afa29a21358b9cb2e8d97d90c7d29565`
+- Entries verified: 45
+- Audit root hash: `sha256:4f8f47c9b2c702f9b902bc7722f170ed025b15a6e073fda2cd10c9b686480bce`
 - Audit chain valid: **true**
 
 ## Limitations

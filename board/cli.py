@@ -496,6 +496,30 @@ def cmd_remediate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_supersede(args: argparse.Namespace) -> int:
+    """Record that this review's decision replaces an earlier review's.
+
+    Distinct from the appeal path, which replaces a decision inside one session. This is
+    the cross-review case: a second review of the same subject, at a higher tier or on
+    fresher evidence, standing in place of the first.
+
+    Nothing recorded this before, so a reader of the earlier decision found it current.
+    """
+
+    runtime = _runtime(args)
+    result = runtime.link_review_supersession(
+        args.review,
+        supersedes_session_id=args.supersedes,
+        actor=args.actor,
+        idempotency_key=args.key or f"supersede-{args.review}-{args.supersedes}",
+    )
+    print(f"{args.review} now supersedes {args.supersedes}.")
+    print(f"  superseded decision  {result['superseded_decision_id']}  -> SUPERSEDED")
+    print(f"  successor decision   {result['successor_decision_id']}")
+    print("  The earlier decision stays readable; only its status changed.")
+    return 0
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     """Record that a named human read an agent seat's draft and verified it.
 
@@ -770,6 +794,15 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--review", required=True)
     report.add_argument("--report", required=True)
     report.set_defaults(func=cmd_report)
+
+    supersede = sub.add_parser(
+        "supersede", help="Record that this review replaces an earlier one"
+    )
+    supersede.add_argument("--review", required=True, help="The superseding review")
+    supersede.add_argument("--supersedes", required=True, help="The review being replaced")
+    supersede.add_argument("--actor", required=True, help="Board Chair of the superseding review")
+    supersede.add_argument("--key", default="")
+    supersede.set_defaults(func=cmd_supersede)
 
     verify = sub.add_parser(
         "verify", help="Record that a named human verified an agent seat's draft"

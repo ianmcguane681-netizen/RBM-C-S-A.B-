@@ -194,7 +194,10 @@ def test_v1_database_upgrades_in_place(tmp_path: Path):
         "SELECT sql FROM sqlite_master WHERE name = 'decision_ratifications'"
     ).fetchone()[0]
     connection.close()
-    assert versions == [1, 2, 3]
+    # Against MIGRATIONS rather than a literal, because the claim under test is "a v1
+    # database ends up fully migrated", not "there are exactly three migrations". The
+    # literal version failed the moment a fourth was added, which tested the wrong thing.
+    assert versions == [version for version, _ in MIGRATIONS]
     # Per-session uniqueness is gone; per-decision uniqueness remains, and the
     # governance validator is nullable for single-authority ratification.
     assert "session_id TEXT NOT NULL UNIQUE" not in ratification_sql

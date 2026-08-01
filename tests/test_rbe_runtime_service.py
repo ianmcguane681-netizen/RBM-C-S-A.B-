@@ -157,9 +157,15 @@ def prepare_to_consolidation(
     *,
     severity: str | None = None,
     insufficient: bool = False,
+    repository: str | None = None,
 ) -> None:
+    record = initiation(runtime.authority, review_id)
+    if repository is not None:
+        # So a test can build two reviews of DIFFERENT subjects in one store, which
+        # supersession needs in order to prove it refuses to link them.
+        record = {**record, "repository": repository}
     runtime.initiate_review(
-        initiation(runtime.authority, review_id),
+        record,
         actor="human-chair",
         idempotency_key="initiate",
         execution_mode=ExecutionMode.ADVISORY_DRY_RUN,

@@ -219,7 +219,7 @@ No remediation plans were recorded.
 
 ## Governance And Publication
 
-- Decision status: **SIGNED**
+- Decision status: **SUPERSEDED**
 - Publication: **RECORDED**
 
 ## Audit Verification

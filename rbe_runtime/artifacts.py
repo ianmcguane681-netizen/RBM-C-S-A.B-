@@ -58,9 +58,27 @@ class ArtifactExporter:
         findings = self.repository.list_findings(session_id)
         remediation = self.repository.list_remediation_plans(session_id)
         candidate = self.repository.get_decision_candidate(session_id)
+        # `get_decision` and friends filter `superseded = 0`, which is right for "what
+        # stands now" and wrong for an export. Superseding RBM003-USDC-0001 emptied its
+        # own bundle: decision, ratification and publication all vanished, leaving a
+        # review that appeared never to have decided anything.
+        #
+        # A superseded decision is still the decision that review made, and the record of
+        # why it was replaced is worthless without it. Export falls back to the history and
+        # the status field says SUPERSEDED, which is the honest rendering.
         decision = self.repository.get_decision(session_id)
         ratification = self.repository.get_ratification(session_id)
         publication = self.repository.get_publication(session_id)
+        if decision is None:
+            history = self.repository.get_decision_history(session_id)
+            if history:
+                decision = history[-1]
+                ratification = self.repository.get_ratification(
+                    session_id, decision_id=decision.decision_id
+                )
+                publication = self.repository.get_publication(
+                    session_id, decision_id=decision.decision_id
+                )
         audit = self.repository.list_audit(session_id)
         audit_verification = self.repository.verify_audit(session_id)
         if candidate is None:

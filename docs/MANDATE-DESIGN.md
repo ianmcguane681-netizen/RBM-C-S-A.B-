@@ -1,6 +1,6 @@
 # The mandate artifact — design
 
-**Status:** design only. No code yet.
+**Status:** design agreed; the three prerequisites are built. The mandate itself is not.
 
 ## What it is for
 
@@ -80,8 +80,9 @@ not gate anything that moves money, and the mandate says so by name rather than 
 arithmetic.
 
 **3 · Scrutiny is sufficient and recorded.** How were the seat drafts verified, and on what
-basis was the decision ratified? `board verify --basis` records the first on the draft
-file. The second is currently **not recorded at all** — see Prerequisites.
+basis was the decision ratified? Both are now in the store: the first inside
+`review_reports.raw_record_json`, the second in
+`decision_ratifications.single_authority_rationale`.
 
 A decision whose scrutiny level is unknown is `INDETERMINATE`, never `PERMITTED`. An
 unrecorded reading is not a full reading.
@@ -105,17 +106,10 @@ condition is `INDETERMINATE` — not waived.
 
 Wall-clock freshness is a proxy for drift; drift is the thing that actually matters.
 
-**5 · Not superseded.** `decision.superseded` covers the in-session appeal case.
-
-It does not cover the case in front of us. `RBM003-USDC-0002` replaced `RBM003-USDC-0001`,
-and **nothing in the store records that** — `parent_session_id` exists in the schema and is
-never written, and `supersede_published_decision` is an appeal mechanism requiring
-`APPEAL_REVIEW`, not a cross-review link. A mandate reading decision 0001 today would find
-`superseded: False` and be wrong.
-
-Until cross-review supersession exists, this condition returns `INDETERMINATE` whenever
-another published decision exists for the same subject at a later artefact height. Better
-to refuse for a reason than to permit on a field that cannot know.
+**5 · Not superseded.** `decision.superseded` for the in-session appeal case, and
+`review_sessions.parent_session_id` for the cross-review case, which `board supersede` now
+writes. Decision 0001 reads `SUPERSEDED` and decision 0002 holds the link, so this
+condition answers from the record rather than guessing.
 
 **6 · Scope matches.** The proposed action must concern the subject the decision reviewed —
 matched on the review's `repository` locator (`ethereum:0xA0b8...`), not on a name. A
@@ -133,14 +127,14 @@ Against `RBM003-USDC-0002`, for any proposed action:
 REFUSED
   outcome        FAILED       FAIL is not a permitting outcome
   authority      FAILED       RBM-003 is non-binding; §11 forbids authorisation
-  scrutiny       INDETERMINATE ratification basis is not recorded in the store
+  scrutiny       FAILED       ratified on a summary reading, not a full one
   freshness      INDETERMINATE no drift observation supplied
-  supersession   ESTABLISHED  not superseded
+  supersession   ESTABLISHED  current; 0001 is SUPERSEDED by this one
   scope          ESTABLISHED  ethereum:0xA0b8...eB48
   findings       FAILED       4 unresolved SEV-2
 ```
 
-Three independent refusals and two conditions that cannot be evaluated. The right answer,
+Four independent refusals and one condition that cannot be evaluated. The right answer,
 and the per-condition breakdown is what makes it useful rather than merely negative.
 
 **The first mandate this system produces will refuse.** That is the correct outcome and
@@ -155,11 +149,25 @@ Three gaps that must close before a mandate can mean anything:
    has no column for it. A governance control that validates its input and discards it.
    Needs a column, a migration, and the field in the export.
 
-2. **Record the verification basis in the store.** `--basis` writes to the draft JSON, which
-   is a file on disk and not part of the decision package. Condition 3 cannot read it.
+2. ~~**Record the verification basis in the store.**~~ **Already satisfied.** Checked
+   rather than assumed, and the assumption was wrong: `submit_report` stores the whole
+   report payload in `review_reports.raw_record_json`, so
+   `ai_assistance.human_verification_basis` is already in the store for all eight seats.
+   Condition 3 reads it from there.
 
-3. **Cross-review supersession.** `parent_session_id` exists and nothing writes it. Needed
-   for condition 5 to return anything but `INDETERMINATE`.
+3. **Cross-review supersession.** ~~`parent_session_id` exists and nothing writes it.~~
+   **Done.** `board supersede --review <new> --supersedes <old>` records it, guarded on
+   same subject, ratification order, both decisions signed, and chair-only. Establishing it
+   after both decisions exist rather than claiming it at initiation: at open time a review
+   can only *intend* to supersede, and an intent recorded as a fact is the sentinel defect
+   wearing a schema.
+
+   Building it exposed a further defect. `get_decision`, `get_ratification` and
+   `get_publication` all filter `superseded = 0`, so superseding a decision **emptied its
+   own export bundle** -- RBM003-USDC-0001 rendered as a review that never decided
+   anything. Right for "what stands now", wrong for an export, and the record of why a
+   decision was replaced is worthless without the decision. Export now falls back to the
+   history and renders `status: SUPERSEDED`.
 
 None is large. All three are the difference between a mandate that reasons about evidence
 and one that reasons about absences.

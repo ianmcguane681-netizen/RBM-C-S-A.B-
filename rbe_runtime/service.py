@@ -768,6 +768,35 @@ class RBERuntime:
                 {"actor": actor},
             )
 
+    def link_review_supersession(
+        self,
+        session_id: str,
+        *,
+        supersedes_session_id: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        """Declare that this review's decision replaces an earlier review's.
+
+        The chair of the superseding review declares it, because it is a governance act
+        about their own review rather than an observation anyone may record.
+        """
+
+        initiation = self.repository.get_initiation(session_id)
+        if actor != initiation["board_chair"]:
+            raise RBEError(
+                "RBE_TRANSITION_ACTOR_MISMATCH",
+                "Only the named Board Chair may supersede a review",
+                "RBE-ES-DEC-005",
+                {"actor": actor, "board_chair": initiation["board_chair"]},
+            )
+        return self.repository.link_review_supersession(
+            session_id,
+            supersedes_session_id=supersedes_session_id,
+            actor=actor,
+            idempotency_key=idempotency_key,
+        )
+
     def supersede_published_decision(
         self,
         session_id: str,
