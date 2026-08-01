@@ -25,10 +25,11 @@ venues probed, never a claim that the token is illiquid.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Sequence
 
 from connectors.chain import ChainAccessError, ChainClient
 from lib.http_retry import TransientRetrievalError
+from lib.shares import format_share
 
 # Mainnet. Addresses are constants of the protocols, not configuration.
 UNISWAP_V2_FACTORY = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
@@ -202,6 +203,103 @@ def v3_pool(client: ChainClient, token: str, quote: str, fee: int, **kw: Any) ->
     )
     address = "0x" + str(reading.value)[-40:]
     return "" if address == ZERO_ADDRESS else address
+
+
+@dataclass(frozen=True, slots=True)
+class PoolComposition:
+    """Who owns the liquidity, which is a different question from how much there is.
+
+    The three categories are never summed. Burned LP is permanent; locked LP returns on a
+    schedule; project-held LP can leave at any moment. A single "not really available"
+    figure would hide the distinction a holder most needs -- headline depth that is mostly
+    the project's own liquidity is exactly the case CG-05 names.
+    """
+
+    pair: str
+    block_number: int
+    lp_total_supply: int
+    burned: tuple[tuple[str, int], ...] = ()
+    locked: tuple[tuple[str, int], ...] = ()
+    project_held: tuple[tuple[str, int], ...] = ()
+    # Uniswap V3 positions are NFTs held by a position manager rather than fungible LP
+    # tokens, so this analysis does not reach them. Stated rather than omitted: a V2-only
+    # composition presented as complete would understate project-held depth on any token
+    # whose real liquidity sits in V3.
+    covers_v3: bool = False
+
+    def _share(self, amount: int) -> float:
+        return (amount / self.lp_total_supply * 100.0) if self.lp_total_supply else 0.0
+
+    @property
+    def burned_share(self) -> float:
+        return self._share(sum(a for _, a in self.burned))
+
+    @property
+    def locked_share(self) -> float:
+        return self._share(sum(a for _, a in self.locked))
+
+    @property
+    def project_share(self) -> float:
+        return self._share(sum(a for _, a in self.project_held))
+
+    def describe(self) -> str:
+        lines = [
+            f"LP ownership of {self.pair} at block {self.block_number} "
+            f"(supply {self.lp_total_supply:,}):",
+            f"  burned        {format_share(sum(a for _, a in self.burned), self.lp_total_supply):>12}  permanent",
+            f"  locked        {format_share(sum(a for _, a in self.locked), self.lp_total_supply):>12}  returns on a schedule",
+            f"  project-held  {format_share(sum(a for _, a in self.project_held), self.lp_total_supply):>12}  can be withdrawn at any time",
+            "  These are reported separately and are not summed.",
+        ]
+        if not self.covers_v3:
+            lines.append(
+                "  Uniswap V3 positions are NFTs and are NOT covered by this analysis, so "
+                "liquidity held there is neither counted nor excluded."
+            )
+        return "\n".join(lines)
+
+
+def pool_ownership(
+    client: ChainClient,
+    pair: str,
+    *,
+    burn_addresses: Sequence[str] = (),
+    locker_addresses: Sequence[str] = (),
+    project_addresses: Sequence[str] = (),
+    **kw: Any,
+) -> PoolComposition:
+    """Read LP ownership. A V2 pair is itself an ERC-20, so this needs no new machinery.
+
+    Callers supply the three address groups because only the caller knows which is which:
+    the same address is a treasury to one project and a locker to another, and guessing
+    would put withdrawable liquidity in the permanent column.
+    """
+
+    from connectors.chain_queries import balance_of, total_supply
+
+    supply_reading = total_supply(client, pair, **kw)
+    supply = int(str(supply_reading.value or "0x0"), 16)
+
+    def _balances(addresses: Sequence[str]) -> tuple[tuple[str, int], ...]:
+        out: list[tuple[str, int]] = []
+        for address in addresses:
+            try:
+                reading = balance_of(client, pair, address, **kw)
+            except ChainAccessError:
+                continue
+            amount = int(str(reading.value or "0x0"), 16)
+            if amount > 0:
+                out.append((address, amount))
+        return tuple(out)
+
+    return PoolComposition(
+        pair=pair,
+        block_number=supply_reading.block_number,
+        lp_total_supply=supply,
+        burned=_balances(burn_addresses),
+        locked=_balances(locker_addresses),
+        project_held=_balances(project_addresses),
+    )
 
 
 def v2_reserves(client: ChainClient, pair: str, token: str, **kw: Any) -> tuple[int, int, int]:
