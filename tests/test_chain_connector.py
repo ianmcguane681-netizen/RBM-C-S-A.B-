@@ -20,10 +20,13 @@ import pytest
 
 from connectors.chain import (
     FINALIZED,
+    QUICKNODE_URL_ENV,
     ChainAccessError,
     ChainClient,
     ChainProvider,
     ChainReading,
+    best_for,
+    quicknode_ethereum,
 )
 from lib.http_retry import TransientRetrievalError
 
@@ -164,6 +167,77 @@ class TestArchiveCapabilityIsThreeValued:
 
         assert reading.block_number == 1_000_000
         assert reading.params[-1] == hex(1_000_000)
+
+
+class TestProvidersAreChosenByMeasurementNotPreference:
+    """Measured 2026-08-01, and the result inverts the obvious assumption.
+
+    The keyed endpoint answered 9 of 9 historical heights and caps eth_getLogs at 6
+    blocks. The anonymous one answered 4 of 8 and caps at 50. Neither wins both, so a
+    single "preferred provider" would silently degrade half the work.
+    """
+
+    def test_state_prefers_the_endpoint_that_can_actually_serve_history(self, monkeypatch):
+        monkeypatch.setenv(QUICKNODE_URL_ENV, "https://example.test/token/")
+
+        provider = best_for("state")
+
+        assert provider.name == "quicknode"
+        assert provider.serves_archive is True
+
+    def test_logs_prefer_the_wider_range_even_when_a_key_is_configured(self, monkeypatch):
+        monkeypatch.setenv(QUICKNODE_URL_ENV, "https://example.test/token/")
+
+        assert best_for("logs").max_log_range == 50
+
+    def test_state_falls_back_when_no_key_is_configured(self, monkeypatch):
+        """Legitimate for current-state reads, which the anonymous endpoint serves
+        reliably."""
+
+        monkeypatch.delenv(QUICKNODE_URL_ENV, raising=False)
+
+        assert best_for("state").name == "1rpc.io"
+
+    def test_the_fallback_cannot_silently_satisfy_a_historical_read(self, monkeypatch):
+        """The half that matters. Falling back for current state is fine; falling back
+        and then answering a historical question would return a different measurement
+        wearing the requested block's label."""
+
+        monkeypatch.delenv(QUICKNODE_URL_ENV, raising=False)
+        client = ChainClient(best_for("state"), post_json=responder(value("0x1")))
+
+        with pytest.raises(ChainAccessError, match="archive"):
+            client.read("eth_call", [{"to": "0xabc"}], block_number=20_000_000)
+
+    def test_an_unknown_task_raises_rather_than_defaulting(self):
+        with pytest.raises(ValueError, match="Unknown task"):
+            best_for("prices")
+
+
+class TestCredentialHandling:
+    def test_a_missing_url_names_the_variable_to_set(self, monkeypatch):
+        monkeypatch.delenv(QUICKNODE_URL_ENV, raising=False)
+
+        with pytest.raises(ChainAccessError, match=QUICKNODE_URL_ENV):
+            quicknode_ethereum()
+
+    def test_the_url_is_the_credential_so_no_separate_key_is_demanded(self, monkeypatch):
+        """QuickNode embeds its token in the URL path. An earlier version demanded an
+        `api_key` argument as well and rejected a correctly authenticated provider."""
+
+        monkeypatch.setenv(QUICKNODE_URL_ENV, "https://example.test/token/")
+
+        client = ChainClient(quicknode_ethereum(), post_json=responder(value("0x1")))
+
+        assert client.provider.requires_key is True
+
+    def test_a_credentialed_provider_with_no_url_is_refused(self):
+        """An unauthenticated call returns an authorisation error indistinguishable from
+        an empty result, so it must never be attempted."""
+
+        with pytest.raises(ChainAccessError, match="no URL configured"):
+            ChainClient(ChainProvider(name="keyed", url="  ", chain="t",
+                                      max_log_range=6, archive="yes", requires_key=True))
 
 
 class TestEveryReadCarriesItsProvenance:

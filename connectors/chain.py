@@ -6,13 +6,19 @@ is 55,000,000` is a claim; `totalSupply at block 25,660,449 on ethereum, contrac
 can regenerate it. Every read here returns the second kind or nothing.
 
 Providers are not interchangeable and the differences are not documented anywhere
-convenient, so they are declared. Measured on 2026-08-01 against five public endpoints:
+convenient, so they are declared. Measured on 2026-08-01:
 
-    1rpc.io/eth                  latest yes   archive UNRELIABLE   getLogs 50 blocks
-    ethereum-rpc.publicnode.com  latest yes   archive no           getLogs no
-    rpc.ankr.com                 requires a key even for eth_blockNumber
-    eth.llamarpc.com             HTTP 521
-    cloudflare-eth.com           refuses eth_blockNumber
+    quicknode (keyed, free tier)  archive 9/9 heights   getLogs  6 blocks
+    1rpc.io/eth                   archive 4/8 heights   getLogs 50 blocks
+    ethereum-rpc.publicnode.com   archive none          getLogs none
+    rpc.ankr.com                  requires a key even for eth_blockNumber
+    eth.llamarpc.com              HTTP 521
+    cloudflare-eth.com            refuses eth_blockNumber
+
+That table inverts the obvious assumption and is the reason `best_for(task)` exists. The
+keyed endpoint is the only one usable for history and is **eight times worse** for logs;
+the anonymous one is the reverse. A single "preferred provider" would silently degrade
+half the work, so state reads and log walks resolve to different endpoints.
 
 "Unreliable" rather than "yes" is the whole lesson of that measurement. A single
 historical query against 1rpc succeeded, which looked like archive support. Repeating it
@@ -27,10 +33,11 @@ consistently, and post-merge finality also means the state cannot later be reorg
 from under evidence already recorded. The tag is what gets queried; the height it resolved
 to is what gets recorded.
 
-The 50-block log cap is the constraint that shapes everything else: a continuously running
-watcher only ever asks for the newest blocks, which is one request per ten minutes of
-chain, so free tier is comfortable. Historical backfill over the same window is roughly
-4,300 requests, and is not.
+The log cap is the constraint that shapes everything else, and it is small on every free
+endpoint measured. A continuously running watcher only ever asks for the newest blocks --
+one request per ten minutes of chain on the 50-block endpoint -- so forward capture is
+comfortable. Historical backfill over a month is roughly 4,300 requests at 50 blocks and
+36,000 at 6, and is not.
 
 The distinction this module exists to protect: **"the range holds no logs" and "the
 provider refused to answer" are different facts.** Recording the second as the first is
@@ -41,6 +48,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -110,10 +118,66 @@ PUBLICNODE_ETHEREUM = ChainProvider(
     archive="no",
 )
 
+QUICKNODE_URL_ENV = "QUICKNODE_ETHEREUM_URL"
+
+
+def quicknode_ethereum(url: str = "") -> ChainProvider:
+    """A keyed QuickNode endpoint, read from the environment by default.
+
+    The URL embeds the auth token in its path, so it is a credential and never appears
+    in this repository. Measured on 2026-08-01 against a free-tier endpoint:
+
+        archive     9 of 9 heights answered, from the tip to 5,000,000 blocks back
+        getLogs     6 blocks inclusive succeeds, 7 returns HTTP 413
+
+    The log cap is contract-independent -- WBTC failed at 7 blocks with ~60 logs while
+    USDC succeeded at 6 with 482 -- so it is a span limit rather than a result limit, and
+    it is eight times tighter than the anonymous public endpoint's.
+
+    That inversion is why providers are chosen per task rather than globally. This one is
+    for state; 1rpc is for logs. A single "best provider" would be wrong for half the work.
+    """
+
+    resolved = (url or os.environ.get(QUICKNODE_URL_ENV, "")).strip()
+    if not resolved:
+        raise ChainAccessError(
+            f"No QuickNode URL. Set {QUICKNODE_URL_ENV}; it contains an auth token and "
+            f"must never be committed."
+        )
+    return ChainProvider(
+        name="quicknode",
+        url=resolved,
+        chain="ethereum",
+        max_log_range=6,
+        archive="yes",
+        requires_key=True,
+    )
+
+
 PROVIDERS: dict[str, ChainProvider] = {
     ONE_RPC_ETHEREUM.name: ONE_RPC_ETHEREUM,
     PUBLICNODE_ETHEREUM.name: PUBLICNODE_ETHEREUM,
 }
+
+
+def best_for(task: str, *, quicknode_url: str = "") -> ChainProvider:
+    """Pick a provider by what it is measurably good at, not by preference order.
+
+    `state` needs archive reliability; `logs` needs range. Measurement says no single
+    endpoint wins both, and pretending otherwise would silently degrade one of them.
+    """
+
+    if task == "state":
+        try:
+            return quicknode_ethereum(quicknode_url)
+        except ChainAccessError:
+            # Falling back is legitimate for current-state reads, which 1rpc serves
+            # reliably. It is not legitimate for historical reads, and `read` already
+            # refuses those against an unreliable provider rather than guessing.
+            return ONE_RPC_ETHEREUM
+    if task == "logs":
+        return ONE_RPC_ETHEREUM
+    raise ValueError(f"Unknown task {task!r}; expected 'state' or 'logs'")
 
 
 class ChainAccessError(RuntimeError):
@@ -189,10 +253,15 @@ class ChainClient:
         post_json: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None,
         clock: Callable[[], str] | None = None,
     ) -> None:
-        if provider.requires_key and not api_key:
+        # `requires_key` means the endpoint is credentialed, not that a separate key
+        # argument is expected. QuickNode embeds its token in the URL path, so the URL
+        # *is* the credential; demanding an additional `api_key` would reject a perfectly
+        # authenticated provider. What matters is that a credentialed provider never runs
+        # with an empty URL, because an unauthenticated call returns an authorisation
+        # error that is indistinguishable from an empty result.
+        if provider.requires_key and not provider.url.strip():
             raise ChainAccessError(
-                f"{provider.name} requires an API key. Without one it returns an "
-                f"authorisation error that is indistinguishable from an empty result."
+                f"{provider.name} is a credentialed endpoint with no URL configured."
             )
         self.provider = provider
         self.api_key = api_key
