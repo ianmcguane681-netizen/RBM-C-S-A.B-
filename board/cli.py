@@ -520,6 +520,41 @@ def cmd_supersede(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mandate(args: argparse.Namespace) -> int:
+    """Ask whether a published decision permits a proposed action.
+
+    Reads an exported decision bundle rather than the live store, because a mandate should
+    be answerable by anyone holding the bundle -- including someone who was not present
+    when the review ran, which is the whole point of exporting it.
+    """
+
+    from rbe_runtime.mandate import PERMITTED, DriftObservation, ProposedAction, evaluate
+
+    root = Path(args.bundle)
+    package = json.loads((root / "decision.json").read_text(encoding="utf-8"))
+    session = json.loads((root / "session.json").read_text(encoding="utf-8"))
+    reports_doc = json.loads((root / "reports.json").read_text(encoding="utf-8"))
+    reports = reports_doc.get("reports", reports_doc) if isinstance(reports_doc, dict) else reports_doc
+
+    drift = None
+    if args.implementation:
+        recorded = args.recorded_implementation or args.implementation
+        drift = DriftObservation(args.block, args.implementation, recorded)
+
+    finding = evaluate(
+        package,
+        ProposedAction(args.subject, args.action),
+        now=args.now,
+        session=session,
+        reports=reports if isinstance(reports, list) else [],
+        drift=drift,
+    )
+    print(finding.describe())
+    # Exit code, not just text: a caller wiring this into anything needs a signal that
+    # cannot be misread, and only PERMITTED is success.
+    return 0 if finding.status == PERMITTED else 3
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     """Record that a named human read an agent seat's draft and verified it.
 
@@ -803,6 +838,21 @@ def build_parser() -> argparse.ArgumentParser:
     supersede.add_argument("--actor", required=True, help="Board Chair of the superseding review")
     supersede.add_argument("--key", default="")
     supersede.set_defaults(func=cmd_supersede)
+
+    mandate = sub.add_parser(
+        "mandate", help="Ask whether a decision permits a proposed action"
+    )
+    mandate.add_argument("--bundle", required=True, help="Exported decision directory")
+    mandate.add_argument("--subject", required=True, help="Locator the action concerns")
+    mandate.add_argument("--action", default="", help="What is proposed")
+    mandate.add_argument("--now", required=True, help="RFC3339 timestamp to evaluate against")
+    mandate.add_argument("--block", type=int, default=0, help="Block the drift check was read at")
+    mandate.add_argument("--implementation", default="", help="Implementation observed now")
+    mandate.add_argument(
+        "--recorded-implementation", default="",
+        help="Implementation the review recorded. Omit only when it equals the observed one.",
+    )
+    mandate.set_defaults(func=cmd_mandate)
 
     verify = sub.add_parser(
         "verify", help="Record that a named human verified an agent seat's draft"
