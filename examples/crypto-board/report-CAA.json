@@ -1,0 +1,88 @@
+{
+  "reviewer_role": "CAA",
+  "summary": "The contract is upgradeable, mintable, pausable and can blacklist. Every one of those is held by an address that is not the token holder.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-1A62BD858EE244F8BA8894AF",
+    "EVI-262CF180A650DDDDBF751717",
+    "EVI-2CA339F44E62779AE9200D4A",
+    "EVI-4449B28DD6D615239F5E3671",
+    "EVI-8148ECCFE37CBFFB9BFC87A6",
+    "EVI-8BBF0CA463D9CB18D59B9F42",
+    "EVI-9EAF8C339454C52653CF8672",
+    "EVI-C3A7EABEBA55DC868D79F91A"
+  ],
+  "finding_categories": {},
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-CAA-CG-04",
+      "review_id": "RBM003-USDC-0001",
+      "reviewer": "agent:caa",
+      "reviewer_role": "CAA",
+      "artefact_version": "25660396",
+      "date_raised": "2026-08-01T18:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-005 section 7 (CG-04)",
+      "title": "USDC is upgradeable and the EIP-1967 slots are empty",
+      "detail": "The three EIP-1967 slots read empty and implementation() reverts, which together look exactly like a non-upgradeable contract. The pre-EIP-1967 OpenZeppelin slots are populated: implementation 0x43506849d7c04f9138d1a2050bbf3a0c054402dd, admin 0x807a96288a1a408dbc13de2b1d087d10356395d2. The proxy is transparent, so it routes non-admin callers to the implementation and the function probe reverts rather than answering. Any assessment checking only EIP-1967 would report one of the largest tokens in existence as immutable.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-1A62BD858EE244F8BA8894AF",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Record upgradeability, the admin address, and that a holder's guarantees survive only as long as the admin chooses not to replace the implementation.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG002-CAA-CG-04",
+      "review_id": "RBM003-USDC-0001",
+      "reviewer": "agent:caa",
+      "reviewer_role": "CAA",
+      "artefact_version": "25660396",
+      "date_raised": "2026-08-01T18:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-005 section 7 (CG-04)",
+      "title": "Mint, pause and blacklist authority sit with named addresses",
+      "detail": "owner() resolves to 0xfcb19e6a322b27c06842a71e8c725399f049ae3a and masterMinter() to 0xe982615d461dd5cd06575bbea87624fda4e3de17. paused() answers false, which establishes that a pause function exists and is currently off rather than that none exists. Together these mean supply, transferability and individual balances are all subject to decisions by parties other than the holder.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-1A62BD858EE244F8BA8894AF",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Enumerate every privileged function with its controlling address and, where multisig, its threshold. Absent that, no claim of trustlessness can be made.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0001-CAA",
+    "review_id": "RBM003-USDC-0001",
+    "reviewer": "agent:caa",
+    "reviewer_role": "CAA",
+    "reviewer_spec_id": "RBS-005",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25660396",
+    "finding_ids": [
+      "CG001-CAA-CG-04",
+      "CG002-CAA-CG-04"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-c/CAA-001"
+    },
+    "human_signature_ref": "SIG-PENDING-CAA"
+  }
+}

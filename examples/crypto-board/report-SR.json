@@ -1,0 +1,88 @@
+{
+  "reviewer_role": "SR",
+  "summary": "Every gate that could run, ran. The thing that would actually cost a holder money is not reachable by any of them.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-1A62BD858EE244F8BA8894AF",
+    "EVI-262CF180A650DDDDBF751717",
+    "EVI-2CA339F44E62779AE9200D4A",
+    "EVI-4449B28DD6D615239F5E3671",
+    "EVI-8148ECCFE37CBFFB9BFC87A6",
+    "EVI-8BBF0CA463D9CB18D59B9F42",
+    "EVI-9EAF8C339454C52653CF8672",
+    "EVI-C3A7EABEBA55DC868D79F91A"
+  ],
+  "finding_categories": {},
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-SR-CG-01",
+      "review_id": "RBM003-USDC-0001",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "25660396",
+      "date_raised": "2026-08-01T18:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-008 section 7 (CG-01)",
+      "title": "The board verified what is checkable and the risk is elsewhere",
+      "detail": "Six gates examined supply, authority, locks, depth, distinctness and reproducibility. Every one is a chain fact. The claim a USDC holder relies on is that each unit is redeemable for one dollar, and that rests on reserves held by a company, attested by an auditor, under a regulator -- none of which is on any chain. A reader seeing six gates answered may conclude the asset was assessed. It was not; its principal risk was never in scope. This is a limit of the profile, not of the execution.",
+      "evidence_tier": "T4",
+      "evidence_reference": "EVI-1A62BD858EE244F8BA8894AF",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "RBM-003 must state in its scope section that it assesses on-chain claims only, and any decision on a fiat-backed token must carry that limit on its face.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG002-SR-CG-05",
+      "review_id": "RBM003-USDC-0001",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "25660396",
+      "date_raised": "2026-08-01T18:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-008 section 7 (CG-05)",
+      "title": "Exit depth was measured against one quote asset",
+      "detail": "CG-05 quoted USDC into WETH only: 0.00%, 0.33% and 39.84% worse at 10k, 1M and 100M. The 39.84% figure is a single-venue route, not a realistic exit, because a seller of that size would split across venues and quote assets. The curve establishes that depth falls away sharply and does not establish what a real exit would cost.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-1A62BD858EE244F8BA8894AF",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Quote across multiple assets and state that single-route slippage is an upper bound rather than an expected cost.",
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0001-SR",
+    "review_id": "RBM003-USDC-0001",
+    "reviewer": "agent:sr",
+    "reviewer_role": "SR",
+    "reviewer_spec_id": "RBS-008",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25660396",
+    "finding_ids": [
+      "CG001-SR-CG-01",
+      "CG002-SR-CG-05"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-d/CSR-001"
+    },
+    "human_signature_ref": "SIG-PENDING-SR"
+  }
+}

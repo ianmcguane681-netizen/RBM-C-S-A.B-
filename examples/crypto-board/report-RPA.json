@@ -1,0 +1,63 @@
+{
+  "reviewer_role": "RPA",
+  "summary": "Every figure in this review reproduces from its recorded block height.",
+  "recommendation": "Proceed to next gate",
+  "evidence_reference_ids": [
+    "EVI-1A62BD858EE244F8BA8894AF",
+    "EVI-262CF180A650DDDDBF751717",
+    "EVI-2CA339F44E62779AE9200D4A",
+    "EVI-4449B28DD6D615239F5E3671",
+    "EVI-8148ECCFE37CBFFB9BFC87A6",
+    "EVI-8BBF0CA463D9CB18D59B9F42",
+    "EVI-9EAF8C339454C52653CF8672",
+    "EVI-C3A7EABEBA55DC868D79F91A"
+  ],
+  "finding_categories": {},
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "CG001-RPA-CG-06",
+      "review_id": "RBM003-USDC-0001",
+      "reviewer": "agent:rpa",
+      "reviewer_role": "RPA",
+      "artefact_version": "25660396",
+      "date_raised": "2026-08-01T18:00:00Z",
+      "severity": "SEV-4",
+      "spec_reference": "RBS-007 section 7 (CG-06)",
+      "title": "Four of four sampled readings reproduced",
+      "detail": "Resampled at block 25660396 through an archive-capable provider: four reproduced, zero diverged, zero unattempted. Each reading carries chain, block height, contract, query and hash. Observation only; no defect asserted. Noted because CG-06 is the gate most likely to pass for the wrong reason, and this one was attempted in full rather than sampled thinly.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-1A62BD858EE244F8BA8894AF",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": false
+      },
+      "status": "OPEN",
+      "remediation_requirement": null,
+      "target_resolution_date": "2026-09-15",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM003-USDC-0001-RPA",
+    "review_id": "RBM003-USDC-0001",
+    "reviewer": "agent:rpa",
+    "reviewer_role": "RPA",
+    "reviewer_spec_id": "RBS-007",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "25660396",
+    "finding_ids": [
+      "CG001-RPA-CG-06"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": false,
+      "method": "provena-chain-c/RPA-001"
+    },
+    "human_signature_ref": "SIG-PENDING-RPA"
+  }
+}
