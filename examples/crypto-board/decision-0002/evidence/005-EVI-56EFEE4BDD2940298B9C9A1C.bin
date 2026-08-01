@@ -1,0 +1,9 @@
+Exit cost at block 25662176 across 10 venue(s), by quote asset. Prices are not compared across quote assets: raw amounts in assets of different decimals are not a price comparison, and this profile has no numéraire to convert them.
+  into 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2:
+    size         10,000,000,000    0.00% worse than smallest   via uniswap-v3-100/WETH
+    size      1,000,000,000,000    0.35% worse than smallest   via uniswap-v3-500/WETH
+    size    100,000,000,000,000   38.41% worse than smallest   via uniswap-v3-500/WETH
+  into 0xdAC17F958D2ee523a2206206994597C13D831ec7:
+    size         10,000,000,000    0.00% worse than smallest   via uniswap-v3-100/USDT
+    size      1,000,000,000,000    0.00% worse than smallest   via uniswap-v3-100/USDT
+    size    100,000,000,000,000   73.24% worse than smallest   via uniswap-v3-100/USDT

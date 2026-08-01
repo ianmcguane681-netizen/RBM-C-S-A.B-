@@ -30,6 +30,36 @@ class SchemaRegistry:
             )
         return cls(validators=validators)
 
+    def version_for(self, schema_name: str) -> str:
+        """The `schema_version` this profile's copy of a schema demands.
+
+        The runtime used to write "2.2.0" into every record it built, which is RBM-001's
+        schema generation. RBM-003's schemas are a separate set authored at 1.0.0, so
+        publishing a crypto decision failed validation against the very schema the same
+        package supplied -- the runtime asserting a version on the profile's behalf.
+
+        A record's schema version is a property of the schema, so it is read from it.
+        """
+
+        validator = self.validators.get(schema_name)
+        if validator is None:
+            raise RBEError(
+                "RBE_UNKNOWN_SCHEMA",
+                f"Unknown controlled schema: {schema_name}",
+                "RBE-ES-SCH-002",
+            )
+        declared = (
+            validator.schema.get("properties", {}).get("schema_version", {}).get("const")
+        )
+        if not declared:
+            raise RBEError(
+                "RBE_SCHEMA_INVALID",
+                f"{schema_name} does not pin a schema_version, so no record can claim one",
+                "RBE-ES-SCH-002",
+                {"schema": schema_name},
+            )
+        return str(declared)
+
     def validate(self, schema_name: str, record: dict[str, Any]) -> None:
         validator = self.validators.get(schema_name)
         if validator is None:

@@ -234,12 +234,24 @@ def validate_decision_bundle(
     *,
     profile: dict[str, Any] | None = None,
     manifest: dict[str, Any] | None = None,
+    spec: PackageSpec | None = None,
 ) -> None:
-    """Validate decision invariants that cannot be expressed safely in JSON Schema."""
+    """Validate decision invariants that cannot be expressed safely in JSON Schema.
+
+    `spec` names which registry entry the profile is being held to. It defaults to
+    RBM-001, which was the only profile when this was written and silently became wrong
+    when there were three: publishing an RBM-003 decision passed its own profile in and
+    had it checked against RBM-001's registry entry, failing with "Profile ID mismatch"
+    on a package that was entirely valid.
+
+    The default stays rather than becoming required, because the check must never read the
+    identity from the profile it is checking -- a package that decided its own identity
+    would always agree with itself. The caller knows which profile it loaded and says so.
+    """
 
     active_profile = copy.deepcopy(profile) if profile is not None else load_json(PROFILE_PATH)
     active_manifest = manifest if manifest is not None else load_json(MANIFEST_PATH)
-    _validate_profile(active_profile)
+    _validate_profile(active_profile, spec)
 
     _require_fields(
         initiation,
@@ -341,9 +353,23 @@ def validate_decision_bundle(
     specialists = initiation["specialists"]
     if not isinstance(specialists, dict):
         raise PackageValidationError("TPL-RIR specialists must be an object")
-    specialist_pool = {"saa", "bca", "dea", "qra", "spa", "poa"}
+
+    # Read from the profile, never hardcoded. This was {"saa","bca","dea","qra","spa",
+    # "poa"} -- RBM-001's roles, correct when RBM-001 was the only profile and silently
+    # wrong the moment there were three. An RBM-003 initiation naming its own six
+    # specialists failed as "incomplete" against a pool it was never meant to match.
+    specialist_pool = {
+        role.lower()
+        for tier in active_profile.get("quorum", {}).values()
+        for role in tier.get("specialist_pool", ())
+    }
+    if not specialist_pool:
+        raise PackageValidationError("Profile declares no specialist pool")
     if set(specialists) != specialist_pool:
-        raise PackageValidationError("TPL-RIR specialist role set is incomplete")
+        raise PackageValidationError(
+            f"TPL-RIR specialist role set does not match the profile pool: "
+            f"expected {sorted(specialist_pool)}, got {sorted(specialists)}"
+        )
     assigned_specialists = {
         role: reviewer for role, reviewer in specialists.items() if reviewer
     }

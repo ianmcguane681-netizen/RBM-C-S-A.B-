@@ -990,7 +990,7 @@ class RBERuntime:
             "single_authority": decision.single_authority,
         }
         board_record = {
-            "schema_version": "2.2.0",
+            "schema_version": self.schemas.version_for("tpl-bdr"),
             **common,
             "tier": initiation["tier"],
             "finding_snapshot": snapshot,
@@ -1013,7 +1013,7 @@ class RBERuntime:
             timespec="seconds"
         ).replace("+00:00", "Z")
         indicator = {
-            "schema_version": "2.2.0",
+            "schema_version": self.schemas.version_for("tpl-mri"),
             **common,
             "review_risk_tier": initiation["tier"],
             "publication_authority": actor,
@@ -1032,6 +1032,7 @@ class RBERuntime:
                 indicator,
                 profile=profile,
                 manifest=self.authority.profile_manifest,
+                spec=self.authority.spec,
             )
         except ValueError as exc:
             raise RBEError(

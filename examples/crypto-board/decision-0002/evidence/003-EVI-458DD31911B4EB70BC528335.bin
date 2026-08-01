@@ -1,0 +1,13 @@
+Transfer activity for 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 over blocks 25662117-25662176 (60 blocks walked, 6,432 transfers).
+
+Established:
+  5,854 distinct addresses appeared in this window.
+  1 transfers were self-transfers and are not activity between parties.
+  127 address pairs transferred in both directions.
+
+Not established:
+  342 group(s) of addresses share a first funder, covering 1,772 addresses. The largest is 207 addresses funded by 0x00009d17b7b809e38f30892cff11650763b80000.
+  Whether any group is one actor or one exchange's customers is NOT determined by this evidence and requires a reviewer's judgement.
+
+Method: first-funder-v1. Addresses are grouped by the sender of the first inbound transfer observed within the walked window. Grouping is reported, never applied: a shared funder is consistent with one actor using many wallets and equally consistent with an exchange serving many customers, and this rule cannot distinguish them.
+Window: this is a sample of 60 blocks and describes no period outside it.

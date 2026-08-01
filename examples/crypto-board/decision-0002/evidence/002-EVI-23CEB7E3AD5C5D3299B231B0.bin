@@ -1,0 +1,5 @@
+Supply position for 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 at block 25662176:
+  burned  53,911,272,789 (0.0001%) -- cannot return to circulation
+
+  No lock contract was identified, and the locker registry is EMPTY: zero known lockers were searched. This finding establishes nothing about whether supply is locked.
+  Top-holder enumeration is not available from JSON-RPC, so this search covers only registered and supplied addresses.
