@@ -224,3 +224,29 @@ is making a decision the board did not make and does not endorse.
 
 A review under this profile can never, by itself, authorise a transaction. Authorisation
 requires a ratified mandate under a binding profile, which this is not.
+
+## 12. An Open Question: Findings About the Subject vs About the Review
+
+`RBM003-USDC-0002` raised sixteen findings. Three describe USDC. Four describe the review
+process. **Nine describe what the review could not reach** — backing that is not on-chain,
+a lock gate that searched nothing, reproducibility covering four of nine evidence items, a
+twelve-minute clustering window, exit costs that are single-route, DAI and every V3
+position unprobed.
+
+That is either unusually honest or not very useful, and both are true at once. A reader
+looking for what the board established has to find three findings inside sixteen, and the
+severities do not separate them: a SEV-3 that says "this figure is unreliable" and a SEV-3
+that says "we did not measure this" ask entirely different things of a reader.
+
+The question is whether scope limits should be findings at all, or a separate section of a
+report — *established* / *alleged* / *not reached*, which is the three-list shape section 11
+already promises and no seat currently produces.
+
+**This is deliberately unresolved.** Splitting them now means guessing which findings ought
+to gate an action, and that guess is exactly what the mandate artifact will answer with
+evidence rather than intuition. Once `is_stake_permitted` exists and it is visible which
+findings actually block a stake and which merely inform one, the split becomes a
+measurement instead of a preference.
+
+Recorded here so the question is not rediscovered from scratch when RBM-004 and RBM-005
+inherit this profile's shape.
