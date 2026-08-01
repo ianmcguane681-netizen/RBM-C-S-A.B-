@@ -1,7 +1,7 @@
 {
   "reviewer_role": "RPA",
   "summary": "Every reading that can be resampled was resampled and reproduced. That covers four of the nine evidence items; the other five are assessments rather than single readings.",
-  "recommendation": "Accept",
+  "recommendation": "Proceed to next gate",
   "evidence_reference_ids": [
     "EVI-0CB098806DB562503B1408C3",
     "EVI-23CEB7E3AD5C5D3299B231B0",
@@ -14,13 +14,13 @@
     "EVI-FA2F424BC61FD26539BA3851"
   ],
   "finding_categories": {
-    "CG001-RPA-CG-06": "CG-06",
-    "CG002-RPA-CG-06": "CG-06"
+    "CG002-RPA-CG-06": "CG-06",
+    "CG003-RPA-CG-06": "CG-06"
   },
   "findings": [
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG001-RPA-CG-06",
+      "finding_id": "CG002-RPA-CG-06",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:rpa",
       "reviewer_role": "RPA",
@@ -35,7 +35,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "No remediation required.",
@@ -44,7 +44,7 @@
     },
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG002-RPA-CG-06",
+      "finding_id": "CG003-RPA-CG-06",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:rpa",
       "reviewer_role": "RPA",
@@ -59,7 +59,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Either extend resampling to re-run assessment findings and compare their described output, or state on every CG-06 result which items it covered.",
@@ -77,16 +77,17 @@
     "reviewer_spec_version": "1.0.0",
     "artefact_sha": "25662176",
     "finding_ids": [
-      "CG001-RPA-CG-06",
-      "CG002-RPA-CG-06"
+      "CG002-RPA-CG-06",
+      "CG003-RPA-CG-06"
     ],
     "evidence_sufficiency": "SUFFICIENT",
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-chain-b/RPA-002"
+      "human_verified": true,
+      "method": "provena-chain-b/RPA-002",
+      "human_verification_basis": "summary-reading"
     },
-    "human_signature_ref": "SIG-PENDING-RPA"
+    "human_signature_ref": "SIG-VERIFY-RPA-Ian McGuane-BASIS-summary-reading"
   }
 }

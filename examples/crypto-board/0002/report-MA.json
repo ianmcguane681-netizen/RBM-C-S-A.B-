@@ -14,14 +14,14 @@
     "EVI-FA2F424BC61FD26539BA3851"
   ],
   "finding_categories": {
-    "CG001-MA-CG-04": "CG-04",
-    "CG002-MA-CG-01": "CG-01",
-    "CG003-MA-CG-03": "CG-03"
+    "CG002-MA-CG-04": "CG-04",
+    "CG003-MA-CG-01": "CG-01",
+    "CG004-MA-CG-03": "CG-03"
   },
   "findings": [
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG001-MA-CG-04",
+      "finding_id": "CG002-MA-CG-04",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:ma",
       "reviewer_role": "MA",
@@ -36,7 +36,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "No remediation. This finding records that the predecessor's SEV-2 is discharged by this review rather than closed by assertion.",
@@ -45,7 +45,7 @@
     },
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG002-MA-CG-01",
+      "finding_id": "CG003-MA-CG-01",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:ma",
       "reviewer_role": "MA",
@@ -60,7 +60,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "The superseding decision must record that RBM003-USDC-0001 carried a split evidence height, so that anyone reading the earlier decision finds the reason it was replaced.",
@@ -69,7 +69,7 @@
     },
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG003-MA-CG-03",
+      "finding_id": "CG004-MA-CG-03",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:ma",
       "reviewer_role": "MA",
@@ -84,7 +84,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "The decision must state that CG-03 was not assessed. RBM-003 should say whether a tier can be claimed with a gate unassessed, which it currently does not address.",
@@ -102,17 +102,18 @@
     "reviewer_spec_version": "1.0.0",
     "artefact_sha": "25662176",
     "finding_ids": [
-      "CG001-MA-CG-04",
-      "CG002-MA-CG-01",
-      "CG003-MA-CG-03"
+      "CG002-MA-CG-04",
+      "CG003-MA-CG-01",
+      "CG004-MA-CG-03"
     ],
     "evidence_sufficiency": "SUFFICIENT",
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-chain-b/MA-002"
+      "human_verified": true,
+      "method": "provena-chain-b/MA-002",
+      "human_verification_basis": "summary-reading"
     },
-    "human_signature_ref": "SIG-PENDING-MA"
+    "human_signature_ref": "SIG-VERIFY-MA-Ian McGuane-BASIS-summary-reading"
   }
 }

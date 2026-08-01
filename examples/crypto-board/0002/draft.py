@@ -81,7 +81,7 @@ report(
     "block. What a unit is worth is not a chain fact and no gate here reaches it.",
     "Monitoring",
     [finding(
-        "CG001-CVA-CG-01", "CVA", "CG-01", "SEV-3",
+        "CG002-CVA-CG-01", "CVA", "CG-01", "SEV-3",
         "The reviewed figure is supply, not backing",
         "totalSupply at block 25662176 is 49,578,553,356,366,347 raw units. decimals is "
         "read from the contract as 6, not assumed, giving 49,578,553,356.37 USDC; symbol "
@@ -144,9 +144,9 @@ report(
     "CG-03 is NOT ASSESSED for this review. The locker registry is empty, so zero lock "
     "contracts were searched, and this seat declines to present a non-result as a gate "
     "result.",
-    "Reject",
+    "Research",
     [finding(
-        "CG001-TKA-CG-03", "TKA", "CG-03", "SEV-3",
+        "CG002-TKA-CG-03", "TKA", "CG-03", "SEV-3",
         "CG-03 is recorded as not assessed, not as answered",
         "The locks probe returned NO_LOCK_CONTRACT_IDENTIFIED and its own description "
         "states the registry is EMPTY and zero known lockers were searched. Burn addresses "
@@ -172,10 +172,10 @@ report(
     "CAA",
     "USDC is upgradeable behind a transparent proxy whose EIP-1967 slots are empty, and "
     "mint, pause and blacklist authority sit with named addresses.",
-    "Reject",
+    "Control",
     [
         finding(
-            "CG001-CAA-CG-04", "CAA", "CG-04", "SEV-2",
+            "CG003-CAA-CG-04", "CAA", "CG-04", "SEV-2",
             "USDC is upgradeable and the EIP-1967 slots are empty",
             "At block 25662176 the three EIP-1967 slots read empty and implementation() "
             "reverts, which together look exactly like a non-upgradeable contract. The "
@@ -192,7 +192,7 @@ report(
             "survive only as long as the admin chooses not to replace the implementation.",
         ),
         finding(
-            "CG002-CAA-CG-04", "CAA", "CG-04", "SEV-2",
+            "CG004-CAA-CG-04", "CAA", "CG-04", "SEV-2",
             "Mint, pause and blacklist authority sit with named addresses",
             "owner() resolves to 0xfcb19e6a322b27c06842a71e8c725399f049ae3a and "
             "masterMinter() to 0xe982615d461dd5cd06575bbea87624fda4e3de17. paused() answers "
@@ -216,7 +216,7 @@ report(
     "Exit cost was quoted at three sizes into two assets across ten venues. Depth is deep "
     "at a million and falls apart at a hundred million, and the two assets disagree by "
     "roughly a factor of two about how badly.",
-    "Reject",
+    "Control",
     [
         finding(
             "CG001-LQA-CG-05", "LQA", "CG-05", "SEV-2",
@@ -263,10 +263,10 @@ report(
     "RPA",
     "Every reading that can be resampled was resampled and reproduced. That covers four of "
     "the nine evidence items; the other five are assessments rather than single readings.",
-    "Accept",
+    "Proceed to next gate",
     [
         finding(
-            "CG001-RPA-CG-06", "RPA", "CG-06", "SEV-4",
+            "CG002-RPA-CG-06", "RPA", "CG-06", "SEV-4",
             "Four of four resampled readings reproduced",
             "symbol, name, decimals and totalSupply were re-run at block 25662176 through "
             "an archive-capable provider: four reproduced, zero diverged, zero unattempted. "
@@ -276,7 +276,7 @@ report(
             "No remediation required.",
         ),
         finding(
-            "CG002-RPA-CG-06", "RPA", "CG-06", "SEV-3",
+            "CG003-RPA-CG-06", "RPA", "CG-06", "SEV-3",
             "Reproducibility covers four of nine evidence items, not the review",
             "Five of the nine registered items -- upgradeability, locks, liquidity, "
             "lp_composition and address_distinctness -- are assessments built from many "
@@ -299,10 +299,10 @@ report(
     "SR",
     "Six gates were seated and five answered. All of them are chain facts, and the claim a "
     "USDC holder relies on is not a chain fact.",
-    "Reject",
+    "Corrective",
     [
         finding(
-            "CG001-SR-CG-01", "SR", "CG-01", "SEV-2",
+            "CG003-SR-CG-01", "SR", "CG-01", "SEV-2",
             "The board verified what is checkable and the risk is elsewhere",
             "This review is materially stronger than its predecessor: six specialists "
             "rather than four, every reading at one block height rather than two, and two "
@@ -319,7 +319,7 @@ report(
             "and any decision on a fiat-backed token must carry that limit on its face.",
         ),
         finding(
-            "CG002-SR-CG-05", "SR", "CG-05", "SEV-3",
+            "CG004-SR-CG-05", "SR", "CG-05", "SEV-3",
             "The exit figures are single-route and will be read as exit cost",
             "LQA quoted two assets rather than the predecessor's one, which is the "
             "improvement that finding asked for, and it immediately produced a two-fold "
@@ -333,7 +333,7 @@ report(
             "order splitting this profile does not implement.",
         ),
         finding(
-            "CG003-SR-CG-02", "SR", "CG-02", "SEV-3",
+            "CG005-SR-CG-02", "SR", "CG-02", "SEV-3",
             "A twelve-minute window is carrying a claim about a multi-year token",
             "ADA walked 60 blocks and reported honestly that the finding describes those "
             "blocks and nothing outside them. The sceptical question is what the window is "
@@ -358,7 +358,7 @@ report(
     "Monitoring",
     [
         finding(
-            "CG001-MA-CG-04", "MA", "CG-04", "SEV-4",
+            "CG002-MA-CG-04", "MA", "CG-04", "SEV-4",
             "The Tier 3 quorum is met and the predecessor's tiering finding is answered",
             "RBM003-USDC-0001 was opened at Tier 2 and its MA seat found the subject "
             "required Tier 3, because RBM-003 section 8 makes anything behind an upgradeable "
@@ -373,7 +373,7 @@ report(
             "discharged by this review rather than closed by assertion.",
         ),
         finding(
-            "CG002-MA-CG-01", "MA", "CG-01", "SEV-3",
+            "CG003-MA-CG-01", "MA", "CG-01", "SEV-3",
             "The predecessor's evidence spanned two block heights under one artefact version",
             "RBM003-USDC-0001 declared artefact version 25660396 and registered symbol, "
             "name, decimals, totalSupply and upgradeability at that height -- then "
@@ -391,7 +391,7 @@ report(
             "it was replaced.",
         ),
         finding(
-            "CG003-MA-CG-03", "MA", "CG-03", "SEV-3",
+            "CG004-MA-CG-03", "MA", "CG-03", "SEV-3",
             "A Tier 3 review is complete in seats and short one gate",
             "All six specialist seats reported, which satisfies the Tier 3 quorum. But TKA "
             "recorded CG-03 as NOT ASSESSED with evidence_sufficiency INSUFFICIENT, because "

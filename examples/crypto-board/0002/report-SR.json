@@ -1,7 +1,7 @@
 {
   "reviewer_role": "SR",
   "summary": "Six gates were seated and five answered. All of them are chain facts, and the claim a USDC holder relies on is not a chain fact.",
-  "recommendation": "Reject",
+  "recommendation": "Corrective",
   "evidence_reference_ids": [
     "EVI-0CB098806DB562503B1408C3",
     "EVI-23CEB7E3AD5C5D3299B231B0",
@@ -14,14 +14,14 @@
     "EVI-FA2F424BC61FD26539BA3851"
   ],
   "finding_categories": {
-    "CG001-SR-CG-01": "CG-01",
-    "CG002-SR-CG-05": "CG-05",
-    "CG003-SR-CG-02": "CG-02"
+    "CG003-SR-CG-01": "CG-01",
+    "CG004-SR-CG-05": "CG-05",
+    "CG005-SR-CG-02": "CG-02"
   },
   "findings": [
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG001-SR-CG-01",
+      "finding_id": "CG003-SR-CG-01",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:sr",
       "reviewer_role": "SR",
@@ -36,7 +36,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "RBM-003 must state in its scope section that it assesses on-chain claims only, and any decision on a fiat-backed token must carry that limit on its face.",
@@ -45,7 +45,7 @@
     },
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG002-SR-CG-05",
+      "finding_id": "CG004-SR-CG-05",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:sr",
       "reviewer_role": "SR",
@@ -60,7 +60,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Label the curve single-route wherever it appears. Estimating a real exit needs order splitting this profile does not implement.",
@@ -69,7 +69,7 @@
     },
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG003-SR-CG-02",
+      "finding_id": "CG005-SR-CG-02",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:sr",
       "reviewer_role": "SR",
@@ -84,7 +84,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "State the window on the face of any CG-02 result. A characterisation of the holder base needs an indexer and a period measured in months.",
@@ -102,17 +102,18 @@
     "reviewer_spec_version": "1.0.0",
     "artefact_sha": "25662176",
     "finding_ids": [
-      "CG001-SR-CG-01",
-      "CG002-SR-CG-05",
-      "CG003-SR-CG-02"
+      "CG003-SR-CG-01",
+      "CG004-SR-CG-05",
+      "CG005-SR-CG-02"
     ],
     "evidence_sufficiency": "SUFFICIENT",
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-chain-b/SR-002"
+      "human_verified": true,
+      "method": "provena-chain-b/SR-002",
+      "human_verification_basis": "summary-reading"
     },
-    "human_signature_ref": "SIG-PENDING-SR"
+    "human_signature_ref": "SIG-VERIFY-SR-Ian McGuane-BASIS-summary-reading"
   }
 }

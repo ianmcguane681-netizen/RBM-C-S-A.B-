@@ -1,7 +1,7 @@
 {
   "reviewer_role": "TKA",
   "summary": "CG-03 is NOT ASSESSED for this review. The locker registry is empty, so zero lock contracts were searched, and this seat declines to present a non-result as a gate result.",
-  "recommendation": "Reject",
+  "recommendation": "Research",
   "evidence_reference_ids": [
     "EVI-0CB098806DB562503B1408C3",
     "EVI-23CEB7E3AD5C5D3299B231B0",
@@ -14,12 +14,12 @@
     "EVI-FA2F424BC61FD26539BA3851"
   ],
   "finding_categories": {
-    "CG001-TKA-CG-03": "CG-03"
+    "CG002-TKA-CG-03": "CG-03"
   },
   "findings": [
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG001-TKA-CG-03",
+      "finding_id": "CG002-TKA-CG-03",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:tka",
       "reviewer_role": "TKA",
@@ -34,7 +34,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Record CG-03 as not assessed in the decision. Do not populate the registry to make the gate appear answered; a verified locker address is the only thing that changes this, and none was available.",
@@ -52,7 +52,7 @@
     "reviewer_spec_version": "1.0.0",
     "artefact_sha": "25662176",
     "finding_ids": [
-      "CG001-TKA-CG-03"
+      "CG002-TKA-CG-03"
     ],
     "evidence_sufficiency": "INSUFFICIENT",
     "missing_evidence": [
@@ -60,9 +60,10 @@
     ],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-chain-b/TKA-002"
+      "human_verified": true,
+      "method": "provena-chain-b/TKA-002",
+      "human_verification_basis": "summary-reading"
     },
-    "human_signature_ref": "SIG-PENDING-TKA"
+    "human_signature_ref": "SIG-VERIFY-TKA-Ian McGuane-BASIS-summary-reading"
   }
 }

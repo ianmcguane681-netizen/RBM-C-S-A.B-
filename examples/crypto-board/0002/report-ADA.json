@@ -35,7 +35,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Any figure described as users, holders or actives must either exclude these clusters or carry the cluster share beside it. Resolving whether a cluster is one actor requires evidence this gate does not produce.",
@@ -59,7 +59,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "No remediation. The window is stated in the evidence and must remain stated in anything quoting it.",
@@ -84,9 +84,10 @@
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-chain-b/ADA-002"
+      "human_verified": true,
+      "method": "provena-chain-b/ADA-002",
+      "human_verification_basis": "summary-reading"
     },
-    "human_signature_ref": "SIG-PENDING-ADA"
+    "human_signature_ref": "SIG-VERIFY-ADA-Ian McGuane-BASIS-summary-reading"
   }
 }

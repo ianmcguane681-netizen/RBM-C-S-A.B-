@@ -1,7 +1,7 @@
 {
   "reviewer_role": "LQA",
   "summary": "Exit cost was quoted at three sizes into two assets across ten venues. Depth is deep at a million and falls apart at a hundred million, and the two assets disagree by roughly a factor of two about how badly.",
-  "recommendation": "Reject",
+  "recommendation": "Control",
   "evidence_reference_ids": [
     "EVI-0CB098806DB562503B1408C3",
     "EVI-23CEB7E3AD5C5D3299B231B0",
@@ -35,7 +35,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Any depth or liquidity figure must state the quote asset and the size it was measured at. A single number without both is not a depth figure.",
@@ -59,7 +59,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "State in the decision that exit cost is single-route and that V3 composition is unreached. A realistic exit estimate needs order splitting across venues and assets, which this gate does not perform.",
@@ -84,9 +84,10 @@
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-chain-b/LQA-002"
+      "human_verified": true,
+      "method": "provena-chain-b/LQA-002",
+      "human_verification_basis": "summary-reading"
     },
-    "human_signature_ref": "SIG-PENDING-LQA"
+    "human_signature_ref": "SIG-VERIFY-LQA-Ian McGuane-BASIS-summary-reading"
   }
 }

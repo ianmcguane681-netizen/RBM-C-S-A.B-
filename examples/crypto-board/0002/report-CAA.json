@@ -1,7 +1,7 @@
 {
   "reviewer_role": "CAA",
   "summary": "USDC is upgradeable behind a transparent proxy whose EIP-1967 slots are empty, and mint, pause and blacklist authority sit with named addresses.",
-  "recommendation": "Reject",
+  "recommendation": "Control",
   "evidence_reference_ids": [
     "EVI-0CB098806DB562503B1408C3",
     "EVI-23CEB7E3AD5C5D3299B231B0",
@@ -14,13 +14,13 @@
     "EVI-FA2F424BC61FD26539BA3851"
   ],
   "finding_categories": {
-    "CG001-CAA-CG-04": "CG-04",
-    "CG002-CAA-CG-04": "CG-04"
+    "CG003-CAA-CG-04": "CG-04",
+    "CG004-CAA-CG-04": "CG-04"
   },
   "findings": [
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG001-CAA-CG-04",
+      "finding_id": "CG003-CAA-CG-04",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:caa",
       "reviewer_role": "CAA",
@@ -35,7 +35,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Record upgradeability, the admin address, and that a holder's guarantees survive only as long as the admin chooses not to replace the implementation.",
@@ -44,7 +44,7 @@
     },
     {
       "schema_version": "1.0.0",
-      "finding_id": "CG002-CAA-CG-04",
+      "finding_id": "CG004-CAA-CG-04",
       "review_id": "RBM003-USDC-0002",
       "reviewer": "agent:caa",
       "reviewer_role": "CAA",
@@ -59,7 +59,7 @@
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Enumerate every privileged function with its controlling address and, where multisig, its threshold. Absent that, no claim of trustlessness can be made.",
@@ -77,16 +77,17 @@
     "reviewer_spec_version": "1.0.0",
     "artefact_sha": "25662176",
     "finding_ids": [
-      "CG001-CAA-CG-04",
-      "CG002-CAA-CG-04"
+      "CG003-CAA-CG-04",
+      "CG004-CAA-CG-04"
     ],
     "evidence_sufficiency": "SUFFICIENT",
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-chain-b/CAA-002"
+      "human_verified": true,
+      "method": "provena-chain-b/CAA-002",
+      "human_verification_basis": "summary-reading"
     },
-    "human_signature_ref": "SIG-PENDING-CAA"
+    "human_signature_ref": "SIG-VERIFY-CAA-Ian McGuane-BASIS-summary-reading"
   }
 }

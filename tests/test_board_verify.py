@@ -99,3 +99,77 @@ class TestWhatVerificationShows:
         assert "SEV-1" in printed
         assert "Rate-limited lookups are stored as archive absences" in printed
         assert "cannot distinguish" in printed
+
+
+class TestHowTheMaterialWasRead:
+    """Two different readings must not leave identical records.
+
+    A person who read sixteen findings in full and a person who read a summary of them
+    were producing byte-identical signatures. That is the defect this whole command exists
+    to prevent -- an attestation that implies more than was done -- pointed at the human
+    rather than at the agent.
+
+    A weaker basis honestly recorded is worth more than a stronger one implied.
+    """
+
+    def test_the_basis_reaches_the_signature_reference(self, tmp_path):
+        path = draft(tmp_path)
+
+        main(["verify", "--report", str(path), "--by", "ian.mcguane",
+              "--basis", "summary-reading"])
+
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        assert stored["report"]["human_signature_ref"] == (
+            "SIG-VERIFY-MCA-ian.mcguane-BASIS-summary-reading"
+        )
+
+    def test_the_basis_is_recorded_structurally_on_the_report(self, tmp_path):
+        """The signature string is what a reader sees; the field is what a query finds."""
+
+        path = draft(tmp_path)
+
+        main(["verify", "--report", str(path), "--by", "ian.mcguane",
+              "--basis", "summary-reading"])
+
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        assert stored["report"]["ai_assistance"]["human_verification_basis"] == "summary-reading"
+
+    def test_the_basis_never_lands_on_a_finding(self, tmp_path):
+        """`tpl-fnd` sets additionalProperties false on a finding's ai_assistance. Writing
+        the basis there made every report unfileable, and the basis describes one act of
+        verification rather than each finding it covered."""
+
+        path = draft(tmp_path)
+
+        main(["verify", "--report", str(path), "--by", "ian.mcguane",
+              "--basis", "summary-reading"])
+
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        assert set(stored["findings"][0]["ai_assistance"]) == {"used", "human_verified"}
+
+    def test_two_bases_do_not_produce_the_same_record(self, tmp_path):
+        """The regression proper."""
+
+        elsewhere = tmp_path / "other"
+        elsewhere.mkdir()
+        full, summary = draft(tmp_path), draft(elsewhere)
+
+        main(["verify", "--report", str(full), "--by", "ian.mcguane", "--basis", "full-text"])
+        main(["verify", "--report", str(summary), "--by", "ian.mcguane",
+              "--basis", "summary-reading"])
+
+        one = json.loads(full.read_text(encoding="utf-8"))["report"]["human_signature_ref"]
+        other = json.loads(summary.read_text(encoding="utf-8"))["report"]["human_signature_ref"]
+        assert one != other
+
+    def test_omitting_the_basis_leaves_the_signature_unchanged(self, tmp_path):
+        """Existing callers keep working, and an absent basis claims nothing rather than
+        claiming a full reading by default."""
+
+        path = draft(tmp_path)
+
+        main(["verify", "--report", str(path), "--by", "ian.mcguane"])
+
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        assert stored["report"]["human_signature_ref"] == "SIG-VERIFY-MCA-ian.mcguane"
+        assert "human_verification_basis" not in stored["report"]["ai_assistance"]

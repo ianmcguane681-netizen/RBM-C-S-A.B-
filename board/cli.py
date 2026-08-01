@@ -510,6 +510,12 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
     This command writes only to the draft file. Nothing is submitted to the review
     store here, so verifying is reversible until the report is filed.
+
+    `--basis` records *how* the verifier read the material. Without it every signature
+    looks alike, so a person who read a summary and a person who read sixteen findings in
+    full leave identical records -- which is the same defect this command exists to
+    prevent, aimed at the human instead of the agent. A weaker basis honestly recorded is
+    worth more than a strong one implied.
     """
 
     from rbe_runtime.profile import is_agent_actor
@@ -525,6 +531,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     path = Path(args.report)
     payload = json.loads(path.read_text(encoding="utf-8"))
     role = payload["reviewer_role"]
+    basis = str(getattr(args, "basis", "") or "").strip()
 
     print(f"Verifying {role} draft as {args.by}:")
     print(f"  summary: {payload['summary']}")
@@ -532,9 +539,23 @@ def cmd_verify(args: argparse.Namespace) -> int:
         print(f"  {item['severity']:6} {item['finding_id']:16} {item['title']}")
     if not payload.get("findings"):
         print("  (no findings)")
+    if basis:
+        print(f"  basis:   {basis}")
+
+    # The report schema sets additionalProperties false, so the basis travels inside
+    # ai_assistance -- an unconstrained object -- and in the signature reference, which is
+    # what any rendering of the record actually shows a reader.
+    signature = f"SIG-VERIFY-{role}-{args.by}"
+    if basis:
+        signature = f"{signature}-BASIS-{basis}"
 
     payload["report"]["ai_assistance"]["human_verified"] = True
-    payload["report"]["human_signature_ref"] = f"SIG-VERIFY-{role}-{args.by}"
+    if basis:
+        payload["report"]["ai_assistance"]["human_verification_basis"] = basis
+    payload["report"]["human_signature_ref"] = signature
+    # Report level only. `tpl-fnd` sets additionalProperties false on a finding's
+    # ai_assistance, and rightly so: the basis describes one act of verification, not each
+    # finding it covered. Writing it per-finding made every report unfileable.
     for item in payload.get("findings", ()):
         item["ai_assistance"]["human_verified"] = True
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -755,6 +776,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify.add_argument("--report", required=True)
     verify.add_argument("--by", required=True, help="The human verifying. Never an agent.")
+    verify.add_argument(
+        "--basis", default="",
+        help="How the material was read, e.g. full-text or summary-reading. Recorded so "
+             "two different readings do not leave identical signatures.",
+    )
     verify.set_defaults(func=cmd_verify)
 
     challenges = sub.add_parser("challenges", help="Show challenge sheets")
