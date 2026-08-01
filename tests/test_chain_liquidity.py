@@ -21,6 +21,10 @@ from connectors.chain_liquidity import (
     INDETERMINATE,
     NO_VENUE_FOUND,
     QUOTED,
+    V3_FEE_TIERS,
+    SELECTORS,
+    UNISWAP_V2_FACTORY,
+    UNISWAP_V3_FACTORY,
     UNISWAP_V3_QUOTER_V2,
     ExitQuote,
     LiquidityFinding,
@@ -150,12 +154,94 @@ class TestAbsenceOfVenueIsNotIlliquidity:
         assert finding.unreachable
 
     def test_every_probed_venue_is_recorded_so_absence_can_be_judged(self):
+        """Asserted by composition rather than a count. A magic number here would have to
+        be edited every time a venue is added, and editing it is exactly the moment
+        someone stops noticing what the number is for."""
+
         client = ChainClient(PROVIDER, post_json=self.responder())
 
         finding = exit_cost(client, "0xtok", (100,), quotes={"WETH": WETH})
 
-        assert len(finding.venues_probed) == 4  # one per fee tier
+        assert any("uniswap-v2" in v for v in finding.venues_probed)
+        assert sum("uniswap-v3" in v for v in finding.venues_probed) == len(V3_FEE_TIERS)
         assert str(len(finding.venues_probed)) in finding.describe()
+
+
+class TestV2IsProbed:
+    """The regression test for a shipped defect.
+
+    `v2_pair` was written and never called. `exit_cost` probed only V3 fee tiers, so a
+    token trading solely on Uniswap V2 -- most older and smaller tokens -- returned
+    NO_VENUE_FOUND while having real liquidity. A false absence, produced by the module
+    written to refuse false absences.
+    """
+
+    def v2_only_responder(self, reserve_token=10**24, reserve_quote=10**21, block=400):
+        """A world where the V2 factory has a pair and the V3 factory has nothing."""
+
+        pair = "0x" + "cc".rjust(64, "0")
+        reserves = "0x" + hex(reserve_token)[2:].rjust(64, "0") + hex(reserve_quote)[2:].rjust(64, "0") + "0" * 64
+
+        def _post(_url, payload):
+            if payload["method"] == "eth_getBlockByNumber":
+                return {"result": {"number": hex(block)}}
+            call = payload["params"][0]
+            target = call.get("to", "").lower()
+            data = call.get("data", "")
+            if target == UNISWAP_V2_FACTORY.lower():
+                return {"result": pair}
+            if target == UNISWAP_V3_FACTORY.lower():
+                return {"result": ZERO}
+            if data.startswith(SELECTORS["getReserves"]):
+                return {"result": reserves}
+            if data.startswith(SELECTORS["token0"]):
+                return {"result": "0x" + "tok".encode().hex().rjust(64, "0")}
+            return {"result": ZERO}
+
+        return _post
+
+    def test_a_v2_only_token_is_quoted_not_reported_absent(self):
+        client = ChainClient(PROVIDER, post_json=self.v2_only_responder())
+
+        finding = exit_cost(client, "0xtok", (10**18,), quotes={"WETH": WETH})
+
+        assert finding.status == QUOTED, "V2-only liquidity must not read as NO_VENUE_FOUND"
+        assert any(q.venue == "uniswap-v2" for q in finding.quotes)
+
+    def test_v2_is_listed_among_the_probed_venues(self):
+        """So that a genuine NO_VENUE_FOUND can be trusted to have looked there."""
+
+        client = ChainClient(PROVIDER, post_json=self.v2_only_responder())
+
+        finding = exit_cost(client, "0xtok", (10**18,), quotes={"WETH": WETH})
+
+        assert any("uniswap-v2" in v for v in finding.venues_probed)
+
+    def test_the_constant_product_fee_is_applied(self):
+        """Omitting the 0.3% fee overstates the proceeds of every exit, consistently and
+        in the flattering direction."""
+
+        from connectors.chain_liquidity import quote_v2_exit
+
+        client = ChainClient(PROVIDER, post_json=self.v2_only_responder(
+            reserve_token=10**24, reserve_quote=10**24))
+
+        quoted = quote_v2_exit(client, "0xtok", WETH, 10**18)
+
+        # With equal reserves and a tiny trade, output approaches size * 0.997.
+        assert quoted is not None
+        assert quoted.amount_out < 10**18
+        assert quoted.amount_out > 10**18 * 0.996
+
+    def test_v2_and_v3_compete_on_one_best_execution_curve(self):
+        """The point of fixing the gap: a seller takes the better of the two."""
+
+        finding = LiquidityFinding(QUOTED, "0xtok", 100, (
+            quote(100, 90, "uniswap-v2", 3000),
+            quote(100, 99, "uniswap-v3-500", 500),
+        ))
+
+        assert finding.best_by_size()[0].venue == "uniswap-v3-500"
 
 
 class TestSizeIsAlwaysCarried:

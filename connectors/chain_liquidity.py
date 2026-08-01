@@ -204,6 +204,69 @@ def v3_pool(client: ChainClient, token: str, quote: str, fee: int, **kw: Any) ->
     return "" if address == ZERO_ADDRESS else address
 
 
+def v2_reserves(client: ChainClient, pair: str, token: str, **kw: Any) -> tuple[int, int, int]:
+    """Reserves of a V2 pair, oriented so the first is the token being sold.
+
+    `getReserves` returns them in token0/token1 order, which is address-sorted and has
+    nothing to do with which side the caller is selling. Getting the orientation wrong
+    inverts the price and produces a quote that is wrong by the square of the ratio while
+    still looking like a number.
+    """
+
+    reading = client.read("eth_call", [{"to": pair, "data": SELECTORS["getReserves"]}], **kw)
+    raw = str(reading.value or "")
+    if len(raw) < 130:
+        raise ChainAccessError(f"{pair} did not return reserves")
+    reserve0 = int(raw[2:66], 16)
+    reserve1 = int(raw[66:130], 16)
+
+    token0_reading = client.read("eth_call", [{"to": pair, "data": SELECTORS["token0"]}], **kw)
+    token0 = "0x" + str(token0_reading.value)[-40:]
+    if token0.lower() == token.lower():
+        return reserve0, reserve1, reading.block_number
+    return reserve1, reserve0, reading.block_number
+
+
+def quote_v2_exit(
+    client: ChainClient, token: str, quote: str, size_in: int, **kw: Any
+) -> ExitQuote | None:
+    """Constant-product output, exactly.
+
+    V2 is closed form, so unlike V3 there is nothing to approximate and no quoter needed:
+
+        out = (in * 997 * reserve_out) / (reserve_in * 1000 + in * 997)
+
+    The 997/1000 is the 0.3% fee, taken on the input. Omitting it would overstate the
+    proceeds of every exit by 0.3%, consistently and in the flattering direction.
+    """
+
+    try:
+        pair = v2_pair(client, token, quote, **kw)
+    except ChainAccessError:
+        return None
+    if not pair:
+        return None
+    try:
+        reserve_in, reserve_out, block_number = v2_reserves(client, pair, token, **kw)
+    except ChainAccessError:
+        return None
+    if reserve_in <= 0 or reserve_out <= 0:
+        return None
+
+    amount_in_with_fee = size_in * 997
+    amount_out = (amount_in_with_fee * reserve_out) // (reserve_in * 1000 + amount_in_with_fee)
+    if amount_out <= 0:
+        return None
+    return ExitQuote(
+        venue="uniswap-v2",
+        size_in=size_in,
+        amount_out=amount_out,
+        quote_token=quote,
+        block_number=block_number,
+        fee_tier=3000,
+    )
+
+
 def quote_v3_exit(
     client: ChainClient, token: str, quote: str, fee: int, size_in: int, **kw: Any
 ) -> ExitQuote | None:
@@ -264,6 +327,23 @@ def exit_cost(
     for name, quote_token in quote_tokens.items():
         if quote_token.lower() == token.lower():
             continue
+
+        # V2 first, and not as an afterthought. An earlier version defined `v2_pair` and
+        # never called it, so a token trading only on V2 -- which is most older and smaller
+        # tokens -- returned NO_VENUE_FOUND while having real liquidity. A false absence,
+        # produced by the module written to refuse false absences.
+        v2_venue = f"uniswap-v2/{name}"
+        probed.append(v2_venue)
+        for size in sizes:
+            try:
+                quoted = quote_v2_exit(client, token, quote_token, size, **kw)
+            except TransientRetrievalError:
+                unreachable.append(f"{v2_venue}@{size}")
+                continue
+            if quoted:
+                block_number = quoted.block_number
+                collected.append(quoted)
+
         for fee in V3_FEE_TIERS:
             venue = f"uniswap-v3-{fee}/{name}"
             probed.append(venue)
