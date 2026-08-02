@@ -40,6 +40,7 @@ def main(ticker: str) -> int:
     print(f"{ticker.upper()} -> CIK {cik}   source: SEC EDGAR, no key required\n")
 
     total_revised = 0
+    periods_shown: dict[str, str] = {}
     for label, tags in CONCEPTS.items():
         series = client.first_reported(cik, tags)
         print(f"SG-01/SG-02  {label}")
@@ -49,9 +50,13 @@ def main(ticker: str) -> int:
 
         latest = series.latest_annual()
         if latest:
+            periods_shown[label] = latest.period_end
             print(f"   {latest.value:>22,.0f} {latest.unit}   [{latest.cite()}]")
         else:
             print(f"   reported, but no annual span found among {len(series.durations)} spans")
+        if series.alternates_with_data:
+            print(f"   TAG CHANGE: also reported under "
+                  f"{', '.join(series.alternates_with_data)}; the history spans both.")
 
         revised = series.revised_durations()
         total_revised += len(revised)
@@ -64,6 +69,16 @@ def main(ticker: str) -> int:
         print()
 
     print("=" * 72)
+    # Figures from different years printed adjacent invite a ratio across them. NVIDIA's
+    # revenue and net income came from FY2022 and FY2026 in an early run of this tool, four
+    # years apart and side by side, and any margin computed from the pair was nonsense.
+    if len(set(periods_shown.values())) > 1:
+        print("PERIODS DIFFER. The figures above do not all describe the same year:")
+        for label, period in sorted(periods_shown.items(), key=lambda kv: kv[1]):
+            print(f"   {period}   {label}")
+        print("Any ratio computed across two of these lines measures the gap between the")
+        print("periods as much as anything about the business.")
+        print()
     if total_revised:
         print(f"{total_revised} reporting span(s) above were filed at more than one value.")
         print("A restated figure and the original are two different facts. Neither has been")

@@ -111,6 +111,9 @@ class ConceptSeries:
     datapoints: tuple[Datapoint, ...] = ()
     units_seen: tuple[str, ...] = ()
     reason: str = ""
+    # Other candidate tags that also carried data. A filer switching tags splits its
+    # history across two of them, and neither alone is the whole series.
+    alternates_with_data: tuple[str, ...] = ()
 
     @property
     def durations(self) -> tuple[str, ...]:
@@ -185,6 +188,12 @@ class ConceptSeries:
             lines.append(
                 "  A restated figure and the original are two different facts. Neither is "
                 "selected here."
+            )
+        if self.alternates_with_data:
+            lines.append(
+                f"  TAG CHANGE: this filer also reported under "
+                f"{', '.join(self.alternates_with_data)}. The history is split across "
+                f"tags and this series alone is not the whole of it."
             )
         latest = self.latest_annual()
         if latest:
@@ -269,22 +278,43 @@ class EdgarClient:
     def first_reported(
         self, cik: str, concepts: Sequence[str], *, taxonomy: str = "us-gaap"
     ) -> ConceptSeries:
-        """Try several tags for the same quantity and return the first the filer uses.
+        """The candidate tag the filer is CURRENTLY using, not the first that ever answered.
 
         Companies tag the same idea differently -- `Revenues` here,
-        `RevenueFromContractWithCustomerExcludingAssessedTax` there. Asking for one tag and
-        reporting NOT_REPORTED would be true about the tag and misleading about the company.
+        `RevenueFromContractWithCustomerExcludingAssessedTax` there -- and they change tag
+        mid-life. NVIDIA used the second through FY2022 and the first from FY2023.
 
-        The series records which tag answered, and an INDETERMINATE anywhere in the walk is
-        returned rather than swallowed: a rate limit halfway through must not read as "the
-        filer uses none of these".
+        The original version returned the first candidate with any data at all, which for
+        NVIDIA meant a four-year-old revenue figure reported with complete confidence
+        beside a current net income. Every candidate is now queried and the one with the
+        most recent data wins, with the others recorded: a filer that switched tags has its
+        history split across both, and neither alone is the whole series.
+
+        An INDETERMINATE anywhere in the walk is still returned rather than swallowed. A
+        rate limit partway through must not read as "the filer uses none of these".
         """
 
         blocked: ConceptSeries | None = None
+        found: list[ConceptSeries] = []
         for name in concepts:
             series = self.concept(cik, name, taxonomy=taxonomy)
             if series.status == REPORTED:
-                return series
-            if series.status == INDETERMINATE and blocked is None:
+                found.append(series)
+            elif series.status == INDETERMINATE and blocked is None:
                 blocked = series
-        return blocked or ConceptSeries(NOT_REPORTED, cik, " / ".join(concepts))
+        if blocked is not None and not found:
+            return blocked
+        if not found:
+            return ConceptSeries(NOT_REPORTED, cik, " / ".join(concepts))
+
+        def recency(series: ConceptSeries) -> str:
+            return max((d.period_end for d in series.datapoints), default="")
+
+        found.sort(key=recency, reverse=True)
+        current = found[0]
+        others = tuple(s.concept for s in found[1:])
+        return ConceptSeries(
+            current.status, current.cik, current.concept, current.entity,
+            current.datapoints, current.units_seen, current.reason,
+            alternates_with_data=others,
+        )
