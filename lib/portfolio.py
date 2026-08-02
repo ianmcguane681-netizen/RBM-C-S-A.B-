@@ -44,6 +44,12 @@ SELL = "SELL"
 CRYPTO = "crypto"
 EQUITY = "equity"
 BETTING = "betting"
+#: Operating lanes. Capital goes in and revenue comes out, but there is no mark until
+#: something sells, so UNPRICED is their normal resting state rather than a failure.
+INVENTORY = "inventory"   # stock bought for resale: Etsy, flipping
+VENTURE = "venture"       # hours and cash sunk into something being built
+
+LANES = (CRYPTO, EQUITY, BETTING, INVENTORY, VENTURE)
 
 
 def _now() -> str:

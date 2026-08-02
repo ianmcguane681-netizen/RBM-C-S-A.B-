@@ -32,3 +32,5 @@ data/monitor-ledger.json
 # Same reasoning as the ledger: it records which opportunities have been put in
 # front of you and which you acted on, and this repository is public.
 data/seen-register.json
+
+data/portfolio.json
