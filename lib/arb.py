@@ -181,6 +181,47 @@ class ArbFinding:
         return "\n".join(lines)
 
 
+def reduction_factor_odds(decimal_odds: float, reduction_pct: float) -> float:
+    """Betfair Exchange: the reduction factor applies to the ODDS of remaining runners.
+
+        new = (old - 1) * (1 - rf) + 1
+    """
+
+    return (decimal_odds - 1.0) * (1.0 - reduction_pct / 100.0) + 1.0
+
+
+def rule4_effective_odds(decimal_odds: float, deduction_pct: float) -> float:
+    """A traditional bookmaker: Rule 4 deducts a percentage of the WINNINGS.
+
+    Different mechanism, same algebra -- deducting r from winnings and multiplying the net
+    odds by (1 - r) are the same operation, so at equal rates the two settle identically.
+    """
+
+    winnings = (decimal_odds - 1.0) * (1.0 - deduction_pct / 100.0)
+    return 1.0 + winnings
+
+
+def non_runner_divergence(
+    decimal_odds: float, exchange_reduction_pct: float, bookmaker_deduction_pct: float
+) -> tuple[float, float, float]:
+    """What a withdrawal actually costs on each side, and the gap between them.
+
+    Built because the mechanisms LOOK incomparable and are not. Betfair Exchange applies a
+    reduction factor to the odds; a bookmaker deducts from winnings under Rule 4. At equal
+    rates those are the same number, which invites the conclusion that non-runners are a
+    solved scenario.
+
+    They are not. The rates come from different places -- Tattersalls' table keyed to the
+    withdrawn horse's starting price, against a per-runner factor assigned from market
+    percentage that moves -- and at least one bookmaker waives the first 5p while the
+    Exchange waives nothing. So the divergence is computed rather than assumed away.
+    """
+
+    exchange = reduction_factor_odds(decimal_odds, exchange_reduction_pct)
+    bookmaker = rule4_effective_odds(decimal_odds, bookmaker_deduction_pct)
+    return exchange, bookmaker, bookmaker - exchange
+
+
 @dataclass(frozen=True, slots=True)
 class EquivalenceDeclaration:
     """A named human stating that two differently worded rules settle the same way.

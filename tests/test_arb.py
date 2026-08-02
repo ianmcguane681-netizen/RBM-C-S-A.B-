@@ -16,6 +16,9 @@ import pytest
 from lib.arb import (
     INDETERMINATE,
     EquivalenceDeclaration,
+    non_runner_divergence,
+    reduction_factor_odds,
+    rule4_effective_odds,
     LOCK,
     NO_LOCK,
     SETTLEMENT_MISMATCH,
@@ -308,3 +311,49 @@ class TestTheMathsItself:
         for forbidden in ("expected_value", "probability", "edge_forecast", "ev", "win_rate"):
             assert forbidden not in ArbFinding.__dataclass_fields__
             assert not hasattr(ArbFinding, forbidden)
+
+
+class TestNonRunnersLookIncomparableAndAreNot:
+    """Betfair Exchange reduces the ODDS; a bookmaker deducts from WINNINGS.
+
+    Two mechanisms with nothing in common on the page, and identical algebra. That
+    similarity is the trap: it invites 'non-runners match' as a settled conclusion, when
+    the rates come from different tables and at least one bookmaker waives the first 5p
+    while the Exchange waives nothing.
+    """
+
+    def test_equal_rates_settle_identically(self):
+        exchange, bookmaker, gap = non_runner_divergence(4.0, 25.0, 25.0)
+
+        assert exchange == pytest.approx(3.25)
+        assert bookmaker == pytest.approx(3.25)
+        assert gap == pytest.approx(0.0)
+
+    def test_the_five_pence_waiver_is_a_real_divergence(self):
+        """A 5% withdrawal: the bookmaker waives it, the Exchange does not. Same race,
+        same horse, different payout, and no price comparison would show it."""
+
+        exchange, bookmaker, gap = non_runner_divergence(4.0, 5.0, 0.0)
+
+        assert bookmaker == pytest.approx(4.0)
+        assert exchange == pytest.approx(3.85)
+        assert gap > 0
+
+    def test_the_gap_grows_with_the_odds(self):
+        """The divergence is on the winnings, so a longer price loses more of it."""
+
+        _, _, short = non_runner_divergence(2.0, 5.0, 0.0)
+        _, _, long_price = non_runner_divergence(10.0, 5.0, 0.0)
+
+        assert long_price > short
+
+    def test_a_zero_reduction_leaves_the_odds_alone(self):
+        assert reduction_factor_odds(4.0, 0.0) == pytest.approx(4.0)
+        assert rule4_effective_odds(4.0, 0.0) == pytest.approx(4.0)
+
+    def test_only_the_winnings_are_reduced_never_the_stake(self):
+        """Both mechanisms return the stake. A reduction that ate into it would be a
+        different and much worse instrument."""
+
+        assert reduction_factor_odds(4.0, 100.0) == pytest.approx(1.0)
+        assert rule4_effective_odds(4.0, 100.0) == pytest.approx(1.0)
