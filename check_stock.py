@@ -25,7 +25,16 @@ CONCEPTS = {
     "net income": ["NetIncomeLoss"],
     "total assets": ["Assets"],
     "total liabilities": ["Liabilities"],
-    "long-term debt": ["LongTermDebtNoncurrent", "LongTermDebt"],
+    # Several tags, ordered from most to least specific. Modine reports under the third:
+    # asking for the first two alone returned a figure ten years stale, and the PERIODS
+    # DIFFER check is what exposed it. A thin candidate list produces a confident wrong
+    # answer, not a missing one.
+    "long-term debt": [
+        "LongTermDebtNoncurrent",
+        "LongTermDebt",
+        "LongTermDebtAndCapitalLeaseObligations",
+        "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
+    ],
     "shares outstanding": [
         "CommonStockSharesOutstanding",
         "EntityCommonStockSharesOutstanding",
