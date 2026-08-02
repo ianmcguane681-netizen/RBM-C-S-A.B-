@@ -1,0 +1,269 @@
+{
+  "profile_id": "RBM-004",
+  "version": "1.0.0",
+  "status": "RELEASE_CANDIDATE",
+  "architecture_authority": {
+    "document_id": "RBE-001",
+    "minimum_compatible_version": "1.1.0",
+    "named_human_approval_required": true
+  },
+  "owner": "Provena Foundry Governance",
+  "human_approval_record": null,
+  "checksum": "sha256:2ea1207eb9c0f2f9e8564e010347519963fb6ae05fd704837de1b66b2a9d3627",
+  "manifest": "MANIFEST.json",
+  "binding": false,
+  "permitted_outcomes": [
+    "PASS",
+    "PASS_WITH_FINDINGS",
+    "FAIL",
+    "INSUFFICIENT_EVIDENCE"
+  ],
+  "omitted_outcome_mapping": {
+    "DEFER_FOR_FURTHER_RESEARCH": "INSUFFICIENT_EVIDENCE"
+  },
+  "process_statuses": [
+    "READY",
+    "PROCEDURALLY_INCOMPLETE",
+    "BLOCKED",
+    "VOID"
+  ],
+  "unresolved_finding_statuses": [
+    "OPEN",
+    "CONTESTED",
+    "UNDER_REVIEW"
+  ],
+  "decision_precedence": [
+    {
+      "priority": 1,
+      "rule_id": "RBM-DEC-001",
+      "condition": "unresolved_sev1 >= 1",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 2,
+      "rule_id": "RBM-DEC-002",
+      "condition": "unresolved_sev2 >= 2",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 3,
+      "rule_id": "RBM-DEC-003",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 0",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 4,
+      "rule_id": "RBM-DEC-004",
+      "condition": "substantive_evidence_sufficient == false",
+      "outcome": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "priority": 5,
+      "rule_id": "RBM-DEC-005",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 1",
+      "outcome": "PASS_WITH_FINDINGS"
+    },
+    {
+      "priority": 6,
+      "rule_id": "RBM-DEC-006",
+      "condition": "unresolved_sev1 == 0 and unresolved_sev2 == 0 and substantive_evidence_sufficient == true",
+      "outcome": "PASS"
+    }
+  ],
+  "role_policy": {
+    "distinct_human_per_board_role": true,
+    "ai_counts_toward_quorum": false,
+    "board_chair_may_hold_other_role": false,
+    "methodology_auditor_may_hold_other_role": false,
+    "board_chair_and_governance_validator_must_differ": true,
+    "decision_assembler_and_publication_control_must_differ": true,
+    "governance_validator_and_publication_control_must_differ": true,
+    "distinct_actor_per_board_role": true
+  },
+  "quorum": {
+    "tier_1": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 2,
+      "specialist_pool": [
+        "FVA",
+        "RIA",
+        "RPA"
+      ]
+    },
+    "tier_2": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 4,
+      "specialist_pool": [
+        "FVA",
+        "RIA",
+        "SDA",
+        "CRA",
+        "MLA",
+        "RPA"
+      ]
+    },
+    "tier_3": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "FVA",
+        "RIA",
+        "SDA",
+        "CRA",
+        "MLA",
+        "RPA",
+        "SR"
+      ],
+      "specialists_required": 6,
+      "specialist_pool": [
+        "FVA",
+        "RIA",
+        "SDA",
+        "CRA",
+        "MLA",
+        "RPA"
+      ]
+    }
+  },
+  "canonical_lifecycle_mapping": {
+    "pre_review": [
+      "DRAFT",
+      "SUBMITTED",
+      "INTAKE_VALIDATION",
+      "RETURNED",
+      "ACCEPTED",
+      "EVIDENCE_LOCKED",
+      "ASSIGNMENT"
+    ],
+    "specialist_review": [
+      "INDEPENDENT_REVIEW"
+    ],
+    "challenge": [
+      "CHALLENGE",
+      "CLARIFICATION"
+    ],
+    "decision": [
+      "CONSOLIDATION",
+      "GOVERNANCE_VALIDATION",
+      "BLOCKED",
+      "DECIDED",
+      "PUBLISHED"
+    ],
+    "appeal": [
+      "APPEALED",
+      "APPEAL_REVIEW",
+      "UPHELD",
+      "SUPERSEDED",
+      "REMANDED"
+    ],
+    "terminal": [
+      "FINAL",
+      "ARCHIVED",
+      "VOID",
+      "WITHDRAWN"
+    ]
+  },
+  "activation_requirements": [
+    "approved_rbe_release",
+    "valid_profile_checksum",
+    "valid_package_manifest",
+    "named_human_principal_architect_approval",
+    "named_human_methodology_owner_approval",
+    "active_status_commit",
+    "immutable_release_tag"
+  ],
+  "supersedes": null,
+  "amendment_rationale": "RBM-004 v1.0.0 initial release. Six gates, each naming a failure mode observed in the domain rather than invented for symmetry with another profile.",
+  "agent_seat_policy": {
+    "agent_seats_permitted": true,
+    "permitted_agent_roles": [
+      "MA",
+      "CVA",
+      "ADA",
+      "TKA",
+      "CAA",
+      "LQA",
+      "RPA",
+      "SR"
+    ],
+    "prohibited_agent_roles": [
+      "BC"
+    ],
+    "agent_actor_prefixes": [
+      "agent:"
+    ],
+    "named_human_verifier_required": true,
+    "ratification_authority_must_be_human": true,
+    "publication_authority_must_be_human": true,
+    "agent_seat_review_is_advisory_only": true,
+    "independence_requirements": {
+      "distinct_instruction_version_per_seat": true,
+      "sceptical_seat_is_blind_to_proposed_outcome": true,
+      "record_model_and_instruction_version_per_seat": true,
+      "shared_model_across_seats_must_be_recorded": true
+    }
+  },
+  "single_authority_policy": {
+    "single_authority_permitted": true,
+    "permitted_only_when_profile_non_binding": true,
+    "never_binding": true,
+    "never_merge_permitted": true,
+    "authority_must_be_human": true,
+    "authority_must_be_board_chair": true,
+    "recorded_flag": "single_authority",
+    "supersedable_by_two_signature_decision": true,
+    "rationale_required": true
+  },
+  "chain_gates": [
+    {
+      "gate_id": "SG-01",
+      "name": "Filing-observable verification",
+      "reviewer_role": "FVA",
+      "requirement": "Every quantitative claim must be reproducible from a named filing -- accession number, form type and reporting period -- by anyone holding the same document. A figure that cannot be traced to a filing is ALLEGED and can never establish occurrence.",
+      "failure_mode": "A screener's number is cited as though it were the company's. Vendors apply undisclosed normalisations, and the figure cannot be regenerated by anyone else."
+    },
+    {
+      "gate_id": "SG-02",
+      "name": "Restatement and revision integrity",
+      "reviewer_role": "RIA",
+      "requirement": "Where a period has been filed more than once at different values, every version must be reported with the filing that produced it. No version may be selected silently, and an as-restated figure may never be compared against an as-originally-filed one.",
+      "failure_mode": "A ratio is computed from an original 10-K and compared to a later year that was restated, so the trend is an artefact of the correction rather than of the business."
+    },
+    {
+      "gate_id": "SG-03",
+      "name": "Share count and dilution",
+      "reviewer_role": "SDA",
+      "requirement": "Basic and diluted counts must be distinguished, the count must be dated, and instruments issuable into shares must be enumerated. A market capitalisation must state which count it used.",
+      "failure_mode": "Apple's FY2013 share count is filed at 899,213,000, then 899,213, then 6,294,494,000 after a retroactive split -- three answers for one period across a factor of 7,000, each equally confident."
+    },
+    {
+      "gate_id": "SG-04",
+      "name": "Control and related parties",
+      "reviewer_role": "CRA",
+      "requirement": "Identify every holder of disproportionate voting power, every class of share and its rights, and material related-party transactions. A claim of dispersed ownership must be verified against the filings that report control.",
+      "failure_mode": "A company is described as widely held while a founder retains supervoting shares that decide every vote."
+    },
+    {
+      "gate_id": "SG-05",
+      "name": "Exit liquidity",
+      "reviewer_role": "MLA",
+      "requirement": "Liquidity must be assessed as the cost of exiting a stated position size, not as average daily volume. Borrow availability and cost are identified separately where a short is contemplated.",
+      "failure_mode": "Average daily volume is reported as though it were depth. The question a holder faces is what leaving costs, and ADV does not answer it."
+    },
+    {
+      "gate_id": "SG-06",
+      "name": "Reproducibility",
+      "reviewer_role": "RPA",
+      "requirement": "Every figure must carry the filing, period and retrieval that produced it, and a sample must be re-retrieved and shown to reproduce. A figure that cannot be regenerated is a claim.",
+      "failure_mode": "A number is quoted from memory or from an earlier draft, and nobody can tell which filing it came from."
+    }
+  ]
+}

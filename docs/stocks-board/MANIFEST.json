@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "RBM-004",
+  "package_version": "1.0.0",
+  "files": [
+    {
+      "path": "PROFILE.json",
+      "sha256": "755c19678bf6515302dd7dbe9f53b37514ca6757e4dfd60818f2108fa32c99d1",
+      "size": 8561
+    },
+    {
+      "path": "schemas/tpl-bdr.schema.json",
+      "sha256": "085890dbf1cd465a98fa9e4966a1789ef6d11f8b765cc61bc667643b91e5dfcb",
+      "size": 6094
+    },
+    {
+      "path": "schemas/tpl-cor.schema.json",
+      "sha256": "88ca0dbd34c5fa5210e901f97bba1231222bd84e1b0c5822ea8ad1aca958c6f2",
+      "size": 2600
+    },
+    {
+      "path": "schemas/tpl-fnd.schema.json",
+      "sha256": "dd72035e3bef626a76a3f641819924ee12c70293f33bd8c8a136cc0461f1db2c",
+      "size": 2609
+    },
+    {
+      "path": "schemas/tpl-mri.schema.json",
+      "sha256": "6ba74a14abf1088c6d64ff6302bb3547d9b81437db0ed20661024a7705e76f49",
+      "size": 5123
+    },
+    {
+      "path": "schemas/tpl-rir.schema.json",
+      "sha256": "7e472f3ccd396237341bace79ba71c98a59e5f4f9e98ff467220e150b53786c6",
+      "size": 3616
+    },
+    {
+      "path": "schemas/tpl-rmp.schema.json",
+      "sha256": "ae0b0a0730c57ffd78b641118ff4c4012db31fd822a02ce9c387c5b924cb07e6",
+      "size": 2044
+    },
+    {
+      "path": "schemas/tpl-rrr.schema.json",
+      "sha256": "ad2aca416c73c9201c471d75cef794cd3d6da9030e4136428d79f1d314bb20e9",
+      "size": 1603
+    },
+    {
+      "path": "specs/RBS-001-METHODOLOGY-AUDIT.md",
+      "sha256": "42f353e520ec5f1bd1509d28f422a9f8bea41ea838046e84b2ff75734f52e119",
+      "size": 2518
+    },
+    {
+      "path": "specs/RBS-002-FILING-VERIFICATION-AUDIT.md",
+      "sha256": "9f73c660065672eac5a6263470b3c1ec502aaec859fa4252b39d06aaba23b9a4",
+      "size": 3206
+    },
+    {
+      "path": "specs/RBS-003-RESTATEMENT-INTEGRITY-AUDIT.md",
+      "sha256": "52ba25cfc1030b47874dc372151544d68cea3d80856943c4e4d6e1d6c8449dcb",
+      "size": 3226
+    },
+    {
+      "path": "specs/RBS-004-SHARE-AND-DILUTION-AUDIT.md",
+      "sha256": "fcd40280621c046db56cc27c924ddbb7d0ffc722cac7fabcdf19987600282bf8",
+      "size": 3172
+    },
+    {
+      "path": "specs/RBS-005-CONTROL-AND-RELATED-PARTY-AUDIT.md",
+      "sha256": "489f66729cb3fa555715ea956fcd62b8d28572e4174a47df0f3ccb3f22485001",
+      "size": 3138
+    },
+    {
+      "path": "specs/RBS-006-MARKET-LIQUIDITY-AUDIT.md",
+      "sha256": "b4319529d9c867eb299b734ff1252767d5ffa3f5660af0a1fd0a9a3d2dd9a26a",
+      "size": 3105
+    },
+    {
+      "path": "specs/RBS-007-REPRODUCIBILITY-AUDIT.md",
+      "sha256": "1d8ced2866a8f32e46b3e820db64877eb2e25dc8fd85d6badb95b99059374903",
+      "size": 3063
+    },
+    {
+      "path": "specs/RBS-008-SCEPTICAL-REVIEW.md",
+      "sha256": "8539cf74fa8b7b3e8ea77be4bec864da9e0dcb843d94deb8da1f961a9dfd8dbd",
+      "size": 2523
+    },
+    {
+      "path": "STOCKS-REVIEW-METHODOLOGY.md",
+      "sha256": "35a15cd0f77579630c544bf8dc657f48c95d322ede04a64acabdfb984fcc5ddf",
+      "size": 9947
+    }
+  ],
+  "root_sha256": "sha256:adb5b806877cb33dda9d82fd24f899413ba2a2f7a886557152fca24cd633dab9"
+}

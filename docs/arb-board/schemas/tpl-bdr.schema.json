@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provena-foundry/crypto-board/tpl-bdr/1.0.0",
+  "title": "TPL-BDR Board Decision Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "artefact_sha",
+    "tier",
+    "methodology_profile_id",
+    "methodology_version",
+    "methodology_status",
+    "methodology_checksum",
+    "binding",
+    "process_status",
+    "outcome",
+    "finding_snapshot",
+    "substantive_evidence_sufficient",
+    "decision_basis",
+    "merge_permitted",
+    "board_chair",
+    "board_chair_signature_ref",
+    "governance_validator",
+    "governance_validation_ref",
+    "correction_refs",
+    "single_authority"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "review_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artefact_sha": {
+      "type": "string",
+      "minLength": 7
+    },
+    "tier": {
+      "type": "integer",
+      "enum": [
+        1,
+        2,
+        3
+      ]
+    },
+    "methodology_profile_id": {
+      "const": "RBM-003"
+    },
+    "methodology_version": {
+      "const": "1.0.0"
+    },
+    "methodology_status": {
+      "enum": [
+        "RELEASE_CANDIDATE",
+        "ACTIVE",
+        "RETIRED"
+      ]
+    },
+    "methodology_checksum": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "boolean"
+    },
+    "process_status": {
+      "enum": [
+        "READY",
+        "PROCEDURALLY_INCOMPLETE",
+        "BLOCKED",
+        "VOID"
+      ]
+    },
+    "outcome": {
+      "enum": [
+        "PASS",
+        "PASS_WITH_FINDINGS",
+        "FAIL",
+        "INSUFFICIENT_EVIDENCE",
+        null
+      ]
+    },
+    "finding_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_sha256",
+        "unresolved_sev1",
+        "unresolved_sev2",
+        "accepted_sev2_remediation",
+        "unresolved_finding_ids"
+      ],
+      "properties": {
+        "snapshot_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "unresolved_sev1": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved_sev2": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accepted_sev2_remediation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved_finding_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "substantive_evidence_sufficient": {
+      "type": "boolean"
+    },
+    "decision_basis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "merge_permitted": {
+      "type": "boolean"
+    },
+    "board_chair": {
+      "type": "string",
+      "minLength": 1
+    },
+    "board_chair_signature_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "governance_validator": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "governance_validation_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "decision_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "correction_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "single_authority": {
+      "type": "boolean"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "process_status": {
+            "const": "READY"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "PASS",
+              "PASS_WITH_FINDINGS",
+              "FAIL",
+              "INSUFFICIENT_EVIDENCE"
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "outcome": {
+            "const": null
+          },
+          "merge_permitted": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "FAIL",
+              "INSUFFICIENT_EVIDENCE",
+              null
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "merge_permitted": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "methodology_status": {
+            "const": "RELEASE_CANDIDATE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "binding": {
+            "const": false
+          },
+          "merge_permitted": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "merge_permitted": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "methodology_status": {
+            "const": "ACTIVE"
+          },
+          "binding": {
+            "const": true
+          },
+          "process_status": {
+            "const": "READY"
+          },
+          "outcome": {
+            "enum": [
+              "PASS",
+              "PASS_WITH_FINDINGS"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "single_authority": {
+            "const": true
+          }
+        },
+        "required": [
+          "single_authority"
+        ]
+      },
+      "then": {
+        "properties": {
+          "governance_validator": {
+            "type": "null"
+          },
+          "governance_validation_ref": {
+            "type": "null"
+          },
+          "merge_permitted": {
+            "const": false
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "governance_validator": {
+            "type": "string",
+            "minLength": 1
+          },
+          "governance_validation_ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
+}

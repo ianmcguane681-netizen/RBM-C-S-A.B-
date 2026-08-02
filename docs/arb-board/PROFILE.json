@@ -1,0 +1,269 @@
+{
+  "profile_id": "RBM-005",
+  "version": "1.0.0",
+  "status": "RELEASE_CANDIDATE",
+  "architecture_authority": {
+    "document_id": "RBE-001",
+    "minimum_compatible_version": "1.1.0",
+    "named_human_approval_required": true
+  },
+  "owner": "Provena Foundry Governance",
+  "human_approval_record": null,
+  "checksum": "sha256:fda4016c0e1bfaa2b6df51d1573f1ae96f447b7a44376527b0aafa488d10100e",
+  "manifest": "MANIFEST.json",
+  "binding": false,
+  "permitted_outcomes": [
+    "PASS",
+    "PASS_WITH_FINDINGS",
+    "FAIL",
+    "INSUFFICIENT_EVIDENCE"
+  ],
+  "omitted_outcome_mapping": {
+    "DEFER_FOR_FURTHER_RESEARCH": "INSUFFICIENT_EVIDENCE"
+  },
+  "process_statuses": [
+    "READY",
+    "PROCEDURALLY_INCOMPLETE",
+    "BLOCKED",
+    "VOID"
+  ],
+  "unresolved_finding_statuses": [
+    "OPEN",
+    "CONTESTED",
+    "UNDER_REVIEW"
+  ],
+  "decision_precedence": [
+    {
+      "priority": 1,
+      "rule_id": "RBM-DEC-001",
+      "condition": "unresolved_sev1 >= 1",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 2,
+      "rule_id": "RBM-DEC-002",
+      "condition": "unresolved_sev2 >= 2",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 3,
+      "rule_id": "RBM-DEC-003",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 0",
+      "outcome": "FAIL"
+    },
+    {
+      "priority": 4,
+      "rule_id": "RBM-DEC-004",
+      "condition": "substantive_evidence_sufficient == false",
+      "outcome": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "priority": 5,
+      "rule_id": "RBM-DEC-005",
+      "condition": "unresolved_sev2 == 1 and accepted_sev2_remediation == 1",
+      "outcome": "PASS_WITH_FINDINGS"
+    },
+    {
+      "priority": 6,
+      "rule_id": "RBM-DEC-006",
+      "condition": "unresolved_sev1 == 0 and unresolved_sev2 == 0 and substantive_evidence_sufficient == true",
+      "outcome": "PASS"
+    }
+  ],
+  "role_policy": {
+    "distinct_human_per_board_role": true,
+    "ai_counts_toward_quorum": false,
+    "board_chair_may_hold_other_role": false,
+    "methodology_auditor_may_hold_other_role": false,
+    "board_chair_and_governance_validator_must_differ": true,
+    "decision_assembler_and_publication_control_must_differ": true,
+    "governance_validator_and_publication_control_must_differ": true,
+    "distinct_actor_per_board_role": true
+  },
+  "quorum": {
+    "tier_1": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 2,
+      "specialist_pool": [
+        "PQA",
+        "MIA",
+        "RPA"
+      ]
+    },
+    "tier_2": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "SR"
+      ],
+      "specialists_required": 4,
+      "specialist_pool": [
+        "PQA",
+        "MIA",
+        "EXA",
+        "ALA",
+        "CPA",
+        "RPA"
+      ]
+    },
+    "tier_3": {
+      "required_roles": [
+        "BC",
+        "MA",
+        "PQA",
+        "MIA",
+        "EXA",
+        "ALA",
+        "CPA",
+        "RPA",
+        "SR"
+      ],
+      "specialists_required": 6,
+      "specialist_pool": [
+        "PQA",
+        "MIA",
+        "EXA",
+        "ALA",
+        "CPA",
+        "RPA"
+      ]
+    }
+  },
+  "canonical_lifecycle_mapping": {
+    "pre_review": [
+      "DRAFT",
+      "SUBMITTED",
+      "INTAKE_VALIDATION",
+      "RETURNED",
+      "ACCEPTED",
+      "EVIDENCE_LOCKED",
+      "ASSIGNMENT"
+    ],
+    "specialist_review": [
+      "INDEPENDENT_REVIEW"
+    ],
+    "challenge": [
+      "CHALLENGE",
+      "CLARIFICATION"
+    ],
+    "decision": [
+      "CONSOLIDATION",
+      "GOVERNANCE_VALIDATION",
+      "BLOCKED",
+      "DECIDED",
+      "PUBLISHED"
+    ],
+    "appeal": [
+      "APPEALED",
+      "APPEAL_REVIEW",
+      "UPHELD",
+      "SUPERSEDED",
+      "REMANDED"
+    ],
+    "terminal": [
+      "FINAL",
+      "ARCHIVED",
+      "VOID",
+      "WITHDRAWN"
+    ]
+  },
+  "activation_requirements": [
+    "approved_rbe_release",
+    "valid_profile_checksum",
+    "valid_package_manifest",
+    "named_human_principal_architect_approval",
+    "named_human_methodology_owner_approval",
+    "active_status_commit",
+    "immutable_release_tag"
+  ],
+  "supersedes": null,
+  "amendment_rationale": "RBM-005 v1.0.0 initial release. Six gates, each naming a failure mode observed in the domain rather than invented for symmetry with another profile.",
+  "agent_seat_policy": {
+    "agent_seats_permitted": true,
+    "permitted_agent_roles": [
+      "MA",
+      "CVA",
+      "ADA",
+      "TKA",
+      "CAA",
+      "LQA",
+      "RPA",
+      "SR"
+    ],
+    "prohibited_agent_roles": [
+      "BC"
+    ],
+    "agent_actor_prefixes": [
+      "agent:"
+    ],
+    "named_human_verifier_required": true,
+    "ratification_authority_must_be_human": true,
+    "publication_authority_must_be_human": true,
+    "agent_seat_review_is_advisory_only": true,
+    "independence_requirements": {
+      "distinct_instruction_version_per_seat": true,
+      "sceptical_seat_is_blind_to_proposed_outcome": true,
+      "record_model_and_instruction_version_per_seat": true,
+      "shared_model_across_seats_must_be_recorded": true
+    }
+  },
+  "single_authority_policy": {
+    "single_authority_permitted": true,
+    "permitted_only_when_profile_non_binding": true,
+    "never_binding": true,
+    "never_merge_permitted": true,
+    "authority_must_be_human": true,
+    "authority_must_be_board_chair": true,
+    "recorded_flag": "single_authority",
+    "supersedable_by_two_signature_decision": true,
+    "rationale_required": true
+  },
+  "chain_gates": [
+    {
+      "gate_id": "AG-01",
+      "name": "Price observability",
+      "reviewer_role": "PQA",
+      "requirement": "Every price must carry its source, its market, and the instant it was observed. A price without a timestamp is not evidence, because the whole claim depends on both legs being available at once.",
+      "failure_mode": "An arb is computed from prices read minutes apart. It existed for neither of them together."
+    },
+    {
+      "gate_id": "AG-02",
+      "name": "Market identity and settlement",
+      "reviewer_role": "MIA",
+      "requirement": "Both legs must be shown to settle under identical rules, quoted verbatim from each operator. Rules are never normalised, paraphrased, or assumed equivalent because the market names match.",
+      "failure_mode": "Two books offer 'Team A to win'. One voids on abandonment and the other pays; one settles at 90 minutes and the other includes extra time. Both legs priced correctly and the lock is a coin flip."
+    },
+    {
+      "gate_id": "AG-03",
+      "name": "Executability at size",
+      "reviewer_role": "EXA",
+      "requirement": "The stated odds must be shown available at the stake the arb requires. Exchange sizes are observed from the book; bookmaker limits are an upper bound applied per account and must be labelled as such.",
+      "failure_mode": "A headline price is available for five pounds. The arb is real and worth nothing."
+    },
+    {
+      "gate_id": "AG-04",
+      "name": "Account and limit reality",
+      "reviewer_role": "ALA",
+      "requirement": "Account status, stake restrictions and prior limitations must be recorded. An arb requiring a stake the account cannot place is UNFILLABLE, never profit.",
+      "failure_mode": "The account has been restricted to a fraction of the advertised maximum, and every calculation assumed the advertised one."
+    },
+    {
+      "gate_id": "AG-05",
+      "name": "Counterparty and void exposure",
+      "reviewer_role": "CPA",
+      "requirement": "The loss if one leg voids and the other loses must be computed and reported beside the guaranteed return. Palpable-error and void policies must be quoted from each operator.",
+      "failure_mode": "A twenty-nine pound guaranteed return carries two hundred and fifty pounds of one-sided exposure, and only the twenty-nine appears on the screen."
+    },
+    {
+      "gate_id": "AG-06",
+      "name": "Reproducibility",
+      "reviewer_role": "RPA",
+      "requirement": "Every quoted price must be recorded with enough detail that a third party can state what was offered, where, and when. Commission treatment must be shown in the arithmetic rather than assumed.",
+      "failure_mode": "A margin is reported gross of commission. At five per cent of net winnings a one per cent margin was never a margin."
+    }
+  ]
+}
