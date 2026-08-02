@@ -202,6 +202,17 @@ def arb_lane(*, probe: bool = False, home: str | Path | None = None) -> LaneRead
     root = Path(home).expanduser() if home else Path.home()
     requirements: list[Requirement] = []
 
+    # First, because it is the only source that covers many books in one request and the
+    # only one that turns nought-of-five coverage into a real universe for a free key.
+    oddsapi = root / ".oddsapi" / "key"
+    has_key = oddsapi.is_file() and oddsapi.read_text(encoding="utf-8").strip()
+    requirements.append(Requirement(
+        ARB, "The Odds API", NOT_ATTEMPTED if has_key else NOT_CONFIGURED,
+        unlocks="many books in one request; discovery for scan_arb.py",
+        detail=("key present" if has_key else ""), required=False,
+        remedy="free key at the-odds-api.com, then ~/.oddsapi/key",
+    ))
+
     betfair = root / ".betfair"
     have_key = (betfair / "app_key").is_file()
     delayed, live = (betfair / "delayed").is_file(), (betfair / "live").is_file()
@@ -247,7 +258,8 @@ def arb_lane(*, probe: bool = False, home: str | Path | None = None) -> LaneRead
         ARB,
         f"Arb maths, settlement-rule divergence and stake sizing all run on typed odds "
         f"with no credentials at all. Live scanning currently reaches {covered} of "
-        f"{len(requirements)} sources.",
+        f"{len(requirements)} sources. A feed gives discovery only: available stake and "
+        f"settlement rules are read at the book, never from an aggregator.",
         tuple(requirements),
     )
 

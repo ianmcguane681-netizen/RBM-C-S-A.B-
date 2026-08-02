@@ -92,7 +92,9 @@ class TestDegradedIsItsOwnAnswer:
         assert arb_lane(home=tmp_path).status == DEGRADED
 
     def test_arb_says_how_many_sources_it_actually_reaches(self, tmp_path):
-        assert "0 of 5 sources" in arb_lane(home=tmp_path).summary
+        lane = arb_lane(home=tmp_path)
+
+        assert f"0 of {len(lane.requirements)} sources" in lane.summary
 
 
 class TestBetfairKeyKindMustBeDeclared:
@@ -102,7 +104,10 @@ class TestBetfairKeyKindMustBeDeclared:
         (root / "app_key").write_text("key", encoding="utf-8")
         for marker in markers:
             (root / marker).write_text("", encoding="utf-8")
-        return arb_lane(home=tmp_path).requirements[0]
+        # By name, not by index: a new source added ahead of Betfair must not silently
+        # repoint these assertions at a different requirement.
+        return next(r for r in arb_lane(home=tmp_path).requirements
+                    if r.name == "Betfair Exchange")
 
     def test_a_key_with_no_declared_kind_does_not_count_as_configured(self, tmp_path):
         """A delayed quote read as a live one is a price you cannot trade at."""
