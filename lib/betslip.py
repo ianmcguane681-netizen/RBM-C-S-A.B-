@@ -150,6 +150,14 @@ class BetSlip:
             f"BET SLIP  {self.market}",
             f"  total stake {self.total_stake:,.2f}   guaranteed return "
             f"{self.guaranteed_return:,.2f}  ({self.return_pct:+.2f}%)",
+        ]
+        if self.reason:
+            # A placeable slip carries a note when the combination on it was NOT the
+            # cheapest one available. Dropping that would present a deliberate trade —
+            # margin given up to avoid two legs at one book — as if it were the best price
+            # anybody found.
+            lines.append(f"  {self.reason}")
+        lines += [
             "",
             "PLACE IN THIS ORDER. The first leg is the one most likely to vanish.",
             "",

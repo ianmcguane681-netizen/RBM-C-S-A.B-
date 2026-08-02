@@ -73,6 +73,35 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+def _stage_reason(verdict: Any, prefix: str) -> str:
+    """Name the deciding stage AND carry its detail up.
+
+    Without the detail an unmeasured cascade reports "a stage was not measured", which is
+    true and useless: the whole value of the arb lane's first stage is that it says which
+    two books need their rules read. A refusal a person cannot act on is a refusal they
+    will learn to skim.
+    """
+
+    stage = getattr(verdict, "decided_by", None)
+    name = getattr(stage, "name", "a stage")
+    detail = str(getattr(stage, "detail", "") or "").strip()
+    return f"{prefix} {name}" + (f": {detail}" if detail else "")
+
+
+@dataclass(frozen=True, slots=True)
+class Unworthy:
+    """Sized successfully, and not worth placing.
+
+    The distinction the rest of this repository keeps making, at the one place `size` would
+    otherwise collapse it. `None` from `size` means a constraint could not be measured,
+    which is INDETERMINATE. A slip that priced correctly and came out under the return
+    floor is a MEASURED refusal, and reporting it as INDETERMINATE would put "I could not
+    work out how much" and "I worked it out and it is not worth it" in the same bucket.
+    """
+
+    reason: str
+
+
 def gate_findings(readings: Sequence[Any]) -> list[dict]:
     """Turn gate output into findings, without convening anything.
 
@@ -84,6 +113,12 @@ def gate_findings(readings: Sequence[Any]) -> list[dict]:
     That is deliberately stricter than a board, which would record an unassessed gate as an
     omission and carry on. Without seats to weigh it, an unreadable gate has to stop things
     on its own or it stops nothing at all.
+
+    A reading may carry a boolean `blocking` and that overrides the name. Sniffing the
+    status string is a decent default for the connector readings written before this
+    existed, but it makes whether a gate stops the lane depend on how somebody spelled a
+    constant — `STAKE_UNREAD` blocks nothing while `STAKE_NOT_READ` blocks everything, for
+    no reason a reader could infer. A gate that knows whether it is a precondition says so.
     """
 
     findings: list[dict] = []
@@ -91,7 +126,8 @@ def gate_findings(readings: Sequence[Any]) -> list[dict]:
         status = str(getattr(reading, "status", "") or "")
         if not status:
             continue
-        blocking = any(
+        declared = getattr(reading, "blocking", None)
+        blocking = declared if isinstance(declared, bool) else any(
             marker in status
             for marker in ("NOT_", "NO_", "UNREADABLE", "UNKNOWN", "MISMATCH",
                            "INDETERMINATE", "FAIL")
@@ -243,12 +279,11 @@ class Reaper:
         verdict = self.screen(subject)
         cascade = str(getattr(verdict, "verdict", ""))
         if cascade == "REFUSED":
-            stage = getattr(verdict, "decided_by", None)
-            return Harvest(self.lane, REFUSED, reason=(
-                f"the cascade refused at {getattr(stage, 'name', 'a stage')}"), **common)
+            return Harvest(self.lane, REFUSED,
+                           reason=_stage_reason(verdict, "the cascade refused at"), **common)
         if cascade != "SURFACED":
-            return Harvest(self.lane, INDETERMINATE, reason=(
-                "the cascade could not be completed; a stage was not measured"), **common)
+            return Harvest(self.lane, INDETERMINATE, reason=_stage_reason(
+                verdict, "the cascade could not be completed; unmeasured at"), **common)
 
         try:
             findings = gate_findings(self.gates(subject))
@@ -269,6 +304,9 @@ class Reaper:
                            reason=reason or f"permission is {permission.status}", **common)
 
         instruction = self.size(subject, permission)
+        if isinstance(instruction, Unworthy):
+            return Harvest(self.lane, REFUSED, permission=permission,
+                           reason=instruction.reason, **common)
         if instruction is None:
             return Harvest(self.lane, INDETERMINATE, permission=permission, reason=(
                 "permitted, and no size could be computed; a constraint was not measured"),
