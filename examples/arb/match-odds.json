@@ -1,0 +1,24 @@
+{
+  "market": "Match Odds: Team A v Team B (worked example, not live prices)",
+  "target_stake": 0,
+  "legs": [
+    {
+      "book": "Betfair Exchange",
+      "selection": "Team A",
+      "odds": 2.16,
+      "max_stake": 5000,
+      "commission_pct": 2.0,
+      "observed_at": "2026-08-02T12:00:00Z",
+      "settlement_rule": "This market will be settled according to the official result. Dead heat rules apply. If the match is abandoned before completion, all bets will be void unless the market has already been unconditionally determined."
+    },
+    {
+      "book": "Some Bookmaker",
+      "selection": "Team B",
+      "odds": 2.10,
+      "max_stake": 250,
+      "commission_pct": 0.0,
+      "observed_at": "2026-08-02T12:00:40Z",
+      "settlement_rule": "Bets settled on the result after 90 minutes plus stoppage time. If a match is abandoned, bets stand if the fixture is replayed within 48 hours."
+    }
+  ]
+}
