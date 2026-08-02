@@ -15,6 +15,7 @@ import pytest
 
 from lib.arb import (
     INDETERMINATE,
+    EquivalenceDeclaration,
     LOCK,
     NO_LOCK,
     SETTLEMENT_MISMATCH,
@@ -84,6 +85,91 @@ class TestSettlementIsTheWholeGame:
 
         assert "NOT normalised" in described
         assert "Void if abandoned" in described
+
+
+# Verbatim from the operators' own dead-heat pages. Not one word in common, and on 100
+# staked at 2.0 in a two-way dead heat both return exactly 100.
+BETFAIR_DEAD_HEAT = (
+    "A Dead Heat is calculated by dividing the stake proportionally between the number of "
+    "winners in the event. So, in a two-way Dead Heat your return will be half of what it "
+    "could have been."
+)
+BET365_DEAD_HEAT = (
+    "Your original stake is divided by the number of selections tied for that exact "
+    "position. The reduced stake is multiplied by the original odds. The portion of the "
+    "stake allocated to the extra tied competitors is treated as lost."
+)
+
+
+class TestDifferentWordsCanMeanTheSameSettlement:
+    """The flaw live evidence exposed.
+
+    Comparing rule text for equality is right in principle -- no string comparison is
+    entitled to decide two wordings mean the same thing -- and in practice refused nearly
+    every real pair, which is useless and teaches its user to ignore the tool.
+
+    So the judgement stays human and becomes a record instead of an assumption.
+    """
+
+    def mismatched(self):
+        return [
+            leg("Betfair", "A", 2.10, rule=BETFAIR_DEAD_HEAT),
+            leg("bet365", "B", 2.10, rule=BET365_DEAD_HEAT),
+        ]
+
+    def test_differing_wording_still_refuses_by_default(self):
+        assert evaluate(self.mismatched()).status == SETTLEMENT_MISMATCH
+
+    def test_a_named_human_may_declare_them_equivalent(self):
+        declaration = EquivalenceDeclaration(
+            declared_by="Ian McGuane",
+            reasoning="Both halve the effective stake in a two-way dead heat; 100 at 2.0 "
+                      "returns 100 under either wording.",
+            scenarios_checked=("two-way dead heat at 2.0",),
+        )
+
+        assert evaluate(self.mismatched(), equivalence=declaration).status == LOCK
+
+    def test_an_agent_may_not_declare_equivalence(self):
+        """Deciding two wordings settle alike is exactly the judgement automation is not
+        entitled to make."""
+
+        for actor in ("agent:mia", "ai:reviewer", "model:gpt", "automation:bot"):
+            with pytest.raises(ValueError):
+                EquivalenceDeclaration(actor, "they look the same")
+
+    def test_a_declaration_without_reasoning_is_refused(self):
+        with pytest.raises(ValueError):
+            EquivalenceDeclaration("Ian McGuane", "   ")
+
+    def test_the_declaration_is_reported_on_the_finding(self):
+        declaration = EquivalenceDeclaration(
+            "Ian McGuane", "equivalent on a two-way dead heat",
+            scenarios_checked=("two-way dead heat", "abandonment"),
+        )
+
+        described = evaluate(self.mismatched(), equivalence=declaration).describe()
+
+        assert "THE RULES DIFFER IN WORDING" in described
+        assert "Ian McGuane declared them equivalent" in described
+        assert "two-way dead heat; abandonment" in described
+
+    def test_the_lock_is_stated_to_rest_on_that_judgement(self):
+        """A waived mismatch must be distinguishable in the record from one that never
+        existed."""
+
+        declaration = EquivalenceDeclaration("Ian McGuane", "checked dead heat only")
+
+        described = evaluate(self.mismatched(), equivalence=declaration).describe()
+
+        assert "This lock rests on that judgement" in described
+        assert "not checked above, it is a bet" in described
+
+    def test_identical_wording_needs_no_declaration(self):
+        finding = evaluate([leg("BookA", "A", 2.10), leg("BookB", "B", 2.10)])
+
+        assert finding.status == LOCK
+        assert "THE RULES DIFFER" not in finding.describe()
 
 
 class TestALockIsOnlyALockWhileBothLegsStand:

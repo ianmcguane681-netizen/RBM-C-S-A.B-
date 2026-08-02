@@ -6,6 +6,11 @@ Every field is one you can read off two screens: the price, the size it is offer
 commission, and -- the one that decides it -- each operator's settlement rule, copied
 verbatim from their rules page.
 
+If the two operators word the same settlement differently -- and they usually do -- add a
+`settlement_equivalence` block naming who decided they match and why. The tool refuses
+without it, because deciding two wordings mean the same thing is a judgement it is not
+entitled to make on your behalf.
+
 That last field is the point of this tool. The arithmetic of arbitrage is a line of code
 and every arb calculator on the internet gets it right. What they leave out is whether the
 two legs settle the same way, and that is what turns a locked position into a coin flip.
@@ -18,7 +23,7 @@ import json
 import sys
 from pathlib import Path
 
-from lib.arb import LOCK, Leg, evaluate
+from lib.arb import LOCK, EquivalenceDeclaration, Leg, evaluate
 
 TEMPLATE = {
     "market": "Match Odds: Team A v Team B",
@@ -46,9 +51,18 @@ TEMPLATE = {
 }
 
 
-def load(path: Path) -> tuple[list[Leg], float, str]:
+def load(path: Path) -> tuple[list[Leg], float, str, EquivalenceDeclaration | None]:
     spec = json.loads(path.read_text(encoding="utf-8"))
     market = str(spec.get("market") or "unnamed market")
+    declared = spec.get("settlement_equivalence")
+    equivalence = (
+        EquivalenceDeclaration(
+            declared_by=str(declared["declared_by"]),
+            reasoning=str(declared["reasoning"]),
+            scenarios_checked=tuple(declared.get("scenarios_checked") or ()),
+        )
+        if declared else None
+    )
     legs = [
         Leg(
             book=str(item["book"]),
@@ -62,7 +76,7 @@ def load(path: Path) -> tuple[list[Leg], float, str]:
         )
         for item in spec["legs"]
     ]
-    return legs, float(spec.get("target_stake") or 0.0), market
+    return legs, float(spec.get("target_stake") or 0.0), market, equivalence
 
 
 def observation_gap(legs: list[Leg]) -> str:
@@ -84,8 +98,8 @@ def observation_gap(legs: list[Leg]) -> str:
 
 
 def main(path: str) -> int:
-    legs, target, market = load(Path(path))
-    finding = evaluate(legs, target_stake=target)
+    legs, target, market, equivalence = load(Path(path))
+    finding = evaluate(legs, target_stake=target, equivalence=equivalence)
 
     print(f"{market}\n")
     print(finding.describe())

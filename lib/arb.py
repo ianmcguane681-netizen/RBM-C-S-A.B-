@@ -89,6 +89,7 @@ class ArbFinding:
     stakes: tuple[float, ...] = ()
     guaranteed_return: float = 0.0
     reason: str = ""
+    equivalence: "EquivalenceDeclaration | None" = None
 
     @property
     def total_implied_pct(self) -> float:
@@ -163,22 +164,80 @@ class ArbFinding:
             f"  settlement, quoted from each operator and NOT normalised: "
             + " | ".join(f"{leg.book}: {leg.settlement_rule}" for leg in self.legs)
         )
+        if self.equivalence is not None:
+            lines.append(
+                f"  THE RULES DIFFER IN WORDING. {self.equivalence.declared_by} declared "
+                f"them equivalent: {self.equivalence.reasoning}"
+            )
+            if self.equivalence.scenarios_checked:
+                lines.append(
+                    f"  scenarios checked: "
+                    + "; ".join(self.equivalence.scenarios_checked)
+                )
+            lines.append(
+                "  This lock rests on that judgement. If the rules diverge in a scenario "
+                "not checked above, it is a bet."
+            )
         return "\n".join(lines)
 
 
-def _settlement_matches(legs: Sequence[Leg]) -> bool:
-    """Identical wording, compared case- and space-insensitively and nothing more.
+@dataclass(frozen=True, slots=True)
+class EquivalenceDeclaration:
+    """A named human stating that two differently worded rules settle the same way.
 
-    Deliberately crude. Anything smarter would be deciding that two differently worded
-    rules mean the same thing, which is a judgement no string comparison is entitled to
-    make and precisely the judgement that costs money when it is wrong.
+    The first version of this module compared rule text for equality and nothing else, on
+    the reasoning that no string comparison is entitled to decide two wordings mean the
+    same thing. That reasoning is right and the consequence was a tool that refuses almost
+    every real pair, which is useless and teaches its user to ignore it.
+
+    A worked case, from Betfair and bet365's own dead-heat pages. Betfair: "your return
+    will be half of what it could have been". bet365: "stake divided by the number of tying
+    competitors, paid at full odds on that reduced stake, the remainder treated as lost".
+    On 100 at 2.0 in a two-way dead heat both return 100. Same settlement, no shared words.
+
+    So the judgement stays human and becomes a record instead of an assumption: who decided
+    the rules match, and on what reasoning. The same shape as `board verify --by` -- an
+    attestation the machine cannot make for itself and must not fake.
+    """
+
+    declared_by: str
+    reasoning: str
+    scenarios_checked: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.declared_by.strip() or self.declared_by.lower().startswith(
+            ("agent:", "ai:", "model:", "automation:")
+        ):
+            raise ValueError(
+                "settlement equivalence must be declared by a named human; comparing "
+                "wordings is exactly the judgement automation is not entitled to make"
+            )
+        if not self.reasoning.strip():
+            raise ValueError(
+                "a declaration without reasoning is indistinguishable from a guess"
+            )
+
+
+def _settlement_matches(
+    legs: Sequence[Leg], equivalence: EquivalenceDeclaration | None = None
+) -> bool:
+    """Identical wording, or a human saying the different wordings settle alike.
+
+    Still crude on its own, and still refusing by default. `equivalence` does not weaken
+    that: it records who took responsibility for the judgement, so a mismatch that was
+    waived is distinguishable in the record from one that never existed.
     """
 
     normalised = {" ".join(leg.settlement_rule.lower().split()) for leg in legs}
-    return len(normalised) == 1
+    return len(normalised) == 1 or equivalence is not None
 
 
-def evaluate(legs: Sequence[Leg], *, target_stake: float = 0.0) -> ArbFinding:
+def evaluate(
+    legs: Sequence[Leg],
+    *,
+    target_stake: float = 0.0,
+    equivalence: EquivalenceDeclaration | None = None,
+) -> ArbFinding:
     """Two or more mutually exclusive, collectively exhaustive legs.
 
     Stakes are split so every outcome returns the same amount, which is what makes the
@@ -197,7 +256,7 @@ def evaluate(legs: Sequence[Leg], *, target_stake: float = 0.0) -> ArbFinding:
         return ArbFinding(
             INDETERMINATE, legs, reason="two legs name the same selection"
         )
-    if not _settlement_matches(legs):
+    if not _settlement_matches(legs, equivalence):
         return ArbFinding(
             SETTLEMENT_MISMATCH, legs,
             reason="; ".join(f"{leg.book}: {leg.settlement_rule!r}" for leg in legs),
@@ -233,4 +292,5 @@ def evaluate(legs: Sequence[Leg], *, target_stake: float = 0.0) -> ArbFinding:
     return ArbFinding(
         LOCK, legs, total_stake=stake, stakes=stakes,
         guaranteed_return=min(returns) - stake,
+        equivalence=equivalence,
     )
