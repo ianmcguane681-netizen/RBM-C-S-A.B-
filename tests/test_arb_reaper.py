@@ -321,8 +321,14 @@ class TestTheStandingGrantRecordsWhatItSkipped:
         assert authority().thesis_for(MARKET).declared_by == "Ian McGuane"
 
     def test_automation_cannot_hold_a_standing_grant_either(self):
-        with pytest.raises(ValueError, match="cannot author a thesis"):
-            authority(declared_by="agent:arb-reaper").thesis_for(MARKET)
+        """And it fails where the grant is DECLARED, not per market inside reap()."""
+
+        with pytest.raises(ValueError, match="cannot hold a standing authority"):
+            authority(declared_by="agent:arb-reaper")
+
+    def test_an_unnamed_grant_is_refused(self):
+        with pytest.raises(ValueError, match="named author"):
+            authority(declared_by="   ")
 
 
 class TestTheLaneEndToEnd:

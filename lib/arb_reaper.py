@@ -135,6 +135,27 @@ class StandingAuthority:
         "making no claim about the event's outcome"
     )
 
+    def __post_init__(self) -> None:
+        """Checked here, not only when a thesis is minted.
+
+        `Thesis` applies the same guard, but it applies it per market inside `reap()` —
+        so an automation-authored grant assembled cleanly at start-up and raised in the
+        middle of a run, out of a callable nothing catches. A grant that cannot authorise
+        anything should fail where it is declared.
+        """
+
+        from lib.thesis import AUTOMATION_PREFIXES
+
+        author = self.declared_by.strip().lower()
+        if not author:
+            raise ValueError("a standing authority needs a named author")
+        if any(author.startswith(prefix) for prefix in AUTOMATION_PREFIXES):
+            raise ValueError(
+                f"{self.declared_by!r} cannot hold a standing authority. Minting theses "
+                f"from it does not launder the authorship: whoever is named on the grant "
+                f"is named on every position taken under it"
+            )
+
     def thesis_for(self, market: str) -> Thesis:
         return Thesis(
             subject=market,

@@ -3,6 +3,7 @@
     python run.py                 what would run, and why the rest would not
     python run.py --go            actually run them
     python run.py --queue         just the human queue
+    python run.py --reap          all three reaper lanes, to READY and no further
     python run.py --resolve DEC-0001 "confirmed and placed"
 
 The orchestration layer. Lanes run on their own cadences, some feed others, and everything
@@ -16,6 +17,12 @@ one stops instead.
 
 **A lane that did not run is never shown as a lane that found nothing.** `NOT_DUE`,
 `NEVER_RAN`, `HELD` and `FAILED` are four different facts and none of them is a result.
+
+`--reap` is the other half and works the same way. It runs the arb, stocks and chain
+reapers from `data/reapers.json` — look, screen, gate, authorise, size — and stops at a
+sized instruction. It places nothing, signs nothing and sends nothing, and a lane nobody
+configured is reported as `NOT_CONFIGURED` rather than folded in beside the lanes that
+looked and found nothing.
 """
 from __future__ import annotations
 
@@ -134,6 +141,30 @@ def main(go: bool) -> int:
     return 1 if orchestrator.open_decisions else 0
 
 
+def reap() -> int:
+    """Every configured lane, to a sized instruction and no further.
+
+    Exit codes match the rest of the repository's convention: 1 means something wants a
+    person, 2 means nothing was looked at.
+
+        0   every configured lane looked, and nothing reached READY
+        1   at least one instruction is waiting for a person
+        2   NOTHING WAS LOOKED AT — no lane configured, the config would not parse, or
+            every configured lane failed to look. The third case is the one worth having
+            a distinct code for: a scheduler treating it as 0 would read a broken
+            pipeline as a quiet morning, every morning.
+    """
+
+    from lib.reaping import reap as run_reapers
+
+    reaping = run_reapers()
+    print(reaping.describe())
+
+    if reaping.refusal or not reaping.ready or not reaping.looked:
+        return 2
+    return 1 if any(h.status == "READY" for h in reaping.harvests) else 0
+
+
 def resolve(decision_id: str, resolution: str) -> int:
     orchestrator = Orchestrator(LANES, STATE)
     if not orchestrator.resolve(decision_id, resolution):
@@ -157,6 +188,8 @@ if __name__ == "__main__":
             print("Usage: python run.py --resolve DEC-0001 'what you did'")
             raise SystemExit(2)
         raise SystemExit(resolve(rest[0], " ".join(rest[1:])))
+    if "--reap" in argv:
+        raise SystemExit(reap())
     if "--queue" in argv:
         raise SystemExit(0 if not print(Orchestrator(LANES, STATE).describe_queue()) else 0)
     raise SystemExit(main("--go" in argv))

@@ -41,3 +41,8 @@ data/theses.json
 
 data/breakers*.json
 data/HALT
+
+# The reaper configuration: watchlists, sports, balances and a wallet address. Same
+# reasoning as the ledger — it records what is being watched and how much is behind it,
+# and this repository is public. examples/reapers.example.json is the committed shape.
+data/reapers.json

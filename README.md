@@ -205,6 +205,58 @@ It has never returned `PERMITTED`. RBM-003 section 11 states that a review under
 never authorise a transaction, so the authority condition refuses every time. That is the
 profile being honest about its weight, and the mandate encodes it rather than outranking it.
 
+## Running the lanes without a board: reapers
+
+A full review is six seats, six reports and a ratification. That earns its keep when
+somebody else must be convinced, and it is dead weight for one person spending their own
+money on a Tuesday morning. So the lanes also run without one.
+
+```bash
+cp examples/reapers.example.json data/reapers.json   # then edit it
+python run.py --reap
+```
+
+A **reaper** takes one lane from *look* to *here is a sized instruction that is permitted*
+and does everything in between unasked. What it never does is place it.
+
+```text
+look → screen → veto check → authorise → size → READY, or a stated refusal
+```
+
+The same gates that would block under review still block; they simply arrive without a
+convening. What is lost is the audit chain, and every harvest says so rather than letting a
+working decision be mistaken for a reviewed one.
+
+| lane | evidence | ends at |
+|---|---|---|
+| `arb` | aggregator odds, per-book | a bet slip: stakes to the penny, order to place them in, and the abort plan written **before** the first bet goes on |
+| `stocks` | SEC filings, an Alpaca quote and 30 days of closes | a whole number of shares priced at the ask |
+| `crypto` | contract identity, upgradeability, a round trip | unsigned transactions to sign in your own wallet |
+
+Four things hold the boundary:
+
+- **Circuit breakers are the last gate**, checked after sizing because a breaker needs a
+  number. A reaper with none attached cannot reach `READY` at all — remembering to call
+  them separately works right up until the evening somebody forgets. `data/HALT` is a file;
+  its presence blocks every lane and no other condition is consulted.
+- **The arb lane's ceiling is `INDETERMINATE` until a person reads two books' rules.** A
+  feed returns odds, not settlement terms, and the only real position this board has
+  examined had a positive margin net of commission and was refused because one leg voided on
+  abandonment while the other stood. Declaring equivalence is a one-time human act per set
+  of books, and `EquivalenceDeclaration` refuses every automation prefix.
+- **The stocks lane disqualifies; it does not select.** You name the company and write the
+  thesis; the filings are used to knock it out. A criterion must declare itself
+  `OBSERVATIONAL` or `FORECAST`, and a forecast needs a named human — the machine may
+  observe, and may not originate a prediction and then trade on it.
+- **The crypto lane cannot sign.** Not a setting: `connectors/chain_exec.py` has no key
+  path, no signing library and no send method. It computes the swap to the last byte,
+  including the `amountOutMin` floor that stands between a swap and a sandwich, and an
+  exact-amount approval rather than an unlimited one.
+
+`--reap` exits `2` when **nothing was looked at** — no lane configured, an unparseable
+config, or every configured lane failing to reach its source. A scheduler treating that as
+`0` would read a broken pipeline as a quiet morning, every morning.
+
 ## Agent seats
 
 Seats may be held by agents. They are advisory, always:
@@ -259,6 +311,9 @@ check_arb.py          is a claimed arb real, from two screens
 trade_sheet.py        board verdict, round-trip cost, and your own target
 monitor.py            has anything a review relied on moved since last time
 preflight.py          what each lane needs before it can read anything
+run.py --reap         all three lanes, board-free, to a sized instruction and no further
+lib/reaper.py         the sequence a lane runs; lib/{arb,stocks,crypto}_reaper.py fill it
+lib/breakers.py       ring-fence, position cap, daily loss, losing run, and a kill file
 tools/repin_package.py  the only sanctioned way to re-hash a controlled package
 ```
 

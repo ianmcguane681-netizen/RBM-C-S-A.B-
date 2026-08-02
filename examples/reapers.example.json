@@ -1,0 +1,89 @@
+{
+  "_README": [
+    "Copy to data/reapers.json and edit. That path is gitignored: it records what is",
+    "being watched and how much is behind it, and this repository is public.",
+    "",
+    "Balances are ring-fences. A lane may lose its balance and nothing else, and the",
+    "breakers derive the per-position cap and the daily loss limit from it.",
+    "",
+    "Every lane stops at a sized instruction. Nothing here places a bet, submits an",
+    "order or signs a transaction, and the crypto adapter has no key path at all.",
+    "",
+    "Theses live separately in data/theses.json and must be written by a person. The",
+    "stocks and crypto lanes refuse a watchlist entry that has none."
+  ],
+
+  "arb": {
+    "enabled": true,
+    "balance": 500.0,
+    "currency": "EUR",
+    "sports": ["soccer_epl", "soccer_efl_champ"],
+    "prefer_distinct_books": true,
+
+    "_authority": [
+      "A standing grant, because nobody writes a thesis per football match at nine in",
+      "the morning. Defensible HERE and nowhere else in this repository: an arb makes",
+      "no claim about the fixture. Every minted thesis records that nobody looked at",
+      "the particular market before authorising it."
+    ],
+    "authority": {
+      "declared_by": "YOUR NAME",
+      "reasoning": "two books disagree by more than the cost of taking both sides; this position makes no claim about the event's outcome",
+      "considered": [
+        "a soft book restricts or limits the account, which is routine rather than a tail risk",
+        "one leg is voided and the other stands, leaving an unhedged single bet",
+        "the price moves between placing the first leg and the second"
+      ],
+      "expires_at": "2026-09-01T00:00:00Z",
+      "max_exposure": 50.0,
+      "currency": "EUR"
+    },
+
+    "_declarations": [
+      "The lane's ceiling is INDETERMINATE until one of these exists for the books it",
+      "wants to use. An odds feed returns odds, not settlement terms, and the only real",
+      "position this board examined had a positive margin and voided on one leg only.",
+      "",
+      "The key is the books that will be PLACED, sorted and joined with |. Run the lane",
+      "once with none and it tells you the exact key it wants. A declaration is a",
+      "one-time act per set of books: read their abandonment and non-runner rules once.",
+      "",
+      "'*' matches any books. It exists, it is deliberately awkward to reach for, and a",
+      "declaration that two unnamed books settle alike is not a judgement anybody made."
+    ],
+    "declarations": {
+      "Sky Bet|bet365": {
+        "declared_by": "YOUR NAME",
+        "reasoning": "read both books' football rules for abandonment and non-runners; both void the market and return stakes if the fixture is not replayed within 48 hours",
+        "scenarios_checked": ["abandonment", "postponement", "dead heat"]
+      }
+    }
+  },
+
+  "stocks": {
+    "enabled": true,
+    "balance": 5000.0,
+    "free_balance": 5000.0,
+    "currency": "USD",
+    "_watchlist": [
+      "The lane disqualifies; it does not select. These are companies YOU chose and",
+      "wrote a thesis for. The filings are used to knock them out, not to find them."
+    ],
+    "watchlist": ["MODN", "AAPL"]
+  },
+
+  "crypto": {
+    "enabled": false,
+    "balance": 1000.0,
+    "currency": "USD",
+    "quote_name": "USDC",
+    "wallet": "0xYOUR_WALLET_ADDRESS",
+    "watchlist": ["0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"],
+    "_note": [
+      "This lane produces unsigned transactions and cannot sign or send them. That is",
+      "structural: connectors/chain_exec has no key path, no signing library and no",
+      "send method. Sign the steps in a wallet you control, after checking the token",
+      "addresses character for character."
+    ]
+  }
+}
