@@ -76,6 +76,26 @@ def reaper(*, subjects=("Team A v Team B",), asked=5, answered=5, verdict="SURFA
     )
 
 
+def breakers(tmp_path, **kw):
+    from lib.breakers import Breakers, Ringfence
+
+    return Breakers(Ringfence("arb", 1000.0, **kw), tmp_path / "b.json",
+                    kill_switch=tmp_path / "HALT")
+
+
+def armed(tmp_path, *, size=10.0, edge=2.0, book=None, **kw):
+    """The same reaper with limits behind it — the only shape that can reach READY."""
+
+    base = reaper(**kw)
+    return Reaper(
+        name=base.name, lane=base.lane, look=base.look, screen=base.screen,
+        gates=base.gates, thesis_for=base.thesis_for, size=base.size,
+        autonomous_execution=base.autonomous_execution,
+        breakers=book if book is not None else breakers(tmp_path),
+        measure=lambda _i: (size, edge),
+    )
+
+
 class TestNotLookingIsNotFindingNothing:
     def test_a_source_failure_is_could_not_look(self):
         harvests = reaper(look_raises=RuntimeError("feed down")).reap()
@@ -143,14 +163,14 @@ class TestAnUnassessedGateBlocks:
 
 
 class TestReadyStopsBeforeMoney:
-    def test_a_clean_run_is_ready_and_carries_the_instruction(self):
-        harvest = reaper().reap()[0]
+    def test_a_clean_run_is_ready_and_carries_the_instruction(self, tmp_path):
+        harvest = armed(tmp_path).reap()[0]
 
         assert harvest.status == READY
         assert harvest.instruction == "an instruction"
 
-    def test_ready_says_nothing_has_been_placed(self):
-        assert "NOTHING HAS BEEN PLACED" in reaper().reap()[0].describe()
+    def test_ready_says_nothing_has_been_placed(self, tmp_path):
+        assert "NOTHING HAS BEEN PLACED" in armed(tmp_path).reap()[0].describe()
 
     def test_permitted_but_unsizeable_is_indeterminate_not_ready(self):
         harvest = reaper(sized=None).reap()[0]
@@ -170,8 +190,8 @@ class TestReadyStopsBeforeMoney:
 
 
 class TestTheMissingAuditChainIsStated:
-    def test_a_working_decision_says_no_board_was_convened(self):
-        described = reaper().reap()[0].describe()
+    def test_a_working_decision_says_no_board_was_convened(self, tmp_path):
+        described = armed(tmp_path).reap()[0].describe()
 
         assert "No board was convened" in described
         assert "a working decision, not a reviewed one" in described
@@ -180,3 +200,70 @@ class TestTheMissingAuditChainIsStated:
         """There is no decision to qualify, so the note would be noise."""
 
         assert "No board was convened" not in reaper(subjects=()).reap()[0].describe()
+
+
+class TestTheBreakersAreTheLastGate:
+    """A breaker needs a number, so it cannot run before sizing — which makes it last.
+
+    That is also the right place for a different reason: everything before it asks whether
+    this particular thing is a good idea, and the breakers ask whether the lane should be
+    doing anything at all. A tripped breaker refuses a perfectly good candidate, and that
+    is the point.
+    """
+
+    def test_a_reaper_with_no_breakers_cannot_reach_ready(self):
+        """Remembering to check them separately works until the evening somebody forgets."""
+
+        harvest = reaper().reap()[0]
+
+        assert harvest.status == REFUSED
+        assert "no circuit breakers are attached" in harvest.reason
+
+    def test_a_clean_run_with_breakers_reaches_ready(self, tmp_path):
+        assert armed(tmp_path).reap()[0].status == READY
+
+    def test_the_kill_switch_refuses_a_perfectly_good_candidate(self, tmp_path):
+        book = breakers(tmp_path)
+        book.halt("stopping for the night")
+
+        harvest = armed(tmp_path, book=book).reap()[0]
+
+        assert harvest.status == REFUSED
+        assert "kill switch" in harvest.reason
+
+    def test_a_size_over_the_cap_is_refused_after_being_sized(self, tmp_path):
+        harvest = armed(tmp_path, size=500.0).reap()[0]
+
+        assert harvest.status == REFUSED
+        assert "position size" in harvest.reason
+
+    def test_an_implausible_edge_is_refused(self, tmp_path):
+        assert "sanity bound" in armed(tmp_path, edge=40.0).reap()[0].reason
+
+    def test_a_tripped_breaker_refuses_before_anything_is_carried_forward(self, tmp_path):
+        """The lane stops as a whole. It does not get one more look at a good candidate."""
+
+        book = breakers(tmp_path)
+        book.record(-31.0)          # 3% of 1000
+
+        harvest = armed(tmp_path, book=book).reap()[0]
+
+        assert harvest.status == REFUSED
+        assert "previously tripped" in harvest.reason
+
+    def test_an_unmeasured_instruction_is_refused_not_waved_through(self, tmp_path):
+        """No `measure` means size 0, and an unchecked size is not a permitted one."""
+
+        base = armed(tmp_path)
+        unmeasured = Reaper(
+            name=base.name, lane=base.lane, look=base.look, screen=base.screen,
+            gates=base.gates, thesis_for=base.thesis_for, size=base.size,
+            breakers=base.breakers,
+        )
+
+        assert unmeasured.reap()[0].status == REFUSED
+
+    def test_the_instruction_is_still_carried_so_the_refusal_is_readable(self, tmp_path):
+        """You want to see WHAT was refused, not just that something was."""
+
+        assert armed(tmp_path, size=500.0).reap()[0].instruction == "an instruction"

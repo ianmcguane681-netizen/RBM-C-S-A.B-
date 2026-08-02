@@ -34,6 +34,17 @@ The last pair is the recurring defect at the level of the whole lane. A reaper w
 was down and a reaper that scanned six books and found nothing both produce an empty list,
 and reporting them alike is how a system convinces somebody the market is quiet.
 
+## The breakers are consulted last, after the size exists
+
+A breaker needs a number to check, so it cannot run before sizing. That makes it the LAST
+gate rather than the first, which is the right place for a different reason too: everything
+before it is about whether this particular thing is a good idea, and the breakers are about
+whether the lane should be doing anything at all. A tripped breaker refuses a perfectly good
+candidate, and that is the point.
+
+Refusing to wire them in and remembering to call them separately would work until the
+evening somebody forgot, so a reaper without breakers cannot produce READY at all.
+
 ## Autonomy stops before money
 
 `autonomous_execution` exists, defaults to `False`, and is refused outright for the chain
@@ -183,6 +194,13 @@ class Reaper:
     thesis_for: Callable[[Any], Any]
     #: (subject, permission) -> a sized instruction, or None if it cannot be sized.
     size: Callable[[Any, Any], Any]
+    #: The lane's circuit breakers. Required to reach READY: a reaper with none cannot
+    #: produce a ready instruction at all, because remembering to check them separately
+    #: works right up until the evening somebody forgets.
+    breakers: Any = None
+    #: (instruction) -> (proposed_size, claimed_edge_pct), so the breakers get numbers
+    #: rather than having to understand what a bet or an order is.
+    measure: Callable[[Any], tuple[float, float]] | None = None
     autonomous_execution: bool = False
 
     def __post_init__(self) -> None:
@@ -255,6 +273,22 @@ class Reaper:
             return Harvest(self.lane, INDETERMINATE, permission=permission, reason=(
                 "permitted, and no size could be computed; a constraint was not measured"),
                 **common)
+
+        if self.breakers is None:
+            # Not an oversight to route around. A lane that can produce a ready
+            # instruction with no limits behind it is the thing the breakers exist for.
+            return Harvest(self.lane, REFUSED, permission=permission, reason=(
+                "no circuit breakers are attached to this lane, so no ring-fence, no "
+                "position cap and no kill switch apply. A reaper without them cannot "
+                "produce a ready instruction."), **common)
+
+        size, edge = self.measure(instruction) if self.measure else (0.0, 0.0)
+        verdict = self.breakers.check(proposed_size=size, claimed_edge_pct=edge)
+        if verdict.verdict != "PERMITTED":
+            return Harvest(self.lane, REFUSED, instruction=instruction,
+                           permission=permission, reason=(
+                               f"the breakers blocked it: {', '.join(verdict.blocked_by)}"),
+                           **common)
 
         return Harvest(self.lane, READY, instruction=instruction, permission=permission,
                        **common)
