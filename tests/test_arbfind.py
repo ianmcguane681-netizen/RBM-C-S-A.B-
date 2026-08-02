@@ -61,7 +61,48 @@ class TestACandidateIsNotAnArb:
         ]).describe()
 
         assert "not liquidity" in text
-        assert "does not carry the terms" in text
+        assert "no price source carries the terms" in text
+
+
+class TestAKnownStakeRemovesOnePrecondition:
+    """Adding an exchange has to be visibly worth more than adding a wider feed."""
+
+    def _sized(self, a_stake, b_stake):
+        return find_arb(MARKET, BOTH, [
+            Quote("Betfair", MARKET, "Team A", 2.20, "2026-08-02T16:00:00Z",
+                  available_stake=a_stake),
+            Quote("Smarkets", MARKET, "Team B", 2.20, "2026-08-02T16:00:00Z",
+                  available_stake=b_stake),
+        ])
+
+    def test_both_stakes_known_leaves_only_settlement_unread(self):
+        found = self._sized(5_000.0, 250.0)
+
+        assert len(found.unmet_preconditions) == 1
+        assert "settlement" in found.unmet_preconditions[0]
+
+    def test_the_smallest_stake_binds_and_is_named(self):
+        found = self._sized(5_000.0, 250.0)
+
+        assert found.stake_bound == pytest.approx(250.0)
+        assert "size bound 250.00 at Smarkets" in found.describe()
+
+    def test_one_unread_side_makes_the_whole_bound_unknown(self):
+        """Not the minimum of the sides that happened to be readable."""
+
+        from lib.arbfind import UNKNOWN_STAKE
+
+        found = self._sized(5_000.0, UNKNOWN_STAKE)
+
+        assert found.stake_bound == UNKNOWN_STAKE
+
+    def test_the_sizeless_book_is_named_rather_than_the_gap_being_generic(self):
+        from lib.arbfind import UNKNOWN_STAKE
+
+        found = self._sized(5_000.0, UNKNOWN_STAKE)
+
+        assert "available stake at Smarkets" in found.unmet_preconditions[0]
+        assert "Betfair" not in found.unmet_preconditions[0]
 
     def test_a_discovery_never_produces_a_leg(self):
         """A Leg would imply a stake and a rule that nobody read."""

@@ -1,8 +1,16 @@
 """Pull odds from every configured book and find combinations that imply under 100%.
 
     python scan_arb.py                       list the sports currently in season
-    python scan_arb.py soccer_epl            scan one sport
+    python scan_arb.py soccer_epl            scan one sport via the aggregator
+    python scan_arb.py --market 1.234567     scan named exchange markets directly
     python scan_arb.py soccer_epl --json     machine-readable, for a scheduler
+
+**Aggregator and exchange results are NOT merged, and that is a known gap rather than an
+oversight.** An aggregator names a market by its teams and time; Betfair names it
+`1.234567`. Matching one to the other needs fuzzy name resolution across sources, and a
+wrong match is worse than no match: it would pair a price from one fixture with a price
+from another and compute a margin across two different events. Until that is solved with
+its own gate, the two paths run separately and each says which books it covered.
 
 Discovery only. Every result is an `ArbCandidate` and never a position, because two
 preconditions are unmet by construction and no feed can meet them:
@@ -32,9 +40,10 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Sequence
 
 from connectors.oddsapi import H2H, OddsApiSource
-from lib.arbfind import ARB_CANDIDATE, scan_markets
+from lib.arbfind import ARB_CANDIDATE, quotes_from_legs, scan_markets
 from lib.seen import SeenRegister, arb_identity
 from lib.store import LOST
 
@@ -43,6 +52,63 @@ REGISTER = Path("data/seen-register.json")
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def exchange_quotes(markets: Sequence[str]) -> tuple[tuple, list[str]]:
+    """Every configured exchange, for the markets named. Silence is reported, not skipped.
+
+    Exchanges are worth more than a wider feed for one reason: they return the size
+    available at the price. A candidate whose legs all came from exchanges has one fewer
+    unread precondition, and `unmet_preconditions` computes that per quote rather than
+    assuming the weakest source.
+    """
+
+    from connectors.betfair import BetfairSource
+    from connectors.smarkets import SmarketsSource
+
+    collected: list = []
+    silent: list[str] = []
+    for build in (BetfairSource.from_directory, SmarketsSource.from_directory):
+        try:
+            source = build()
+        except Exception as error:  # noqa: BLE001 - a bad directory is not a crash
+            silent.append(f"{build.__qualname__.split('.')[0]}: {error}"[:100])
+            continue
+        for market in markets:
+            try:
+                answer = source.quote(market)
+            except Exception as error:  # noqa: BLE001
+                silent.append(f"{source.name} on {market}: {error}"[:100])
+                continue
+            if answer.status != "CONFIGURED":
+                silent.append(f"{source.name}: {answer.reason or answer.status}"[:100])
+                break
+            collected.extend(quotes_from_legs(answer.legs))
+    return tuple(collected), silent
+
+
+def scan_exchanges(market_ids: Sequence[str]) -> int:
+    """Exchanges only, for markets named by their own identifiers.
+
+    Worth running on its own even though exchange-versus-exchange arbs are rare: these are
+    the only sources that return the size at the price AND the rules text, so a candidate
+    found here has both preconditions readable rather than one.
+    """
+
+    quotes, silent = exchange_quotes(market_ids)
+    for note in silent:
+        print(f"  NOT COVERED  {note}")
+    if not quotes:
+        print("\nNo exchange answered. NOTHING was scanned, which is not a finding that "
+              "no arb exists.")
+        return 2
+
+    markets: dict[str, set] = {}
+    for quote in quotes:
+        markets.setdefault(quote.market, set()).add(quote.selection)
+    result = scan_markets({m: tuple(sorted(s)) for m, s in markets.items()}, quotes)
+    print(result.describe())
+    return 1 if result.arbs else 0
 
 
 def main(sport: str, *, as_json: bool) -> int:
@@ -128,8 +194,12 @@ def main(sport: str, *, as_json: bool) -> int:
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    if "--help" in sys.argv or "-h" in sys.argv:
+    argv = sys.argv[1:]
+    if "--help" in argv or "-h" in argv:
         print(__doc__)
         raise SystemExit(0)
-    raise SystemExit(main(args[0] if args else "", as_json="--json" in sys.argv))
+    if "--market" in argv:
+        ids = argv[argv.index("--market") + 1:]
+        raise SystemExit(scan_exchanges([i for i in ids if not i.startswith("--")]))
+    args = [a for a in argv if not a.startswith("--")]
+    raise SystemExit(main(args[0] if args else "", as_json="--json" in argv))

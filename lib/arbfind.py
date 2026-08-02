@@ -63,10 +63,20 @@ class Quote:
     decimal_odds: float
     observed_at: str
     commission_pct: float = 0.0
+    #: Size available AT THIS PRICE, when the source knows it. An aggregator does not and
+    #: leaves it UNKNOWN_STAKE; an exchange reads it off the ladder and fills it in. This
+    #: is the whole reason an exchange connector is worth more than a wider feed, and
+    #: keeping it per-quote means a mixed scan reports honestly rather than at the level of
+    #: its weakest source.
+    available_stake: float = UNKNOWN_STAKE
 
     def __post_init__(self) -> None:
         if self.decimal_odds <= 1.0:
             raise ValueError(f"{self.book}/{self.selection}: decimal odds must exceed 1.0")
+
+    @property
+    def stake_is_known(self) -> bool:
+        return self.available_stake > 0
 
     @property
     def net_odds(self) -> float:
@@ -118,13 +128,37 @@ class ArbCandidate:
         return (stamps[0], stamps[-1]) if stamps else ("", "")
 
     @property
-    def unmet_preconditions(self) -> tuple[str, ...]:
-        """Always both, until a person reads them at the book. Stated, never assumed."""
+    def stake_bound(self) -> float:
+        """The smallest available stake across the legs, or UNKNOWN_STAKE if any is unread.
 
-        return (
-            "available stake at each book (a feed returns odds, not liquidity)",
-            "settlement rules at each book (a feed does not carry the terms)",
-        )
+        The smallest binds: a position is only as large as its tightest side. One unread
+        side makes the whole bound unknown rather than making it the minimum of the ones
+        that happened to be readable, which would be the flattering reading.
+        """
+
+        if not self.quotes or not all(q.stake_is_known for q in self.quotes):
+            return UNKNOWN_STAKE
+        return min(q.available_stake for q in self.quotes)
+
+    @property
+    def unmet_preconditions(self) -> tuple[str, ...]:
+        """What still has to be read at the book before this is a position.
+
+        Computed rather than fixed, so adding an exchange visibly removes one. Settlement
+        rules never come off this list from a price feed of any kind: no source in this
+        repository returns a book's terms, and the only real position this board examined
+        was refused on exactly that.
+        """
+
+        unmet: list[str] = []
+        sizeless = [q.book for q in self.quotes if not q.stake_is_known]
+        if sizeless:
+            unmet.append(
+                f"available stake at {', '.join(sorted(set(sizeless)))} "
+                f"(a feed returns odds, not liquidity)"
+            )
+        unmet.append("settlement rules at each book (no price source carries the terms)")
+        return tuple(unmet)
 
     def describe(self) -> str:
         if self.status == INCOMPLETE_BOOK:
@@ -152,6 +186,12 @@ class ArbCandidate:
                 f"    {quote.selection:<22} {quote.decimal_odds:>7.3f} at "
                 f"{quote.book}{commission}   {quote.observed_at}"
             )
+        bound = self.stake_bound
+        if bound != UNKNOWN_STAKE:
+            tightest = min(self.quotes, key=lambda q: q.available_stake)
+            lines.append(
+                f"  size bound {bound:,.2f} at {tightest.book} on {tightest.selection}"
+            )
         first, last = self.observation_spread
         if first != last:
             lines.append(f"  quotes span {first} to {last}; they were never simultaneous")
@@ -159,6 +199,30 @@ class ArbCandidate:
         for item in self.unmet_preconditions:
             lines.append(f"    - {item}")
         return "\n".join(lines)
+
+
+def quotes_from_legs(legs: Iterable) -> tuple[Quote, ...]:
+    """Adapt a source that already produces `Leg` into discovery quotes.
+
+    An exchange returns the price, the size at that price and the market's rules text, so
+    it can build a `Leg` directly. Discovery still runs over `Quote`, and this narrows
+    rather than widens: the settlement rule is deliberately DROPPED on the way in.
+
+    That looks like throwing away the best thing the exchange gave us, and it is the point.
+    A rule read at one book says nothing about the other book's rule, and the gate exists
+    to compare two of them. Carrying one leg's rule into a candidate would let a
+    half-verified position read as verified — which is the exact shape of the failure the
+    only real position this board examined took.
+    """
+
+    return tuple(
+        Quote(
+            book=leg.book, market=leg.market, selection=leg.selection,
+            decimal_odds=leg.decimal_odds, observed_at=leg.observed_at,
+            commission_pct=leg.commission_pct, available_stake=leg.max_stake,
+        )
+        for leg in legs
+    )
 
 
 def best_per_selection(quotes: Sequence[Quote]) -> dict[str, Quote]:
