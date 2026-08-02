@@ -268,3 +268,61 @@ class TestObligationsAreChosenInAdvance:
         text = summarise_obligations(obligations_for(self._changes((UNCHANGED, "owner"))))
 
         assert "says nothing about anything not being watched" in text
+
+
+class TestTheJsonLayerDoesNotReintroduceTheZero:
+    """The presentation layer is where a carefully-built distinction goes to die.
+
+    An empty book has no unpriced assets, so `is_complete` reads true and the total
+    emitted 0.0 -- which a front end renders as a known balance of zero. The text panel
+    already said "an empty book, not a zero balance". The JSON layer had quietly
+    reintroduced the very defect the module argues against, and it was found by running
+    it rather than by reading it.
+    """
+
+    def _payload(self, monkeypatch, tmp_path):
+        import status
+
+        monkeypatch.setattr(status, "BOOK", tmp_path / "portfolio.json")
+        return status.as_json()
+
+    def test_an_empty_book_emits_null_rather_than_zero(self, monkeypatch, tmp_path):
+        payload = self._payload(monkeypatch, tmp_path)
+
+        assert payload["capital"]["priced_value"] is None
+        assert payload["capital"]["value_status"] == "EMPTY_BOOK"
+
+    def test_an_empty_book_is_not_reported_as_complete(self, monkeypatch, tmp_path):
+        assert self._payload(monkeypatch, tmp_path)["capital"]["is_complete"] is False
+
+    def test_an_unpriced_holding_emits_null_with_a_status(self, monkeypatch, tmp_path):
+        import status
+        from lib.portfolio import Portfolio
+
+        path = tmp_path / "portfolio.json"
+        book = Portfolio(path)
+        book.add(buy("MOD"))
+        book.save()
+        monkeypatch.setattr(status, "BOOK", path)
+
+        held = status.as_json()["capital"]["positions"][0]
+
+        assert held["value"] is None
+        assert held["value_status"] == "UNPRICED"
+
+    def test_the_payload_names_the_fields_it_refuses_to_emit(self, monkeypatch, tmp_path):
+        """So a front end cannot quietly invent a risk score in the top bar."""
+
+        refused = self._payload(monkeypatch, tmp_path)["refused_fields"]
+
+        assert set(refused) == {
+            "risk_score", "daily_pnl", "best_performer", "expected_profit",
+        }
+        assert "heterogeneous" in refused["risk_score"]
+
+    def test_an_unconfigured_lane_reports_its_status_not_an_empty_result(
+            self, monkeypatch, tmp_path):
+        engines = {e["lane"]: e for e in self._payload(monkeypatch, tmp_path)["engines"]}
+
+        assert engines["arb"]["status"] in {"DEGRADED", "BLOCKED"}
+        assert engines["arb"]["missing"]
