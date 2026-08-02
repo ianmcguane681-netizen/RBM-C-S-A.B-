@@ -103,6 +103,10 @@ class ArbCandidate:
     quotes: tuple[Quote, ...] = ()
     selections_expected: tuple[str, ...] = ()
     reason: str = ""
+    #: The best combination using a different book per selection, when the cheapest one
+    #: doubles up. Empty when the cheapest is already spread, or when no diversified
+    #: combination exists at all.
+    distinct_book_alternative: tuple[Quote, ...] = ()
 
     @property
     def total_implied_pct(self) -> float:
@@ -186,6 +190,21 @@ class ArbCandidate:
                 f"    {quote.selection:<22} {quote.decimal_odds:>7.3f} at "
                 f"{quote.book}{commission}   {quote.observed_at}"
             )
+        if self.distinct_book_alternative:
+            spread_implied = sum(q.implied_pct for q in self.distinct_book_alternative)
+            cost = spread_implied - self.total_implied_pct
+            lines.append(
+                f"  CONCENTRATED: {len(self.books)} book(s) across "
+                f"{len(self.quotes)} legs. One restriction or void there takes out more "
+                f"than one leg."
+            )
+            lines.append(
+                f"  A one-book-per-leg alternative implies {spread_implied:.3f}% "
+                f"(costs {cost:+.3f}% of margin):"
+            )
+            for quote in self.distinct_book_alternative:
+                lines.append(f"    {quote.selection:<22} {quote.decimal_odds:>7.3f} at "
+                             f"{quote.book}")
         bound = self.stake_bound
         if bound != UNKNOWN_STAKE:
             tightest = min(self.quotes, key=lambda q: q.available_stake)
@@ -236,12 +255,50 @@ def best_per_selection(quotes: Sequence[Quote]) -> dict[str, Quote]:
     return best
 
 
+def best_distinct_books(
+    selections: Sequence[str], quotes: Sequence[Quote]
+) -> tuple[Quote, ...]:
+    """The best combination that uses a DIFFERENT book for every selection.
+
+    Concentration is a real cost and it is not priced into the odds. Two legs at one
+    bookmaker means one account restriction, one voided market or one palpable-error claim
+    takes out both at once and leaves the rest unhedged — and soft books restrict arbitrage
+    accounts as a matter of course, so this is an expected event rather than a tail risk.
+
+    Spreading across books usually costs margin. That trade is the holder's to make, so
+    this returns the diversified combination and `find_arb` reports BOTH, with the cost of
+    diversifying stated. Silently preferring either one would be deciding it for them.
+
+    Exhaustive over the assignment, which is fine at three-way size and would need a
+    matching algorithm beyond about six selections.
+    """
+
+    selections = tuple(selections)
+    by_selection: dict[str, list[Quote]] = {s: [] for s in selections}
+    for quote in quotes:
+        if quote.selection in by_selection:
+            by_selection[quote.selection].append(quote)
+    if any(not options for options in by_selection.values()):
+        return ()
+
+    best: tuple[Quote, ...] = ()
+    best_implied = float("inf")
+    for combination in product(*(by_selection[s] for s in selections)):
+        if len({q.book for q in combination}) != len(selections):
+            continue
+        implied = sum(q.implied_pct for q in combination)
+        if implied < best_implied:
+            best, best_implied = combination, implied
+    return best
+
+
 def find_arb(
     market: str,
     selections: Sequence[str],
     quotes: Sequence[Quote],
     *,
     allow_single_book: bool = False,
+    prefer_distinct_books: bool = True,
 ) -> ArbCandidate:
     """The best combination for one market, and whether it sums under 100%.
 
@@ -269,6 +326,13 @@ def find_arb(
     chosen = tuple(best[selection] for selection in selections)
     total = sum(q.implied_pct for q in chosen)
 
+    # The diversified alternative, computed whenever the cheapest combination doubles up
+    # at a book. Reported rather than substituted: paying margin for independence is the
+    # holder's call, and it is only a call if both numbers are visible.
+    spread: tuple[Quote, ...] = ()
+    if prefer_distinct_books and len({q.book for q in chosen}) < len(selections):
+        spread = best_distinct_books(selections, relevant)
+
     if total >= 100.0:
         return ArbCandidate(
             NO_ARB, market, chosen, selections,
@@ -290,7 +354,8 @@ def find_arb(
             ),
         )
 
-    return ArbCandidate(ARB_CANDIDATE, market, chosen, selections)
+    return ArbCandidate(ARB_CANDIDATE, market, chosen, selections,
+                        distinct_book_alternative=spread)
 
 
 @dataclass(frozen=True, slots=True)

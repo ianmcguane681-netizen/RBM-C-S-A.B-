@@ -229,3 +229,75 @@ class TestTheScanKeepsWhatItFoundNothingIn:
         ])
 
         assert "never simultaneous" in found.describe()
+
+
+class TestOneBookPerLegIsOfferedAtItsStatedCost:
+    """Concentration is a real cost and it is not priced into the odds.
+
+    Two legs at one bookmaker means one restriction, one voided market or one
+    palpable-error claim takes out both at once and leaves the rest unhedged. Soft books
+    restrict arbitrage accounts as a matter of course, so that is an expected event rather
+    than a tail risk.
+
+    Spreading usually costs margin, and that trade is the holder's to make. So both
+    combinations are reported with the difference stated, because it is only a choice if
+    both numbers are visible.
+    """
+
+    MARKET = "Arsenal v Chelsea"
+    THREE = ("Arsenal", "Draw", "Chelsea")
+
+    def _quotes(self):
+        m = self.MARKET
+        return [
+            Quote("bet365", m, "Arsenal", 2.45, "t"),
+            Quote("Sky Bet", m, "Arsenal", 2.40, "t"),
+            Quote("bet365", m, "Chelsea", 3.70, "t"),
+            Quote("Paddy Power", m, "Chelsea", 3.60, "t"),
+            Quote("Sky Bet", m, "Draw", 4.20, "t"),
+            Quote("Paddy Power", m, "Draw", 4.10, "t"),
+        ]
+
+    def test_the_cheapest_combination_is_still_the_headline(self):
+        found = find_arb(self.MARKET, self.THREE, self._quotes())
+
+        assert {q.book for q in found.quotes} == {"bet365", "Sky Bet"}
+
+    def test_a_one_book_per_leg_alternative_is_offered(self):
+        found = find_arb(self.MARKET, self.THREE, self._quotes())
+
+        assert len({q.book for q in found.distinct_book_alternative}) == 3
+
+    def test_the_cost_of_diversifying_is_stated_rather_than_decided(self):
+        text = find_arb(self.MARKET, self.THREE, self._quotes()).describe()
+
+        assert "costs +0.751% of margin" in text
+        assert "takes out more than one leg" in text
+
+    def test_no_alternative_is_offered_when_the_cheapest_is_already_spread(self):
+        m = self.MARKET
+        spread = [
+            Quote("bet365", m, "Arsenal", 2.45, "t"),
+            Quote("Sky Bet", m, "Draw", 4.20, "t"),
+            Quote("Paddy Power", m, "Chelsea", 3.70, "t"),
+        ]
+
+        assert find_arb(m, self.THREE, spread).distinct_book_alternative == ()
+
+    def test_the_alternative_is_empty_when_too_few_books_quoted(self):
+        """Two books cannot cover three selections one apiece."""
+
+        m = self.MARKET
+        thin = [
+            Quote("bet365", m, "Arsenal", 2.45, "t"),
+            Quote("bet365", m, "Chelsea", 3.70, "t"),
+            Quote("Sky Bet", m, "Draw", 4.20, "t"),
+        ]
+
+        assert find_arb(m, self.THREE, thin).distinct_book_alternative == ()
+
+    def test_it_can_be_switched_off(self):
+        found = find_arb(self.MARKET, self.THREE, self._quotes(),
+                         prefer_distinct_books=False)
+
+        assert found.distinct_book_alternative == ()
