@@ -1,8 +1,8 @@
 {
   "store_id": "monitor-ledger.json",
   "backend": "json",
-  "writes": 4,
+  "writes": 6,
   "first_write": "2026-08-02T16:14:25Z",
-  "last_write": "2026-08-02T16:17:52Z",
+  "last_write": "2026-08-02T18:20:38Z",
   "rows_at_last_write": 52
 }

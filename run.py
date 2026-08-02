@@ -1,0 +1,162 @@
+"""Fire every lane that is due, hold the ones that are not, and show what awaits you.
+
+    python run.py                 what would run, and why the rest would not
+    python run.py --go            actually run them
+    python run.py --queue         just the human queue
+    python run.py --resolve DEC-0001 "confirmed and placed"
+
+The orchestration layer. Lanes run on their own cadences, some feed others, and everything
+producing work for a person joins one queue.
+
+**The queue is the throttle.** Every lane produces something a human has to act on, and a
+human's capacity does not rise because more lanes were added. Past the limit, lanes that
+would add more are `HELD`. That is deliberate and it is the opposite of what a dashboard
+usually does: the system reports being busiest exactly when it is least able to act, so this
+one stops instead.
+
+**A lane that did not run is never shown as a lane that found nothing.** `NOT_DUE`,
+`NEVER_RAN`, `HELD` and `FAILED` are four different facts and none of them is a result.
+"""
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+from lib.orchestrator import HELD, Lane, Orchestrator
+
+STATE = Path("data/orchestrator.json")
+
+#: The lanes, their cadences, and what each one costs a person.
+#:
+#: Cadences are chosen against how fast the underlying thing actually moves, not against how
+#: often it would be nice to look. Chain state and filings change slowly; odds change in
+#: seconds, and a scan is bounded by an API quota rather than by usefulness.
+LANES = (
+    Lane(
+        name="monitor",
+        command=("python", "monitor.py", "examples/monitor/watchlist.example.json"),
+        cadence_seconds=6 * 3600,
+        produces_decisions=True,
+        # 4 = a material change: a prior review may no longer hold.
+        # 5 = the ledger itself was lost, which is not a finding about the world.
+        findings_exit_codes=(4, 5),
+    ),
+    Lane(
+        name="arb-scan",
+        command=("python", "scan_arb.py", "soccer_epl", "--json"),
+        cadence_seconds=30 * 60,
+        produces_decisions=True,
+        findings_exit_codes=(1,),
+        # 2 = no odds source configured. Not a crash, and not "no arb exists".
+        unconfigured_exit_codes=(2,),
+    ),
+    Lane(
+        name="status",
+        command=("python", "status.py"),
+        cadence_seconds=24 * 3600,
+        # Produces no work for a person: it reports, it does not ask. So it is never HELD,
+        # and it is the one lane that still runs when the queue is full — which is exactly
+        # when somebody most needs to see the state.
+        produces_decisions=False,
+    ),
+    Lane(
+        name="preflight",
+        command=("python", "preflight.py"),
+        cadence_seconds=24 * 3600,
+        produces_decisions=False,
+        # 1 = a lane is DEGRADED, 2 = a lane is BLOCKED. Both are the report doing its job.
+        unconfigured_exit_codes=(1, 2),
+    ),
+)
+
+
+def _run_one(lane: Lane, orchestrator: Orchestrator) -> None:
+    try:
+        result = subprocess.run(
+            list(lane.command), capture_output=True, text=True, timeout=600, check=False
+        )
+        code, detail = result.returncode, (result.stdout or result.stderr or "")
+    except (OSError, subprocess.SubprocessError) as error:
+        code, detail = -1, f"{type(error).__name__}: {error}"
+
+    run = orchestrator.record_run(lane, code, detail)
+    print(f"  {run.status:<9} {lane.name} (exit {code})")
+
+    if run.status == "FINDINGS" and lane.produces_decisions:
+        raised = orchestrator.raise_decision(
+            lane.name,
+            # STABLE across runs, so the same standing finding does not queue hourly.
+            # Resolving it and seeing it again means the condition genuinely recurred.
+            subject=f"{lane.name} exited {code}",
+            question=(
+                "This lane exited with a code meaning it found something. Read its output "
+                "and decide what, if anything, it obliges."
+            ),
+        )
+        if raised:
+            print(f"            -> queued {raised.decision_id}")
+        else:
+            # Already open for this subject. Not raising again is the point: a lane on a
+            # cadence re-observes the same standing item every cycle.
+            print("            -> already queued, not raised again")
+
+
+def main(go: bool) -> int:
+    orchestrator = Orchestrator(LANES, STATE)
+    if not orchestrator.readable:
+        print(f"REFUSING TO RUN: orchestrator state could not be read "
+              f"({orchestrator.reason}).")
+        print("Re-running everything would raise every decision already answered.")
+        return 2
+
+    plan = orchestrator.plan()
+    print("PLAN")
+    for verdict in plan:
+        print(verdict.describe())
+    print()
+
+    if not go:
+        print("Nothing was run. Use --go to run the lanes marked RUN.")
+        print()
+        print(orchestrator.describe_queue())
+        return 0
+
+    print("RUNNING")
+    lanes = {lane.name: lane for lane in LANES}
+    for verdict in plan:
+        if verdict.should_run:
+            _run_one(lanes[verdict.lane], orchestrator)
+    print()
+
+    orchestrator.save()
+    print(orchestrator.describe_queue())
+    return 1 if orchestrator.open_decisions else 0
+
+
+def resolve(decision_id: str, resolution: str) -> int:
+    orchestrator = Orchestrator(LANES, STATE)
+    if not orchestrator.resolve(decision_id, resolution):
+        print(f"No open decision {decision_id}.")
+        return 2
+    orchestrator.save()
+    print(f"{decision_id} resolved: {resolution}")
+    print()
+    print(orchestrator.describe_queue())
+    return 0
+
+
+if __name__ == "__main__":
+    argv = sys.argv[1:]
+    if "--help" in argv or "-h" in argv:
+        print(__doc__)
+        raise SystemExit(0)
+    if "--resolve" in argv:
+        rest = argv[argv.index("--resolve") + 1:]
+        if len(rest) < 2:
+            print("Usage: python run.py --resolve DEC-0001 'what you did'")
+            raise SystemExit(2)
+        raise SystemExit(resolve(rest[0], " ".join(rest[1:])))
+    if "--queue" in argv:
+        raise SystemExit(0 if not print(Orchestrator(LANES, STATE).describe_queue()) else 0)
+    raise SystemExit(main("--go" in argv))
