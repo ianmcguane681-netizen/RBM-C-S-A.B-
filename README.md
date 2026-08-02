@@ -40,22 +40,30 @@ A profile declares the seats, the specialist pool, the gate list, and what evide
 admissible. It cannot declare its own outcome vocabulary, lifecycle, or decision
 precedence — a profile that could redefine `FAIL` would be marking its own homework.
 
-Two ship with the repo, and both are real rather than illustrative:
+Five ship with the repo, and all are real rather than illustrative:
 
-| Profile | Reviews | Specialists |
-|---|---|---|
-| **RBM-001** | research conclusions, where evidence is scarce and curated by others | SAA BCA DEA QRA SPA POA |
-| **RBM-002** | engineering artefacts at a named commit, where evidence is cheap | GCA MCA EFA ATA SVA RPA |
-| **RBM-003** | on-chain assets and the claims made about them, at a named block height | CVA ADA TKA CAA LQA RPA |
+| Profile | Reviews | Artefact is | Specialists |
+|---|---|---|---|
+| **RBM-001** | research conclusions | a study bundle | SAA BCA DEA QRA SPA POA |
+| **RBM-002** | engineering artefacts | a commit hash | GCA MCA EFA ATA SVA RPA |
+| **RBM-003** | on-chain assets | a block height | CVA ADA TKA CAA LQA RPA |
+| **RBM-004** | listed equities | a set of filings | FVA RIA SDA CRA MLA RPA |
+| **RBM-005** | claimed arbitrage positions | a priced instant | PQA MIA EXA ALA CPA RPA |
 
-Three profiles, one engine, no changes to the decision code between them. That's the
-claim, and `tests/test_profile_registry.py` is where it's checked — every registered
-profile loads in one process and produces a distinct rule set. The test iterates the
-registry rather than a hardcoded list, so a fourth is covered the moment it exists.
+Five profiles, one engine, no changes to the decision code between them. That's the claim,
+and `tests/test_profile_registry.py` is where it's checked — every registered profile loads
+in one process and produces a distinct rule set. The test iterates the registry rather than
+a hardcoded list, so a sixth is covered the moment it exists.
 
-Adding a third is a registry entry in `controlled_authority/profiles.py` plus a package
+Adding one is a registry entry in `controlled_authority/profiles.py` plus a package
 directory. The runtime states what it expects to find; a package that disagrees fails to
 load rather than redefining what it is.
+
+The claim was tested rather than asserted. Adding RBM-004 and RBM-005 broke three things,
+all of them RBM-001 assumptions welded into shared code and invisible while there was only
+one profile: the runtime stamping its own schema version onto records, the bundle validator
+checking any profile against RBM-001's registry entry, and a specialist pool hardcoded to
+`{saa, bca, dea, qra, spa, poa}`. Each now reads from the profile.
 
 ## The engineering gates, and where they came from
 
@@ -113,6 +121,49 @@ One defect underlies most of that column: a value meaning *not found* or *unknow
 `NO_PATTERN_MATCHED`, `NO_VENUE_FOUND`, `NO_LOCK_CONTRACT_IDENTIFIED`, `NOT_ATTEMPTED` —
 and a test asserts the wording never collapses it into the flattering reading.
 
+## Running it against something real
+
+Three commands, no review ceremony. They produce facts pinned to a source, and no verdict.
+
+```bash
+python check_token.py 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48   # six chain gates
+python check_stock.py NVDA                                         # filing gates, no API key
+python check_arb.py my-arb.json                                    # is a claimed arb real
+```
+
+`check_stock.py` needs nothing but a network connection: SEC EDGAR asks only that a client
+identify itself. `check_token.py` needs an Ethereum node URL. `check_arb.py` needs neither —
+you type in odds from two screens.
+
+Each of these has caught something on live data that reasoning alone did not:
+
+| | |
+|---|---|
+| **WETH** | no owner, no pause switch, no admin — and the naive read of an empty return is "ownership renounced" |
+| **Apple** | one fiscal year's share count filed at 899,213,000, then 899,213, then 6,294,494,000 |
+| **NVIDIA** | revenue four years stale because the company changed XBRL tags mid-life |
+| **USDC** | upgradeable behind a proxy whose EIP-1967 slots are empty, so the standard check reports it immutable |
+| **Betfair vs bet365** | non-runner settlement diverging by 0.15–0.45 in odds, larger than most arb margins |
+
+## From a verdict to an action
+
+`rbe_runtime/mandate.py` is the piece between the board and anything that moves money. Given
+a published decision and a proposed action, it reports whether that decision permits it —
+eight conditions, each evaluated and reported separately, and no boolean anywhere.
+
+```text
+PERMITTED · REFUSED · EXPIRED · INDETERMINATE
+```
+
+The default is REFUSED and permission must be positively established, because the recurring
+defect in this repository — *not found* rendering as *not there* — would here authorise a
+trade. `INDETERMINATE` is reported apart from `REFUSED` so a caller can tell "the decision
+says no" from "I cannot tell what it says".
+
+It has never returned `PERMITTED`. RBM-003 section 11 states that a review under it can
+never authorise a transaction, so the authority condition refuses every time. That is the
+profile being honest about its weight, and the mandate encodes it rather than outranking it.
+
 ## Agent seats
 
 Seats may be held by agents. They are advisory, always:
@@ -152,13 +203,26 @@ python -m board.cli --profile RBM-002 verify --report examples/engineering-board
 rbe_runtime/          lifecycle, decision engine, repository, validation
 controlled_authority/ controlled-package validation and the profile registry
 board/                CLI front door, agent seats, challenge sheets
+connectors/           the evidence readers: chain, EDGAR filings, exchange odds
 guards/               agent output governance
-lib/                  adjudication standing, retry policy, domain packs, term matching
+lib/                  arbitrage maths, adjudication standing, retry policy, term matching
 docs/rbe-001/         the architecture package
-docs/review-board/    RBM-001
-docs/engineering-board/ RBM-002
-docs/crypto-board/    RBM-003
+docs/review-board/      RBM-001    research
+docs/engineering-board/ RBM-002    engineering
+docs/crypto-board/      RBM-003    crypto
+docs/stocks-board/      RBM-004    equities
+docs/arb-board/         RBM-005    arbitrage
+check_token.py        one command, six chain gates
+check_stock.py        one command, the filing gates
+check_arb.py          is a claimed arb real, from two screens
+trade_sheet.py        board verdict, round-trip cost, and your own target
 ```
+
+`connectors/` is where the evidence comes from and where most of the defects were found.
+`chain*.py` read Ethereum over JSON-RPC; `edgar.py` reads SEC filings and needs no API key;
+`betfair.py` and `smarkets.py` read exchange prices; `odds.py` holds the interface and, more
+importantly, the answer an unconfigured source gives — a scan that reached two books of five
+and reports "no arb" is wrong in the way that costs money.
 
 `lib/adjudication.py` is worth knowing about independently. It separates two axes that
 are constantly conflated: **how many independent sources allege this**, and **has any
