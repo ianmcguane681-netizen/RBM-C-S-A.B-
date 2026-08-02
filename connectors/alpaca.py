@@ -50,7 +50,7 @@ import json
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -290,6 +290,30 @@ class AlpacaBroker:
             symbol, bid, float(row.get("bs") or 0.0), ask, float(row.get("as") or 0.0),
             str(row.get("t") or ""),
         )
+
+    def daily_closes(self, symbol: str, *, days: int = 30) -> tuple[float, ...] | None:
+        """Recent daily closes, newest last. `None` when they could not be read.
+
+        `None` rather than an empty tuple, and the difference is the point. `lib/sizing`
+        turns unknown volatility into NOT_MEASURED and refuses to state a size at all,
+        because skipping the volatility ceiling raises the permitted size exactly when
+        nothing is known about how far the price moves. An empty tuple would compute a
+        volatility of zero and sail past that.
+        """
+
+        if not self.is_configured:
+            return None
+        start = (datetime.now(timezone.utc) - timedelta(days=days * 2)).date().isoformat()
+        try:
+            payload = self._call(
+                f"{DATA_BASE}/v2/stocks/{symbol}/bars"
+                f"?timeframe=1Day&start={start}&limit={days}&adjustment=split"
+            )
+        except Exception:  # noqa: BLE001 - a failed read is not a flat market
+            return None
+        bars = (payload or {}).get("bars") or []
+        closes = tuple(float(bar["c"]) for bar in bars if bar.get("c"))
+        return closes or None
 
     def order_by_client_id(self, client_order_id: str) -> OrderResult:
         """What actually happened to an order. The answer after an UNKNOWN."""
