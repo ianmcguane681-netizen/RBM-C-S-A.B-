@@ -1,0 +1,86 @@
+{
+  "reviewer_role": "MA",
+  "summary": "Conducted under the profile named, at the tier claimed, with both omitted seats justified against gates that genuinely had no evidence to read.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-42A4FD1E577FF694FFC79325",
+    "EVI-DF7E0E0BEC9315A00C43029C"
+  ],
+  "finding_categories": {
+    "AG001-MA-AG-06": "AG-06",
+    "AG002-MA-AG-06": "AG-06"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG001-MA-AG-06",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-001 (AG-06)",
+      "title": "Both omitted seats were omitted for want of evidence, not for convenience",
+      "detail": "EXA was omitted because nothing was placed and no fill attempted, so there is no execution to audit. RPA was omitted because AG-06 is registered as evidence stating the reproducibility position in full. Both justifications are recorded in the initiation and both are sound: a seat with no evidence to read produces a report that looks like an assessment, which is worse than a recorded omission. Tier 2 with four specialists meets the tier_2 quorum.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-42A4FD1E577FF694FFC79325",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "No remediation. Recorded so a later reader sees the omissions were examined.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG002-MA-AG-06",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-001 (AG-06)",
+      "title": "Every report was verified on a standing authority, not on a reading",
+      "detail": "As with RBM004-MOD-0001, all six reports record verification by Ian McGuane with basis standing-authority-2026-08-02-not-individually-read. The basis is accurate and it is the weakest admissible one. Recorded here so the strength of the verification travels with the decision rather than being inferred from the presence of a signature.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-DF7E0E0BEC9315A00C43029C",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Record a stronger basis against a subsequent review.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM005-WORKED-0001-MA",
+    "review_id": "RBM005-WORKED-0001",
+    "reviewer": "agent:ma",
+    "reviewer_role": "MA",
+    "reviewer_spec_id": "RBS-001",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "odds:worked-example:2026-08-02T12:00:00Z",
+    "finding_ids": [
+      "AG001-MA-AG-06",
+      "AG002-MA-AG-06"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-arb-a/AMA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-MA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

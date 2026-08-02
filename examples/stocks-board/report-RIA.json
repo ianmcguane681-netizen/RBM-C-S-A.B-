@@ -1,0 +1,117 @@
+{
+  "reviewer_role": "RIA",
+  "summary": "Twenty reporting spans were filed at more than one value and two concepts changed XBRL tag. One revision is not a correction but a thousandfold unit change.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-2014AC01DBF2EEBC623808A0",
+    "EVI-21659D7BEC8F2387A0FE062D",
+    "EVI-3B68DBCED3EEA537A50588A2",
+    "EVI-64922B69BC525DD6E52CCE7F",
+    "EVI-992F9BEDF8746DB7F430FAB1",
+    "EVI-BF37EDB74F4949FA09EBFCA9",
+    "EVI-F5E19EF3BE91E45EAFF1C420"
+  ],
+  "finding_categories": {
+    "SG001-RIA-SG-02": "SG-02",
+    "SG002-RIA-SG-02": "SG-02",
+    "SG003-RIA-SG-02": "SG-02"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG001-RIA-SG-02",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:ria",
+      "reviewer_role": "RIA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-003 (SG-02)",
+      "title": "Twenty spans carry more than one filed value, ten of them in net income alone",
+      "detail": "Net income for 2010-04-01..2011-03-31 was filed at 5,233,000 in the 10-K of 2012-06-14 and at 5,200,000 in the 10-K of 2013-05-31. The quarter ending 2011-06-30 was filed three times at 13,125,000, 12,575,000 and 12,600,000. Total assets at 2011-03-31 moved from 916,939,000 to 917,742,000 between a 10-Q and the following 10-K. None of these is an error in the retrieval; all of them are the company having said two things. A series that silently takes the newest replaces what the company said with what it later said instead, and one that takes the first ignores a correction. Neither has been chosen here.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-21659D7BEC8F2387A0FE062D",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Any figure used downstream must name which filing it came from. A restated value and its original are two facts and the choice between them is the reader's to make explicitly.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG002-RIA-SG-02",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:ria",
+      "reviewer_role": "RIA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-003 (SG-02)",
+      "title": "Revenue and long-term debt each changed XBRL tag mid-life",
+      "detail": "Revenue currently reports under RevenueFromContractWithCustomerExcludingAssessedTax and also carries data under SalesRevenueNet and Revenues. Long-term debt currently reports under LongTermDebtAndCapitalLeaseObligations and also carries data under three others. In both cases the history is split and neither tag alone is the whole series. A reader tracking one tag sees a series that stops without saying it has stopped, which is indistinguishable from a company that stopped reporting. NVIDIA's revenue was four years stale in an earlier run of this connector for exactly this reason.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-BF37EDB74F4949FA09EBFCA9",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Register the alternates with every series, as done here, and treat a tag change as a break in the series rather than a continuation of it.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG003-RIA-SG-02",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:ria",
+      "reviewer_role": "RIA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-003 (SG-02)",
+      "title": "One revision is a thousandfold unit change, not a correction of magnitude",
+      "detail": "Diluted shares for 2012-04-01..2012-06-30 were filed at 46,546 in the 10-Q of 2012-08-07 and at 46,500,000 in the 10-Q of 2013-08-01. These are the same quantity expressed in thousands and in units. Treated as a restatement it reads as a 99,900% revision; treated as identical it silently discards the question of which unit the surrounding filings used. Apple filed one fiscal year's share count at 899,213,000, then 899,213, then 6,294,494,000, and the same ambiguity applies. This is not a judgement about Modine: it is a statement that the pre-2013 share series cannot be read without deciding.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-64922B69BC525DD6E52CCE7F",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Flag a revision whose ratio to its original is close to a power of a thousand as a probable unit change and refuse to compute growth across it.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM004-MOD-0001-RIA",
+    "review_id": "RBM004-MOD-0001",
+    "reviewer": "agent:ria",
+    "reviewer_role": "RIA",
+    "reviewer_spec_id": "RBS-003",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "edgar:0000067347",
+    "finding_ids": [
+      "SG001-RIA-SG-02",
+      "SG002-RIA-SG-02",
+      "SG003-RIA-SG-02"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-eq-b/RIA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-RIA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "reviewer_role": "RPA",
+  "summary": "Every figure is retrievable by anyone with no credential. The retrieval is reproducible only once the namespace is recorded, which it was not until this review produced a false statement about the filer.",
+  "recommendation": "Control",
+  "evidence_reference_ids": [
+    "EVI-569B0D63576950B5D6DCBF01",
+    "EVI-AD4AC9CD18C7632A9AFDA275",
+    "EVI-E4E5EAF7AD4C1C5D4DF706A9",
+    "EVI-FEEA402AE1BF1B35332CD8AD"
+  ],
+  "finding_categories": {
+    "SG001-RPA-SG-06": "SG-06",
+    "SG002-RPA-SG-06": "SG-06"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG001-RPA-SG-06",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:rpa",
+      "reviewer_role": "RPA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-007 (SG-06)",
+      "title": "A wrong-namespace query rendered as a claim about the filer",
+      "detail": "EntityCommonStockSharesOutstanding is a cover-page fact and lives in the dei taxonomy. Asked under us-gaap, which was the only namespace the connector knew, EDGAR returned 404 and the tool reported that Modine does not report a share count. Modine reports it in every filing. The output was a statement about which namespace was queried, presented as a statement about the filer, and nothing in it named the namespace so the error was unreadable from the result. This is the same failure as an empty proxy slot reading as 'not a proxy'. The connector now routes a prefixed tag to its own taxonomy and records which one answered.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-AD4AC9CD18C7632A9AFDA275",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Every NOT_REPORTED must name the taxonomy asked. A negative result that does not say what question produced it cannot be reproduced or contradicted.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG002-RPA-SG-06",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:rpa",
+      "reviewer_role": "RPA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-007 (SG-06)",
+      "title": "Two of six gates were not reached, and the reason is recorded",
+      "detail": "SG-04 and SG-05 are registered NOT_ASSESSED. Control and related-party disclosure is narrative text in the 10-K body and the proxy statement, and this connector reads XBRL only; exit liquidity needs traded volume and depth, and no market data source is configured. Both are statements about coverage. Neither is a finding that the filer has no related-party transactions or that the position is liquid, and a reader who takes silence for absence would conclude both.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-E4E5EAF7AD4C1C5D4DF706A9",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Carry the NOT_ASSESSED status and its reason into any downstream summary. A gate that is silent about itself is indistinguishable from one that passed.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM004-MOD-0001-RPA",
+    "review_id": "RBM004-MOD-0001",
+    "reviewer": "agent:rpa",
+    "reviewer_role": "RPA",
+    "reviewer_spec_id": "RBS-007",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "edgar:0000067347",
+    "finding_ids": [
+      "SG001-RPA-SG-06",
+      "SG002-RPA-SG-06"
+    ],
+    "evidence_sufficiency": "INSUFFICIENT",
+    "missing_evidence": [
+      "SG-04 control and related-party disclosure: narrative text outside XBRL",
+      "SG-05 exit liquidity: no market data source configured"
+    ],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-eq-c/RPA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-RPA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

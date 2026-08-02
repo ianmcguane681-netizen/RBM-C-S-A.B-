@@ -1,0 +1,62 @@
+{
+  "reviewer_role": "SDA",
+  "summary": "The current share count is reliable. The series it sits at the end of is not continuous, so dilution cannot be measured across the whole history from these filings.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-54878FDE2A234BF72AA7B95E",
+    "EVI-64922B69BC525DD6E52CCE7F",
+    "EVI-AD4AC9CD18C7632A9AFDA275",
+    "EVI-C7678C37A6A4DF9C64E88E13"
+  ],
+  "finding_categories": {
+    "SG001-SDA-SG-03": "SG-03"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG001-SDA-SG-03",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:sda",
+      "reviewer_role": "SDA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-004 (SG-03)",
+      "title": "Dilution is not measurable across the full series without choosing a unit",
+      "detail": "Diluted shares stand at 53,800,000 for the year ending 2026-03-31 and shares outstanding at 52,815,785 as of 2026-05-22. Both are sound. The series behind them contains a span filed at both 46,546 and 46,500,000, and two further spans revised. Dilution computed from the earliest filed figure to the latest crosses that discontinuity and would report either a collapse or an expansion of three orders of magnitude depending on which side was taken. Dilution measured from 2013 forward is available; dilution measured across the whole history is not, from these filings alone.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-64922B69BC525DD6E52CCE7F",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "State the window over which dilution was measured and why it starts there. A dilution figure with no stated window implies the whole history.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM004-MOD-0001-SDA",
+    "review_id": "RBM004-MOD-0001",
+    "reviewer": "agent:sda",
+    "reviewer_role": "SDA",
+    "reviewer_spec_id": "RBS-004",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "edgar:0000067347",
+    "finding_ids": [
+      "SG001-SDA-SG-03"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-eq-c/SDA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-SDA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "reviewer_role": "SR",
+  "summary": "The findings are sound and the conclusion they point at will be misread. Every one of them is about the filings' internal consistency; none is about the business.",
+  "recommendation": "Control",
+  "evidence_reference_ids": [
+    "EVI-21659D7BEC8F2387A0FE062D",
+    "EVI-E4E5EAF7AD4C1C5D4DF706A9",
+    "EVI-FEEA402AE1BF1B35332CD8AD"
+  ],
+  "finding_categories": {
+    "SG001-SR-SG-06": "SG-06",
+    "SG002-SR-SG-06": "SG-06"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG001-SR-SG-06",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:30:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-008 (SG-06)",
+      "title": "A FAIL here will be read as a verdict on the company",
+      "detail": "This review is heading for FAIL on the strength of six SEV-2 findings. Read individually every one of them is about how the filings can be misread: a tag list that could have been thinner, a units change in 2012, a namespace the connector did not know, two gates never reached. Not one is an assertion that Modine is badly run, badly financed, or overpriced. The board has no view on any of those and cannot form one from what it read. But the outcome vocabulary is PASS, PASS_WITH_FINDINGS, FAIL and INSUFFICIENT_EVIDENCE, and a reader who sees FAIL beside a ticker will take it as a verdict on the ticker. The defect is not in the findings; it is that the artefact under review is a filing set and the outcome will be attached to a company.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-21659D7BEC8F2387A0FE062D",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Every published RBM-004 decision must carry, on its face, the sentence that the artefact reviewed was a filing set and that the outcome describes what those filings establish and cost to read, not the merits of the issuer.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG002-SR-SG-06",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-008 (SG-06)",
+      "title": "Four of six findings describe the review rather than the subject",
+      "detail": "SG001-FVA, SG001-RPA, SG002-RPA and this one are about the retrieval, the namespace, the coverage and the reading. Only the restatement and unit findings are about what Modine filed. The same imbalance was recorded in the crypto board, where nine of sixteen findings described the review's own limits, and it was left open pending the mandate artifact. The mandate now exists. This review is the second instance and the question should stop being deferred: scope limits and subject defects are different things carrying the same severity scale, and a decision engine that counts them together will FAIL a clean subject that was read narrowly.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-FEEA402AE1BF1B35332CD8AD",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Resolve the open methodology question recorded in docs/crypto-board-open-questions.md before a third profile inherits it.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM004-MOD-0001-SR",
+    "review_id": "RBM004-MOD-0001",
+    "reviewer": "agent:sr",
+    "reviewer_role": "SR",
+    "reviewer_spec_id": "RBS-008",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "edgar:0000067347",
+    "finding_ids": [
+      "SG001-SR-SG-06",
+      "SG002-SR-SG-06"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-eq-d/SSR-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-SR-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

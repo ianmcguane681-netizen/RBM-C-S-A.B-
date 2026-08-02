@@ -1,0 +1,61 @@
+{
+  "reviewer_role": "MIA",
+  "summary": "The two legs do not settle under the same rules. On an abandoned match one voids and the other stands. This is not an arbitrage.",
+  "recommendation": "No-build / stop",
+  "evidence_reference_ids": [
+    "EVI-1FAAEB84ABB73E5D458AE823",
+    "EVI-434D3F278AC6365A23539259",
+    "EVI-C217E3FBBFEDD80B9E316913"
+  ],
+  "finding_categories": {
+    "AG001-MIA-AG-02": "AG-02"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG001-MIA-AG-02",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:mia",
+      "reviewer_role": "MIA",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-1",
+      "spec_reference": "RBS-003 (AG-02)",
+      "title": "On abandonment one leg voids and the other stands",
+      "detail": "Betfair: 'If the match is abandoned before completion, all bets will be void unless the market has already been unconditionally determined.' Some Bookmaker: 'If a match is abandoned, bets stand if the fixture is replayed within 48 hours.' Under an abandonment followed by a replay inside 48 hours, the exchange leg returns its stake and settles nothing while the bookmaker leg runs to the replayed result. The position is then a single unhedged bet on Team B at 2.10 for the full bookmaker stake. The prices are correct, the arithmetic across them is correct, and the two legs are not the same event. A lock computed across differing settlement rules is a bet wearing an arb's arithmetic, and it is the central failure this profile exists to catch.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-434D3F278AC6365A23539259",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Do not place. Either find a second leg whose abandonment clause matches, or declare the divergence acceptable under a named human's EquivalenceDeclaration with the scenarios checked, which has not been done here.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM005-WORKED-0001-MIA",
+    "review_id": "RBM005-WORKED-0001",
+    "reviewer": "agent:mia",
+    "reviewer_role": "MIA",
+    "reviewer_spec_id": "RBS-003",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "odds:worked-example:2026-08-02T12:00:00Z",
+    "finding_ids": [
+      "AG001-MIA-AG-02"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-arb-b/MIA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-MIA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

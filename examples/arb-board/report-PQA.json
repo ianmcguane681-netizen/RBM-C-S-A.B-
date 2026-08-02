@@ -1,0 +1,87 @@
+{
+  "reviewer_role": "PQA",
+  "summary": "Both prices carry venue, selection, size and timestamp. Neither was verified against the venue, because no venue is configured.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-1B44C833051E7AA63FA7B1EA",
+    "EVI-1D2C4C0B7D0BAD4876621262",
+    "EVI-2758038F3238C724C49AC2DE"
+  ],
+  "finding_categories": {
+    "AG001-PQA-AG-01": "AG-01",
+    "AG002-PQA-AG-01": "AG-01"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG001-PQA-AG-01",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:pqa",
+      "reviewer_role": "PQA",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-002 (AG-01)",
+      "title": "Both prices were typed, and neither can be checked against its source",
+      "detail": "Betfair Exchange 2.16 on Team A and Some Bookmaker 2.10 on Team B were entered by hand from screens. Each carries venue, selection, decimal odds, maximum stake, commission and an observation timestamp, which is the full identity a price needs. What none of them carries is a retrieval: no odds source is configured, so no leg was read from the venue that quoted it and a transcription error would be indistinguishable from a real price. The arithmetic downstream is exact about numbers whose provenance is a human's eyes.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-1D2C4C0B7D0BAD4876621262",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Configure at least one venue so that at least one leg is machine-read, and mark typed legs as typed in any downstream summary.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG002-PQA-AG-01",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:pqa",
+      "reviewer_role": "PQA",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-002 (AG-01)",
+      "title": "The maximum stakes differ by a factor of twenty",
+      "detail": "The exchange leg offers 5,000 and the bookmaker leg 250. Any position is bounded by the smaller, so the effective size of this claimed arb is set entirely by the bookmaker and the exchange depth is decoration. A return quoted without the binding size implies the larger.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-1B44C833051E7AA63FA7B1EA",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Quote every return alongside the stake it is available at and name which leg bounds it.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM005-WORKED-0001-PQA",
+    "review_id": "RBM005-WORKED-0001",
+    "reviewer": "agent:pqa",
+    "reviewer_role": "PQA",
+    "reviewer_spec_id": "RBS-002",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "odds:worked-example:2026-08-02T12:00:00Z",
+    "finding_ids": [
+      "AG001-PQA-AG-01",
+      "AG002-PQA-AG-01"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-arb-b/PQA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-PQA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

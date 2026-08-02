@@ -1,0 +1,87 @@
+{
+  "reviewer_role": "MA",
+  "summary": "The review was conducted under the profile it names, at a tier its evidence supports, with its two unreached gates recorded rather than passed. One procedural weakness: the verification basis is honest and thin.",
+  "recommendation": "Monitoring",
+  "evidence_reference_ids": [
+    "EVI-569B0D63576950B5D6DCBF01",
+    "EVI-E4E5EAF7AD4C1C5D4DF706A9",
+    "EVI-FEEA402AE1BF1B35332CD8AD"
+  ],
+  "finding_categories": {
+    "SG001-MA-SG-06": "SG-06",
+    "SG002-MA-SG-06": "SG-06"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG001-MA-SG-06",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-001 (SG-06)",
+      "title": "Every report was verified on a standing authority, not on a reading",
+      "detail": "All six reports carry human_signature_ref recording verification by Ian McGuane with basis standing-authority-2026-08-02-not-individually-read. That basis is accurate and it is the weakest admissible one. The predecessor crypto review was verified on a summary reading, which was also weak and was stronger than this. The record is not defective \u2014 it says exactly what happened, which is the whole purpose of the basis field \u2014 but a board whose every report is verified without being read has a human in the loop in name. This is recorded so that the strength of the verification travels with the decision rather than being inferred from the presence of a signature.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-FEEA402AE1BF1B35332CD8AD",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Before this decision is relied on for any action, at least the SR report and the two restatement findings should be read in full by the ratifying human, and a stronger basis recorded against a subsequent review.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG002-MA-SG-06",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:30:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-001 (SG-06)",
+      "title": "Tier 2 is correctly claimed and Tier 3 correctly refused",
+      "detail": "The initiation claims Tier 2 with four specialists, which meets the tier_2 quorum of four, and states that Tier 3 is not claimed because SG-04 and SG-05 are unreached. Both are correct against the profile as loaded. This is recorded as a finding rather than left implicit because the predecessor crypto review had to be re-run as RBM003-USDC-0002 for claiming a tier its evidence did not support, and the cheapest place to catch that is at initiation. It was caught here at initiation.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-569B0D63576950B5D6DCBF01",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "No remediation. Recorded so a later reader can see the tier was examined rather than assumed.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM004-MOD-0001-MA",
+    "review_id": "RBM004-MOD-0001",
+    "reviewer": "agent:ma",
+    "reviewer_role": "MA",
+    "reviewer_spec_id": "RBS-001",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "edgar:0000067347",
+    "finding_ids": [
+      "SG001-MA-SG-06",
+      "SG002-MA-SG-06"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-eq-a/SMA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-MA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

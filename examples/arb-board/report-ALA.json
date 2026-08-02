@@ -1,0 +1,86 @@
+{
+  "reviewer_role": "ALA",
+  "summary": "At these prices the combined implied probability is under 100%, and that is not sufficient. The maths returns SETTLEMENT_MISMATCH before it returns a stake split.",
+  "recommendation": "No-build / stop",
+  "evidence_reference_ids": [
+    "EVI-1FAAEB84ABB73E5D458AE823",
+    "EVI-2758038F3238C724C49AC2DE"
+  ],
+  "finding_categories": {
+    "AG001-ALA-AG-04": "AG-04",
+    "AG002-ALA-AG-04": "AG-04"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG001-ALA-AG-04",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:ala",
+      "reviewer_role": "ALA",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-005 (AG-04)",
+      "title": "A positive margin was computed and correctly refused",
+      "detail": "Net of the exchange's 2% commission the two legs imply under 100% combined, which on arithmetic alone reads as a lock. The engine returned SETTLEMENT_MISMATCH rather than a stake split, because the settlement check runs before the maths and refuses to size a position whose legs are not the same event. This is recorded as a finding rather than passed over because the margin is the number an operator would have seen first, and it was real. The gate that stopped it was the one reading prose, not the one reading numbers.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-1FAAEB84ABB73E5D458AE823",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Any interface showing a margin must show the settlement status at least as prominently, and must never show a margin alone.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG002-ALA-AG-04",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:ala",
+      "reviewer_role": "ALA",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-005 (AG-04)",
+      "title": "The worst case is the whole of the larger stake, not the margin",
+      "detail": "If one leg voids and the other loses, the exposure is the entire stake on the surviving leg. A two-percent edge and a one-hundred-percent downside are not comparable quantities, and quoting the first without the second is the arithmetic that makes small edges look worth taking.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-1FAAEB84ABB73E5D458AE823",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Report worst_case_if_a_leg_voids beside every return figure.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM005-WORKED-0001-ALA",
+    "review_id": "RBM005-WORKED-0001",
+    "reviewer": "agent:ala",
+    "reviewer_role": "ALA",
+    "reviewer_spec_id": "RBS-005",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "odds:worked-example:2026-08-02T12:00:00Z",
+    "finding_ids": [
+      "AG001-ALA-AG-04",
+      "AG002-ALA-AG-04"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-arb-c/ALA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-ALA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

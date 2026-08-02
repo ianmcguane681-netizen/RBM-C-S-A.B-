@@ -1,0 +1,87 @@
+{
+  "reviewer_role": "SR",
+  "summary": "The board reached the right conclusion by the right gate, and the position it examined was constructed to be caught. That is a test of the gates, not of the market.",
+  "recommendation": "Control",
+  "evidence_reference_ids": [
+    "EVI-1FAAEB84ABB73E5D458AE823",
+    "EVI-42A4FD1E577FF694FFC79325",
+    "EVI-DF7E0E0BEC9315A00C43029C"
+  ],
+  "finding_categories": {
+    "AG001-SR-AG-06": "AG-06",
+    "AG002-SR-AG-06": "AG-06"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG001-SR-AG-06",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-008 (AG-06)",
+      "title": "The subject was chosen to fail, so false positives are untested",
+      "detail": "The initiation says plainly that this position's legs settle under materially different abandonment rules and that it was chosen for that reason. The board duly found it. That establishes the settlement gate fires when a mismatch is present; it establishes nothing about false positives \u2014 whether these gates would refuse a position that was genuinely sound, or pass one that was subtly not. A profile validated only against a subject built to fail it has been tested in one direction.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-1FAAEB84ABB73E5D458AE823",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Run a second review against a position whose settlement rules genuinely match, and record whether the board passes it. A gate that has never returned a pass has not been shown to discriminate.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG002-SR-AG-06",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:sr",
+      "reviewer_role": "SR",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-008 (AG-06)",
+      "title": "Prices are perishable and this decision has no stated expiry",
+      "detail": "AG-06 records honestly that prices cannot be re-observed and that only the arithmetic reproduces. It does not follow that the decision is timeless: it is the opposite. The odds behind it were live for seconds. A decision over a block height stays true about that height forever; a decision over a price stops describing anything almost immediately, and nothing in this record says when it expired.",
+      "evidence_tier": "T2",
+      "evidence_reference": "EVI-42A4FD1E577FF694FFC79325",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "RBM-005 decisions must carry an explicit validity window, and the mandate's expiry condition must read it.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM005-WORKED-0001-SR",
+    "review_id": "RBM005-WORKED-0001",
+    "reviewer": "agent:sr",
+    "reviewer_role": "SR",
+    "reviewer_spec_id": "RBS-008",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "odds:worked-example:2026-08-02T12:00:00Z",
+    "finding_ids": [
+      "AG001-SR-AG-06",
+      "AG002-SR-AG-06"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-arb-d/ASR-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-SR-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

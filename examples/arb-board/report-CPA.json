@@ -1,0 +1,59 @@
+{
+  "reviewer_role": "CPA",
+  "summary": "No source answered. The scan reached nought of five books, so nothing here establishes that these were the best available prices.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-DF7E0E0BEC9315A00C43029C"
+  ],
+  "finding_categories": {
+    "AG001-CPA-AG-05": "AG-05"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "AG001-CPA-AG-05",
+      "review_id": "RBM005-WORKED-0001",
+      "reviewer": "agent:cpa",
+      "reviewer_role": "CPA",
+      "artefact_version": "odds:worked-example:2026-08-02T12:00:00Z",
+      "date_raised": "2026-08-02T15:45:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-006 (AG-05)",
+      "title": "Coverage is nought of five and no better price has been excluded",
+      "detail": "Betfair, Smarkets, Matchbook, Paddy Power and Bet365 are the declared universe. None is configured, so none answered. The two prices under review were typed from two screens and may or may not be the best available; this review cannot say. A scan that reaches no source and reports no better price has established absence of evidence, and the failure mode is that it reads as evidence of absence. That sentence \u2014 'no arb found' from nought of five \u2014 is the one that costs money in this domain, and it is why coverage is registered as evidence rather than mentioned.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-DF7E0E0BEC9315A00C43029C",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Configure at least two sources before any scan result is treated as a statement about the market rather than about the two screens that were open.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM005-WORKED-0001-CPA",
+    "review_id": "RBM005-WORKED-0001",
+    "reviewer": "agent:cpa",
+    "reviewer_role": "CPA",
+    "reviewer_spec_id": "RBS-006",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "odds:worked-example:2026-08-02T12:00:00Z",
+    "finding_ids": [
+      "AG001-CPA-AG-05"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-arb-c/CPA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-CPA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}

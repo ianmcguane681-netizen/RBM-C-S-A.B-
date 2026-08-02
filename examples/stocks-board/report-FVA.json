@@ -1,0 +1,92 @@
+{
+  "reviewer_role": "FVA",
+  "summary": "Every headline figure is present and cited to an accession number. Two of them are only findable because the tag list is wide, and one describes a different date to the rest.",
+  "recommendation": "Corrective",
+  "evidence_reference_ids": [
+    "EVI-1CD9975333891BC82ECCD4F5",
+    "EVI-358DA7C1711273A7316D5985",
+    "EVI-5D998D0D68330D6089165566",
+    "EVI-78C3D0B39633701E909B0364",
+    "EVI-992F9BEDF8746DB7F430FAB1",
+    "EVI-AD4AC9CD18C7632A9AFDA275",
+    "EVI-B72C1A21A7A65907B9E6CDFD",
+    "EVI-C7678C37A6A4DF9C64E88E13"
+  ],
+  "finding_categories": {
+    "SG001-FVA-SG-01": "SG-01",
+    "SG002-FVA-SG-01": "SG-01"
+  },
+  "findings": [
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG001-FVA-SG-01",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:fva",
+      "reviewer_role": "FVA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:00:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-002 (SG-01)",
+      "title": "The reported figure depends on how many tags were asked for",
+      "detail": "Long-term debt is reported under LongTermDebtAndCapitalLeaseObligations. An earlier run of this evidence path asked only for LongTermDebtNoncurrent and LongTermDebt and returned a figure ten years stale, presented with the same confidence as a current one. The value now registered, 384,900,000 for the span ending 2026-03-31, is correct because the candidate list happened to be wide enough. That is a property of the query, not of the filing. A thin candidate list produces a confident wrong answer rather than a missing one, and nothing in the output distinguishes the two.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-5D998D0D68330D6089165566",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Record, with every figure, the full candidate tag list that was asked and which of them answered, so a reader can see what a narrower question would have returned.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "SG002-FVA-SG-01",
+      "review_id": "RBM004-MOD-0001",
+      "reviewer": "agent:fva",
+      "reviewer_role": "FVA",
+      "artefact_version": "edgar:0000067347",
+      "date_raised": "2026-08-02T15:00:00Z",
+      "severity": "SEV-3",
+      "spec_reference": "RBS-002 (SG-01)",
+      "title": "The share count describes 2026-05-22; every other figure describes 2026-03-31",
+      "detail": "Shares outstanding is 52,815,785, taken from dei:EntityCommonStockSharesOutstanding, which is a cover-page fact stated as of a date near filing. Revenue, net income, assets, liabilities and debt all describe the fiscal year ending 2026-03-31. Any per-share figure computed across the two measures the fifty-two day gap as well as the business. The figures are individually correct and the composition of any two of them is not.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-AD4AC9CD18C7632A9AFDA275",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "State the as-of date beside every share count, and refuse to compute a per-share figure whose numerator and denominator describe different dates.",
+      "target_resolution_date": "2026-09-30",
+      "closure": null
+    }
+  ],
+  "report": {
+    "schema_version": "1.0.0",
+    "report_id": "RPT-RBM004-MOD-0001-FVA",
+    "review_id": "RBM004-MOD-0001",
+    "reviewer": "agent:fva",
+    "reviewer_role": "FVA",
+    "reviewer_spec_id": "RBS-002",
+    "reviewer_spec_version": "1.0.0",
+    "artefact_sha": "edgar:0000067347",
+    "finding_ids": [
+      "SG001-FVA-SG-01",
+      "SG002-FVA-SG-01"
+    ],
+    "evidence_sufficiency": "SUFFICIENT",
+    "missing_evidence": [],
+    "ai_assistance": {
+      "used": true,
+      "human_verified": true,
+      "method": "provena-eq-b/FVA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
+    },
+    "human_signature_ref": "SIG-VERIFY-FVA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
+  }
+}
