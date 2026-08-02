@@ -168,7 +168,7 @@ def crypto_lane(*, probe: bool = False, environ: dict[str, str] | None = None) -
     )
 
 
-def stocks_lane(*, probe: bool = False) -> LaneReadiness:
+def stocks_lane(*, probe: bool = False, home: str | Path | None = None) -> LaneReadiness:
     from connectors.edgar import DEFAULT_AGENT
 
     if probe:
@@ -176,16 +176,40 @@ def stocks_lane(*, probe: bool = False) -> LaneReadiness:
     else:
         status, detail = CONFIGURED, f"User-Agent: {DEFAULT_AGENT}"
 
+    from pathlib import Path as _Path
+
+    root = _Path(home).expanduser() if home else _Path.home()
+    alpaca = root / ".alpaca"
+    has_keys = (alpaca / "key_id").is_file() and (alpaca / "secret_key").is_file()
+    paper, live = (alpaca / "paper").is_file(), (alpaca / "live").is_file()
+    if not has_keys:
+        broker_status, broker_detail = NOT_CONFIGURED, ""
+    elif paper == live:
+        # A key gives no hint which environment it belongs to and the base URLs differ by
+        # one word. A live order placed believing it was paper is not found later.
+        broker_status = NOT_CONFIGURED
+        broker_detail = "keys present but the environment is undeclared: create exactly " \
+                        "one of 'paper' or 'live'"
+    else:
+        broker_status = NOT_ATTEMPTED
+        broker_detail = f"keys present, declared {'paper' if paper else 'LIVE'}"
+
     return LaneReadiness(
         STOCKS,
-        "Filing gates against SEC EDGAR. No API key exists to obtain; EDGAR asks only "
-        "that a client identify itself.",
+        "Filing gates against SEC EDGAR, and execution through a broker. No API key "
+        "exists for EDGAR; it asks only that a client identify itself.",
         (
             Requirement(
                 STOCKS, "SEC EDGAR identification", status,
                 unlocks="check_stock.py, RBM-004 evidence, monitor tickers",
                 detail=detail,
                 remedy="EdgarClient(user_agent='you you@example.com') -- must contain an address",
+            ),
+            Requirement(
+                STOCKS, "Alpaca broker", broker_status,
+                unlocks="prices with size behind them, and paper order execution",
+                detail=broker_detail, required=False,
+                remedy="~/.alpaca/{key_id,secret_key} plus exactly one of {paper,live}",
             ),
         ),
     )

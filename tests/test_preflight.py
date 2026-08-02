@@ -136,8 +136,43 @@ class TestStocksNeedsNoKey:
     def test_edgar_is_configured_without_any_credential(self):
         assert stocks_lane().requirements[0].status == CONFIGURED
 
-    def test_the_stocks_lane_is_ready_out_of_the_box(self):
-        assert stocks_lane().status == READY
+    def test_research_needs_no_key_but_execution_does(self, tmp_path):
+        """The lane used to read READY out of the box, and that was true until it could
+        place an order. Research still needs nothing; execution needs a broker, so the
+        lane as a whole is DEGRADED rather than READY -- it can establish what a filer
+        filed and cannot act on it."""
+
+        lane = stocks_lane(home=tmp_path)
+
+        assert lane.status == DEGRADED
+        assert [r.name for r in lane.missing] == ["Alpaca broker"]
+
+    def test_an_undeclared_broker_environment_does_not_count_as_configured(self, tmp_path):
+        """A live order placed believing it was paper is not found later."""
+
+        alpaca = tmp_path / ".alpaca"
+        alpaca.mkdir()
+        (alpaca / "key_id").write_text("k", encoding="utf-8")
+        (alpaca / "secret_key").write_text("s", encoding="utf-8")
+
+        broker = next(r for r in stocks_lane(home=tmp_path).requirements
+                      if r.name == "Alpaca broker")
+
+        assert broker.status == NOT_CONFIGURED
+        assert "undeclared" in broker.detail
+
+    def test_a_declared_paper_environment_counts_and_names_itself(self, tmp_path):
+        alpaca = tmp_path / ".alpaca"
+        alpaca.mkdir()
+        (alpaca / "key_id").write_text("k", encoding="utf-8")
+        (alpaca / "secret_key").write_text("s", encoding="utf-8")
+        (alpaca / "paper").write_text("", encoding="utf-8")
+
+        broker = next(r for r in stocks_lane(home=tmp_path).requirements
+                      if r.name == "Alpaca broker")
+
+        assert broker.status == NOT_ATTEMPTED
+        assert "paper" in broker.detail
 
 
 class TestTheReportDoesNotOverclaim:
