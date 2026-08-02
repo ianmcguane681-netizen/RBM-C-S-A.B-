@@ -1,0 +1,7 @@
+Coverage for Match Odds: Team A v Team B (worked example, not live prices): 0 of 5 source(s) answered.
+  NOT COVERED  Betfair Exchange: needs an app key; live prices cost a one-off activation fee
+  NOT COVERED  Smarkets: needs an account username and password in ~/.smarkets
+  NOT COVERED  Matchbook: needs API credentials
+  NOT COVERED  Paddy Power: no public odds API; needs a licensed feed
+  NOT COVERED  Bet365: no public odds API; needs a licensed feed
+  A price better than anything above may exist at a source that did not answer. Absence of an arb here is absence of evidence, not evidence of absence.

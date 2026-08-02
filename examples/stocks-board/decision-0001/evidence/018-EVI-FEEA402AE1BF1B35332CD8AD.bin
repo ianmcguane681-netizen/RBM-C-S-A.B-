@@ -1,0 +1,4 @@
+Every figure above is retrievable from data.sec.gov/api/xbrl/companyconcept for CIK 0000067347 under the tag and taxonomy recorded with it. No API key exists to obtain; EDGAR asks only for a User-Agent identifying the caller.
+Retrieved at 2026-08-02T14:09:19+00:00.
+Latest accession seen across all concepts: 0001104659-26-066795.
+EDGAR is append-only: a re-run that sees a later accession is reading a filing set this evidence never saw, which is how staleness is detected here rather than assumed absent.
