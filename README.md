@@ -135,6 +135,13 @@ python check_arb.py my-arb.json                                    # is a claime
 identify itself. `check_token.py` needs an Ethereum node URL. `check_arb.py` needs neither —
 you type in odds from two screens.
 
+`python preflight.py` says which of those you have, per lane, and what each missing one
+unlocks. It reports three lane states rather than two, and the middle one is the honest
+part: **arbitrage runs with no credentials at all** — the maths, the settlement-rule
+divergence, the stake sizing — but a live scan reaching nought of five books and reporting
+"no arb" is the most expensive sentence this repository can produce. That is `DEGRADED`,
+not `READY`. The code is fine; the system is blind.
+
 Each of these has caught something on live data that reasoning alone did not:
 
 | | |
@@ -251,7 +258,13 @@ check_stock.py        one command, the filing gates
 check_arb.py          is a claimed arb real, from two screens
 trade_sheet.py        board verdict, round-trip cost, and your own target
 monitor.py            has anything a review relied on moved since last time
+preflight.py          what each lane needs before it can read anything
+tools/repin_package.py  the only sanctioned way to re-hash a controlled package
 ```
+
+Each lane has one command that registers what a board reviews, and each pins to the thing
+that identifies its evidence: `commit-evidence` to a commit, `chain-evidence` to a block
+height, `filing-evidence` to an accession number, `arb-evidence` to a priced instant.
 
 `connectors/` is where the evidence comes from and where most of the defects were found.
 `chain*.py` read Ethereum over JSON-RPC; `edgar.py` reads SEC filings and needs no API key;
