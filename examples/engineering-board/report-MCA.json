@@ -3,7 +3,7 @@
   "summary": "The census cannot distinguish a failure to retrieve from a retrieved absence, so its coverage rate is understated by an unknown amount and says so nowhere.",
   "recommendation": "Corrective",
   "evidence_reference_ids": [
-    "EVI-70203028606D1C2255094AA1",
+    "EVI-9E72CD56B9A0E99B04A7C7F2",
     "EVI-87668345C78903AF9D3C5D2C",
     "EVI-9143CC24C64B52964E695F19",
     "EVI-E3342429DEBC4A8DB294D753",
@@ -27,11 +27,11 @@
       "title": "Rate-limited lookups are stored as archive absences",
       "detail": "connectors/docket_join.py lookup() returns _join_result(False, 'docket lookup failed: HTTP 429') for an exhausted rate limit -- the same shape it returns for 'no RECAP docket matched the reconstructed number'. tools/adjudication_coverage.py main() then builds its resume map from every stored record without inspecting why the record stopped, so the next run skips the rate-limited row as already assessed. The census measures what fraction of decided cases have a complaint in RECAP; a throttled request is not evidence about RECAP, and counting it as one understates coverage by exactly the number of requests the API refused. The failure is silent: nothing in the output file distinguishes the two, and the summary's coverage figure reads as a completed measurement. Confirmed live -- the committed analysis/adjudication_coverage.json at this commit contains one such row of 67, and a longer census run produced eight more.",
       "evidence_tier": "T2",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Distinguish a retryable transport failure from an observation at the point it occurs, and never persist the former as an assessment. Records that could not be attempted must be retried on resume rather than skipped.",
@@ -51,11 +51,11 @@
       "title": "A partially enumerated pool still produces a full summary",
       "detail": "fetch_establishing_records() returns (collected, incomplete) and breaks out of pagination on any exception, so a walk that retrieved 12 of 430 records returns 12 and a reason. main() refuses to write a summary only when 'incomplete and not records' -- that is, only when the pool is entirely empty. A pool that stopped part-way passes the guard and writes pool_size_enumerated equal to the partial count, so a coverage rate is computed over a denominator that is not the population. The guard's own comment says the run 'has no denominator', which is true of the partial case too.",
       "evidence_tier": "T2",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Refuse the summary whenever the pool is incomplete, not only when it is empty, and record the shortfall in the output.",
@@ -80,9 +80,10 @@
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-eng-b/MCA-001"
+      "human_verified": true,
+      "method": "provena-eng-b/MCA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
     },
-    "human_signature_ref": "SIG-PENDING-MCA"
+    "human_signature_ref": "SIG-VERIFY-MCA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
   }
 }

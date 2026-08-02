@@ -3,7 +3,7 @@
   "summary": "No status in this artefact is a pinned constant. One refusal condition cannot observe the state it is meant to refuse.",
   "recommendation": "Monitoring",
   "evidence_reference_ids": [
-    "EVI-70203028606D1C2255094AA1",
+    "EVI-9E72CD56B9A0E99B04A7C7F2",
     "EVI-87668345C78903AF9D3C5D2C",
     "EVI-9143CC24C64B52964E695F19",
     "EVI-E3342429DEBC4A8DB294D753",
@@ -27,11 +27,11 @@
       "title": "The summary refusal cannot fire on the state it describes",
       "detail": "The refusal at the end of main() is computed rather than pinned, which satisfies EG-01's surface test. It fails the substantive one: the requirement is 'do not publish a measurement without a denominator', and the condition 'incomplete and not records' can only observe the total-failure case. The set of inputs that can change this result does not include the partial pool, which is the case the requirement is about. Enumerated per RBS-002 section 4: the inputs are `incomplete` (set on any pagination exception) and `records` (truthy for any non-empty pool); no input carries how much of the pool was walked, so the guard is structurally unable to distinguish 12 of 430 from 430 of 430. Overlaps MCA-EG-02 by design -- the same defect is a computation fault and a measurement fault, and RBS-002 section 2 directs the seat to raise the boundary case rather than defer it.",
       "evidence_tier": "T2",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Give the refusal an input that carries pool completeness, and test the refusal branch.",
@@ -51,11 +51,11 @@
       "title": "Exit code 2 is reused for two distinct refusals",
       "detail": "main() returns 2 for 'pool not enumerated'. A caller cannot distinguish that from other refusals by exit code alone. Observation only: at this commit there is one such path, so no ambiguity exists yet. Raised because the file is about to grow more refusal paths.",
       "evidence_tier": "T2",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": null,
@@ -80,9 +80,10 @@
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-eng-b/GCA-001"
+      "human_verified": true,
+      "method": "provena-eng-b/GCA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
     },
-    "human_signature_ref": "SIG-PENDING-GCA"
+    "human_signature_ref": "SIG-VERIFY-GCA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
   }
 }

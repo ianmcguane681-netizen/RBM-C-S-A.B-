@@ -3,14 +3,15 @@
   "summary": "The review was procedurally complete. Two seats were omitted with justifications, one of which names a role RBM-002 does not define.",
   "recommendation": "Monitoring",
   "evidence_reference_ids": [
-    "EVI-70203028606D1C2255094AA1",
+    "EVI-9E72CD56B9A0E99B04A7C7F2",
     "EVI-87668345C78903AF9D3C5D2C",
     "EVI-9143CC24C64B52964E695F19",
     "EVI-E3342429DEBC4A8DB294D753",
     "EVI-EC59EB6ADBF6A16542BFDEF7"
   ],
   "finding_categories": {
-    "EG001-MA-EG-03": "EG-03"
+    "EG001-MA-EG-03": "EG-03",
+    "EG002-MA-EG-06": "EG-06"
   },
   "findings": [
     {
@@ -26,14 +27,38 @@
       "title": "An omitted seat's justification assigns work to no defined role",
       "detail": "The initiation record omits RPA with the justification that reproducibility 'is assessed by the board chair against a recorded test run rather than by a seat'. RBM-002 section 4 gives the board chair no audit function -- BC convenes, ratifies and publishes. The justification therefore assigns EG-06 to nobody while reading as though it were covered. The T1 test-run evidence was in fact registered and is sound (276 passed at this commit), so the gate was met; the record of who met it is wrong.",
       "evidence_tier": "T3",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Either seat the RPA or record EG-06 as not assessed in this review. An omission justified by a role that does not exist is an unassessed gate.",
+      "target_resolution_date": "2026-08-31",
+      "closure": null
+    },
+    {
+      "schema_version": "1.0.0",
+      "finding_id": "EG002-MA-EG-06",
+      "review_id": "RBM002-GSCF001-0001",
+      "reviewer": "agent:ma",
+      "reviewer_role": "MA",
+      "artefact_version": "1048b11",
+      "date_raised": "2026-08-02T18:40:00Z",
+      "severity": "SEV-2",
+      "spec_reference": "RBS-001 section 7 (EG-06)",
+      "title": "The recorded test run could not be reproduced and was substituted",
+      "detail": "This review was first convened in a container that has since been reclaimed, taking its review store with it. Five of six evidence items regenerated with IDENTICAL reference ids, because a source file at a named commit is derivable: the id is a hash over session, locator and content, and all three were reproducible. The sixth was the recorded test run, and it did not regenerate. A test log is a record of a moment rather than a derivable artefact \u2014 re-running the suite today produces a different log at a different time, which is a different fact about a different run. The suite was re-run (300 passed) and registered as EVI-9E72CD56B9A0E99B04A7C7F2, and every report's reference to the original was repointed at it. This is a substitution and is recorded as one. It is also EG-06 applied to the review that contains EG-06: the gate about reproducibility was the only evidence in this review that could not be reproduced.",
+      "evidence_tier": "T1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
+      "ai_assistance": {
+        "used": true,
+        "description": "agent seat review",
+        "human_verified": true
+      },
+      "status": "OPEN",
+      "remediation_requirement": "Recorded test output must be committed alongside the review, or the store must outlive the container. Until one of those holds, T1 evidence in any review conducted here is reproducible only while the container lives.",
       "target_resolution_date": "2026-08-31",
       "closure": null
     }
@@ -48,15 +73,17 @@
     "reviewer_spec_version": "1.0.0",
     "artefact_sha": "1048b11",
     "finding_ids": [
-      "EG001-MA-EG-03"
+      "EG001-MA-EG-03",
+      "EG002-MA-EG-06"
     ],
     "evidence_sufficiency": "SUFFICIENT",
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-eng-a/EMA-001"
+      "human_verified": true,
+      "method": "provena-eng-a/EMA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
     },
-    "human_signature_ref": "SIG-PENDING-MA"
+    "human_signature_ref": "SIG-VERIFY-MA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
   }
 }

@@ -3,7 +3,7 @@
   "summary": "Every seat above reviewed the code. Nobody reviewed the artefact the code already published, which carries the defect and is not repaired by fixing the code.",
   "recommendation": "Corrective",
   "evidence_reference_ids": [
-    "EVI-70203028606D1C2255094AA1",
+    "EVI-9E72CD56B9A0E99B04A7C7F2",
     "EVI-87668345C78903AF9D3C5D2C",
     "EVI-9143CC24C64B52964E695F19",
     "EVI-E3342429DEBC4A8DB294D753",
@@ -27,11 +27,11 @@
       "title": "The published measurement is not repaired by repairing the tool",
       "detail": "MCA, GCA, EFA and SVA all reviewed tools/adjudication_coverage.py and connectors/docket_join.py. None reviewed analysis/adjudication_coverage.json, which is committed at this same commit, is cited in the README as a completed sweep of all 67 occurrence-establishing cases, and contains a row recording 'join failed: docket lookup failed: HTTP 429'. A code fix changes what future runs write. It does not change what this file says, and the README quotes this file. Any remediation that stops at the code leaves a published artefact asserting something the board has just found to be untrue.",
       "evidence_tier": "T3",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Repair or re-walk the published measurement, and add a test asserting no stored record carries a transient failure, so the artefact cannot regress silently.",
@@ -51,11 +51,11 @@
       "title": "Seats sharing a model are being counted as independent voices",
       "detail": "Four of six seats share two models (provena-eng-b across GCA and MCA, provena-eng-c across EFA and SVA). The runtime recorded this, which is the control working. The board should nonetheless read GCA-EG-01 and MCA-EG-02 as one voice rather than two corroborating ones -- they concern the same defect and were produced by the same model. Note the same applies to this seat's own relationship to the others: I am not an independent check on a shared upstream error.",
       "evidence_tier": "T1",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Record in the decision that the correlated seats' agreement is not corroboration.",
@@ -80,9 +80,10 @@
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-eng-d/ESR-001"
+      "human_verified": true,
+      "method": "provena-eng-d/ESR-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
     },
-    "human_signature_ref": "SIG-PENDING-SR"
+    "human_signature_ref": "SIG-VERIFY-SR-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
   }
 }

@@ -3,7 +3,7 @@
   "summary": "One sentinel in this artefact can match another sentinel and be treated as an identity.",
   "recommendation": "Corrective",
   "evidence_reference_ids": [
-    "EVI-70203028606D1C2255094AA1",
+    "EVI-9E72CD56B9A0E99B04A7C7F2",
     "EVI-87668345C78903AF9D3C5D2C",
     "EVI-9143CC24C64B52964E695F19",
     "EVI-E3342429DEBC4A8DB294D753",
@@ -27,11 +27,11 @@
       "title": "Two unidentifiable records share one resume key",
       "detail": "_resume_key returns f\"{row.get('court') or '?'}/{row.get('docket') or '?'}\". The '?' is a sentinel meaning 'this record could not be identified'. Two records that both fail to produce a court and a docket therefore produce the identical key '?/?', and the resume map treats the second as already assessed. The comment above the resume block reasons carefully about docket collisions across districts and then introduces a collision of its own, in the case where the least is known about the records involved. This is the same shape as the defect this repository already found in its mechanism classifier, where two records that both failed to classify matched each other on the fallback value and produced a corroboration PASS.",
       "evidence_tier": "T2",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "An unidentifiable record must not be keyed at all. Exclude it from the resume map and record it separately, so 'could not identify' never reads as 'already done'.",
@@ -51,11 +51,11 @@
       "title": "A missing strata field defaults to a specific strata",
       "detail": "cached.get('judgment', '1') treats the absence of a strata declaration as a declaration of plaintiff-only. Absence is not a value. The committed analysis/adjudication_pool.json at this commit has no judgment field and is in fact plaintiff-only, so the default is correct by luck rather than by record.",
       "evidence_tier": "T3",
-      "evidence_reference": "EVI-70203028606D1C2255094AA1",
+      "evidence_reference": "EVI-9E72CD56B9A0E99B04A7C7F2",
       "ai_assistance": {
         "used": true,
         "description": "agent seat review",
-        "human_verified": false
+        "human_verified": true
       },
       "status": "OPEN",
       "remediation_requirement": "Treat an undeclared strata as unknown and refuse to reuse the cache, rather than assuming one.",
@@ -80,9 +80,10 @@
     "missing_evidence": [],
     "ai_assistance": {
       "used": true,
-      "human_verified": false,
-      "method": "provena-eng-c/SVA-001"
+      "human_verified": true,
+      "method": "provena-eng-c/SVA-001",
+      "human_verification_basis": "standing-authority-2026-08-02-not-individually-read"
     },
-    "human_signature_ref": "SIG-PENDING-SVA"
+    "human_signature_ref": "SIG-VERIFY-SVA-Ian McGuane-BASIS-standing-authority-2026-08-02-not-individually-read"
   }
 }
