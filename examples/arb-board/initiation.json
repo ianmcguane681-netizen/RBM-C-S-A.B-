@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "review_id": "RBM005-WORKED-0001",
+  "review_date": "2026-08-02T14:30:00Z",
+  "trigger": "First review under RBM-005. Subject: the worked two-leg position in examples/arb/match-odds.json, whose legs settle under materially different abandonment rules. Chosen deliberately: a profile whose central gate is settlement equivalence should first be pointed at a position where the arithmetic looks like a lock and the prose does not, so a PASS would mean the gates do not work.",
+  "tier": 2,
+  "tier_rationale": "A claimed position with real money at stake and two counterparties, which is Tier 2 under RBM-005 section 8. Tier 3 is not claimed: no odds source is configured, so AG-05 coverage is nought of five and the review cannot establish that a better price did not exist elsewhere.",
+  "artefact_sha": "odds:worked-example:2026-08-02T12:00:00Z",
+  "repository": "typed from source screens",
+  "architecture_authority": "RBE-001 v1.1.0",
+  "methodology_profile_id": "RBM-005",
+  "methodology_version": "1.0.0",
+  "methodology_status": "RELEASE_CANDIDATE",
+  "methodology_checksum": "sha256:3484f3e9daf0b71d53ce684f37c0eae64e82ccc3fc20ac641440c703f8886857",
+  "manifest_root_sha256": "sha256:ebc7568750d22e042c84e99d1361b07e9c5974b5287d0e2c13a0712ff1418077",
+  "human_approval_record": null,
+  "binding": false,
+  "board_chair": "ian.mcguane",
+  "methodology_auditor": "agent:ma",
+  "sceptical_reviewer": "agent:sr",
+  "specialists": {
+    "pqa": "agent:pqa",
+    "mia": "agent:mia",
+    "exa": null,
+    "ala": "agent:ala",
+    "cpa": "agent:cpa",
+    "rpa": null
+  },
+  "input_process_status": "READY",
+  "omitted_roles": [
+    {
+      "role": "EXA",
+      "justification": "AG-03 is the observation window, and both legs were typed from screens forty seconds apart with the gap recorded as evidence. There is no execution to audit: nothing was placed, no fill was attempted, and a seat reporting on execution quality would be reporting on an event that never happened."
+    },
+    {
+      "role": "RPA",
+      "justification": "AG-06 is registered as evidence stating plainly that prices cannot be re-observed and only the arithmetic over them reproduces. That is the whole reproducibility position for this review and it is on the record; a seat restating it would add a report rather than a finding."
+    }
+  ]
+}

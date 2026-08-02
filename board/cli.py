@@ -532,6 +532,124 @@ def cmd_filing_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_arb_evidence(args: argparse.Namespace) -> int:
+    """Register a claimed arbitrage position as evidence, pinned to a priced instant.
+
+    The betting analogue of `chain-evidence`. A chain review pins to a block height; an
+    arb pins to the instant each price was observed, because a price is not an address —
+    it needs venue, selection, side, size and timestamp, and it is only re-derivable while
+    the venue keeps history. Every leg carries all five or it is not evidence.
+
+    **The spread between observations is registered as a fact.** Two legs quoted forty
+    seconds apart were never simultaneously available at those prices, and an arb computed
+    across them is arithmetic about a moment that did not exist. The gap is recorded so a
+    reviewer reads it rather than assumes it away.
+
+    **Scan coverage is registered whether or not it is complete.** A scan that reached two
+    books of five and found no better price has established almost nothing, and the ratio
+    is the only thing that says so. `NOT_CONFIGURED` sources are named individually.
+    """
+
+    from connectors.odds import KNOWN_SOURCES, scan
+    from lib.arb import SETTLEMENT_MISMATCH, evaluate
+    from check_arb import load, observation_gap
+
+    runtime = _runtime(args)
+    path = Path(args.position)
+    legs, target, market, equivalence = load(path)
+    finding = evaluate(legs, target_stake=target, equivalence=equivalence)
+    coverage = scan(market, KNOWN_SOURCES)
+
+    print(f"Reading {path}")
+    print(f"Market: {market}")
+
+    def _register(label: str, body: str, tier: str, provenance: dict[str, Any]) -> None:
+        runtime.register_evidence(
+            args.review,
+            locator=f"odds:{market}:{label}",
+            content=body.encode("utf-8"),
+            description=f"{label} for {market}",
+            source_tier=tier,
+            provenance={"kind": "MARKET_PRICE", "market": market, "reading": label,
+                        **provenance},
+            actor=args.actor,
+            idempotency_key=f"arb-{args.review}-{label}",
+        )
+        print(f"  {tier}  {label:<24} {provenance.get('status', '')}")
+
+    # AG-01: each price, with everything needed to identify it again.
+    for index, leg in enumerate(legs):
+        _register(f"ag01:leg{index}", (
+            f"{leg.book} {leg.selection} at {leg.decimal_odds} "
+            f"(max {leg.max_stake}, commission {leg.commission_pct}%) "
+            f"observed {leg.observed_at}"
+        ), "T1", {
+            "status": "PRICED", "gate": "AG-01", "book": leg.book,
+            "selection": leg.selection, "decimal_odds": leg.decimal_odds,
+            "net_odds": leg.net_odds, "max_stake": leg.max_stake,
+            "commission_pct": leg.commission_pct, "observed_at": leg.observed_at,
+            "implied_pct": leg.implied_pct,
+        })
+
+    # AG-02: the settlement rules, verbatim. Two correctly priced legs that settle
+    # differently are a bet, not a lock, and the divergence lives in the prose.
+    for index, leg in enumerate(legs):
+        _register(f"ag02:rules{index}", leg.settlement_rule, "T1", {
+            "status": "RECORDED", "gate": "AG-02", "book": leg.book,
+            "selection": leg.selection,
+        })
+
+    # AG-03: the instant, and the spread across it.
+    _register("ag03:observation_window", observation_gap(legs), "T1", {
+        "status": "MEASURED", "gate": "AG-03",
+        "observed_at": [leg.observed_at for leg in legs],
+    })
+
+    # AG-04: what the maths says at these prices and these sizes.
+    _register("ag04:evaluation", finding.describe(), "T1", {
+        "status": finding.status, "gate": "AG-04",
+        "total_implied_pct": finding.total_implied_pct,
+        "margin_pct": finding.margin_pct,
+        "return_pct": finding.return_pct,
+        "total_stake": finding.total_stake,
+        "stakes": list(finding.stakes),
+        "guaranteed_return": finding.guaranteed_return,
+        "worst_case_if_a_leg_voids": finding.worst_case_if_a_leg_voids,
+        "equivalence_declared_by": (
+            finding.equivalence.declared_by if finding.equivalence else ""
+        ),
+    })
+
+    # AG-05: how much of the intended universe was actually seen.
+    _register("ag05:coverage", coverage.describe(), "T1", {
+        "status": "COMPLETE" if coverage.is_complete else "PARTIAL", "gate": "AG-05",
+        "sources_known": len(coverage.quotes),
+        "sources_answered": len(coverage.answered),
+        "sources_silent": [q.source for q in coverage.silent],
+    })
+
+    # AG-06: what someone else needs to get this back. Prices are perishable in a way a
+    # block height is not: a re-run cannot reproduce them, only the reasoning over them.
+    _register("ag06:reproduction", (
+        f"Prices in this review were typed from {len(legs)} source screen(s) and are "
+        f"recorded above with their observation timestamps. Unlike a block height, a "
+        f"price cannot be re-read later: the market has moved and the venues do not "
+        f"expose the historical book. What is reproducible is the arithmetic over the "
+        f"recorded prices and the settlement rules quoted verbatim, both of which are "
+        f"in this evidence set. Anyone disputing the figures can recompute them; nobody "
+        f"can re-observe them, and this review does not claim otherwise."
+    ), "T2", {
+        "status": "ARITHMETIC_REPRODUCIBLE_PRICES_ARE_NOT", "gate": "AG-06",
+        "legs": len(legs), "source": str(path),
+    })
+
+    if finding.status == SETTLEMENT_MISMATCH:
+        print(f"\n  {finding.status}: {finding.reason}")
+    print(f"\n  coverage {len(coverage.answered)}/{len(coverage.quotes)} sources")
+    _print_next("board advance --to EVIDENCE_LOCKED, then ASSIGNMENT")
+    return 0
+
+
 def cmd_advance(args: argparse.Namespace) -> int:
     """Move the review to its next lifecycle state."""
 
@@ -986,6 +1104,14 @@ def build_parser() -> argparse.ArgumentParser:
     filing.add_argument("--ticker", required=True, help="Ticker to resolve to a CIK")
     filing.add_argument("--actor", required=True)
     filing.set_defaults(func=cmd_filing_evidence)
+
+    arb = sub.add_parser(
+        "arb-evidence", help="Register a claimed arbitrage position (arb review)"
+    )
+    arb.add_argument("--review", required=True)
+    arb.add_argument("--position", required=True, help="JSON of the claimed position")
+    arb.add_argument("--actor", required=True)
+    arb.set_defaults(func=cmd_arb_evidence)
 
     advance = sub.add_parser("advance", help="Move to the next lifecycle state")
     advance.add_argument("--review", required=True)

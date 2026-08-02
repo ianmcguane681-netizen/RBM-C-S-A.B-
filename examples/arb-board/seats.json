@@ -1,0 +1,38 @@
+[
+  {
+    "role": "MA",
+    "model": "provena-arb-a",
+    "instruction_version": "AMA-001",
+    "name": "ma"
+  },
+  {
+    "role": "PQA",
+    "model": "provena-arb-b",
+    "instruction_version": "PQA-001",
+    "name": "pqa"
+  },
+  {
+    "role": "MIA",
+    "model": "provena-arb-b",
+    "instruction_version": "MIA-001",
+    "name": "mia"
+  },
+  {
+    "role": "ALA",
+    "model": "provena-arb-c",
+    "instruction_version": "ALA-001",
+    "name": "ala"
+  },
+  {
+    "role": "CPA",
+    "model": "provena-arb-c",
+    "instruction_version": "CPA-001",
+    "name": "cpa"
+  },
+  {
+    "role": "SR",
+    "model": "provena-arb-d",
+    "instruction_version": "ASR-001",
+    "name": "sr"
+  }
+]
