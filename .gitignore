@@ -24,3 +24,8 @@ dist/
 
 # Live review board store (the exported bundle is committed, the database is not)
 data/review_board*.sqlite3
+
+# The monitor's memory. Ignored by default because it records WHAT IS BEING WATCHED, and
+# on a public repository that publishes a holder's positions. Commit it deliberately if the
+# change history is wanted in git; it is plain JSON and diffs readably.
+data/monitor-ledger.json
