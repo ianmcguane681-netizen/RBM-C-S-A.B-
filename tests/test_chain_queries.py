@@ -22,6 +22,7 @@ from connectors.chain_queries import (
     INDETERMINATE,
     NO_PATTERN_MATCHED,
     PROXY_SLOTS,
+    NO_FUNCTION,
     REVERTED,
     SELECTORS,
     UPGRADEABLE,
@@ -214,6 +215,34 @@ class TestRevertedIsNotRenounced:
 
     def test_reverted_and_zero_are_different_values(self):
         assert REVERTED != ZERO_ADDRESS
+
+    def test_an_empty_return_is_not_a_renunciation(self):
+        """The third state, found live on WETH and initially a crash.
+
+        A contract with a payable fallback accepts an unknown selector instead of
+        reverting, and returns bare `0x`. That is neither a revert nor a zero: the
+        function does not exist. Parsed as an address it crashed; had it not crashed it
+        would have fallen through to ZERO_ADDRESS, reporting WETH as having renounced an
+        ownership it never had -- the exact misreading this class exists to prevent, one
+        state over from where it was being guarded.
+        """
+
+        client = ChainClient(PROVIDER, post_json=self.call_responder(
+            {SELECTORS["owner"]: "0x"}))
+
+        assert authority_holders(client, "0xweth")["owner"] == NO_FUNCTION
+
+    def test_the_three_absences_are_three_different_values(self):
+        assert len({REVERTED, ZERO_ADDRESS, NO_FUNCTION}) == 3
+
+    def test_an_absent_pause_function_does_not_report_running(self):
+        """"false" says a switch exists and is off. For a contract with no switch that is
+        true for the wrong reason, and it hides that nobody can halt transfers either."""
+
+        client = ChainClient(PROVIDER, post_json=self.call_responder(
+            {SELECTORS["paused"]: "0x"}))
+
+        assert is_paused(client, "0xweth") == NO_FUNCTION
 
     def test_an_unpausable_contract_reports_reverted_not_false(self):
         """'false' means transfers are running. 'REVERTED' means there is no pause

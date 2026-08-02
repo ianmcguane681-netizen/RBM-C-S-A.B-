@@ -66,6 +66,11 @@ INDETERMINATE = "INDETERMINATE"
 # not exist; a zero `owner()` means ownership was renounced. Collapsing them would report
 # a renunciation that never happened.
 REVERTED = "REVERTED"
+# The call was accepted and returned nothing. A contract with a payable fallback does
+# this for any selector it does not implement, so it is neither a revert nor a zero --
+# the function is simply absent. Found live on WETH, where collapsing it into
+# ZERO_ADDRESS would have reported a renunciation that never happened.
+NO_FUNCTION = "NO_FUNCTION"
 ZERO_ADDRESS = "0x" + "0" * 40
 
 
@@ -123,9 +128,16 @@ class ProxyFinding:
 
 
 def _address_from_slot(raw: str) -> str:
-    """A 32-byte slot holding a left-padded address. Empty stays empty."""
+    """A 32-byte slot holding a left-padded address. Empty stays empty.
 
-    if not raw or int(raw, 16) == 0:
+    `0x` is not zero. It is no data at all, and `int("0x", 16)` raises rather than
+    returning 0 -- which is the only reason this was ever noticed.
+    """
+
+    body = raw[2:] if raw.startswith("0x") else raw
+    if not body:
+        return NO_FUNCTION
+    if int(body, 16) == 0:
         return ""
     return "0x" + raw[-40:]
 
@@ -208,10 +220,16 @@ def proxy_finding(client: ChainClient, address: str, **kw: Any) -> ProxyFinding:
 def authority_holders(client: ChainClient, address: str, **kw: Any) -> dict[str, str]:
     """CG-04: who holds privileged functions.
 
-    `REVERTED` and the zero address are returned as different values. A reverted `owner()`
-    means the contract has no owner function; a zero `owner()` means ownership was
-    renounced. Reporting the first as the second would credit a project with a
-    renunciation it never made.
+    Three absences, three values, because they mean three different things:
+
+        REVERTED     the contract rejected the call
+        NO_FUNCTION  the call was accepted and returned nothing -- the selector is not
+                     implemented, which a payable fallback does silently
+        ZERO_ADDRESS the function exists and answers zero, i.e. ownership was renounced
+
+    Collapsing any of them into ZERO_ADDRESS would credit a project with a renunciation it
+    never made. WETH is the live case: it has no owner at all, and the second state used
+    to crash on the way to being mislabelled as the third.
     """
 
     out: dict[str, str] = {}
@@ -222,15 +240,25 @@ def authority_holders(client: ChainClient, address: str, **kw: Any) -> dict[str,
             out[role] = REVERTED
             continue
         value = _address_from_slot(str(reading.value or ""))
-        out[role] = value or ZERO_ADDRESS
+        out[role] = value if value else ZERO_ADDRESS
     return out
 
 
 def is_paused(client: ChainClient, address: str, **kw: Any) -> str:
-    """Whether transfers are currently halted, or REVERTED if unpausable."""
+    """Whether transfers are currently halted.
+
+    Four answers, not two. "false" means a pause switch exists and is off; NO_FUNCTION and
+    REVERTED both mean no such switch. Returning "false" for an absent function is the
+    flattering reading -- it says transfers are running normally, which is true but for
+    the wrong reason, and it hides that nobody can stop them either.
+    """
 
     try:
         reading = client.read("eth_call", [{"to": address, "data": SELECTORS["paused"]}], **kw)
     except ChainAccessError:
         return REVERTED
-    return "true" if int(str(reading.value or "0x0"), 16) else "false"
+    raw = str(reading.value or "")
+    body = raw[2:] if raw.startswith("0x") else raw
+    if not body:
+        return NO_FUNCTION
+    return "true" if int(body, 16) else "false"
