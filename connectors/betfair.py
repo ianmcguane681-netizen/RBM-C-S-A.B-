@@ -37,6 +37,7 @@ import ssl
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
@@ -122,6 +123,28 @@ class BetfairCredentials:
             certificate_key=certificate_key if certificate_key.is_file() else None,
             password=password_file.read_text(encoding="utf-8").strip()
             if password_file.is_file() else "",
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class MarketListing:
+    """One market that exists, before anything has been priced.
+
+    Carries `total_matched` because a market with a price and no volume is a price nobody
+    has taken. Sorting on it is how a scan spends its requests on markets that can absorb
+    a stake rather than on the long tail that cannot.
+    """
+
+    market_id: str
+    name: str
+    event: str
+    starts_at: str
+    total_matched: float = 0.0
+
+    def describe(self) -> str:
+        return (
+            f"{self.market_id}  {self.event} — {self.name}  starts {self.starts_at}  "
+            f"matched {self.total_matched:,.0f}"
         )
 
 
@@ -236,6 +259,62 @@ class BetfairSource:
             "maxResults": 1,
         })
         return results[0] if results else {}
+
+    def list_markets(
+        self,
+        *,
+        event_type_id: str = "1",
+        within_hours: int = 24,
+        market_types: Sequence[str] = ("MATCH_ODDS",),
+        limit: int = 100,
+    ) -> tuple[MarketListing, ...]:
+        """What is on, so a scan does not need market IDs typed by hand.
+
+        `event_type_id` defaults to 1, which is Betfair's id for Football. Named as a
+        default rather than hidden, because a scan of the wrong sport reports no arbs in
+        exactly the tone of a scan that found none in the right one.
+
+        The time window is bounded and stated. An unbounded listing would return thousands
+        of markets months out, and prices that far ahead are neither liquid nor comparable
+        to a bookmaker's — the scan would look thorough and cover nothing tradeable.
+
+        `MATCH_ODDS` only by default, for the reason `find_arb` needs: its outcome set is
+        unambiguous. Totals and handicaps need a line as well as a side, and a market whose
+        outcomes are guessed reads complete when it is not.
+        """
+
+        if self.session is None:
+            return ()
+
+        now = datetime.now(timezone.utc)
+        results = self.session.call(f"{BETTING_URL}/listMarketCatalogue/", {
+            "filter": {
+                "eventTypeIds": [event_type_id],
+                "marketTypeCodes": list(market_types),
+                "marketStartTime": {
+                    "from": now.isoformat(timespec="seconds").replace("+00:00", "Z"),
+                    "to": (now + timedelta(hours=within_hours)).isoformat(
+                        timespec="seconds").replace("+00:00", "Z"),
+                },
+            },
+            # Sorted by matched volume: a market nobody has bet into has a price but no
+            # depth, and depth is the only thing an exchange is here to supply.
+            "sort": "MAXIMUM_TRADED",
+            "marketProjection": ["EVENT", "MARKET_START_TIME"],
+            "maxResults": limit,
+        })
+
+        return tuple(
+            MarketListing(
+                market_id=str(row.get("marketId") or ""),
+                name=str(row.get("marketName") or ""),
+                event=str((row.get("event") or {}).get("name") or ""),
+                starts_at=str(row.get("marketStartTime") or ""),
+                total_matched=float(row.get("totalMatched") or 0.0),
+            )
+            for row in results or ()
+            if row.get("marketId")
+        )
 
     def _book(self, market_id: str) -> dict[str, Any]:
         assert self.session is not None

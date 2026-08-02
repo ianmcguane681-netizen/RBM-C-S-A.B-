@@ -240,3 +240,75 @@ class TestTheOperatorNeverHandlesAToken:
         session.login()
 
         assert any("certlogin" in call[0] for call in post.calls)
+
+
+class TestMarketEnumerationIsBoundedAndStated:
+    """A scan that has to be handed market IDs is not a scan.
+
+    Two defaults are named rather than hidden, because both fail in the same tone as a
+    correct answer. The wrong sport reports no arbs exactly like the right sport finding
+    none, and an unbounded window returns thousands of markets months out whose prices are
+    neither liquid nor comparable to a bookmaker's.
+    """
+
+    def _calls(self):
+        seen = []
+
+        def call(url, payload):
+            seen.append((url, payload))
+            return [{
+                "marketId": "1.234567", "marketName": "Match Odds",
+                "marketStartTime": "2026-08-09T14:00:00Z", "totalMatched": 48210.0,
+                "event": {"name": "Arsenal v Chelsea"},
+            }]
+
+        return seen, call
+
+    def _source(self, call):
+        from connectors.betfair import BetfairCredentials, BetfairSession, BetfairSource
+
+        session = BetfairSession(BetfairCredentials(
+            app_key="k", username="u", password="p", delayed=True,
+        ))
+        session.call = call  # type: ignore[method-assign]
+        return BetfairSource(session=session)
+
+    def test_the_listing_carries_matched_volume_not_only_a_name(self):
+        """A market with a price and no volume is a price nobody has taken."""
+
+        seen, call = self._calls()
+
+        listings = self._source(call).list_markets()
+
+        assert listings[0].total_matched == 48210.0
+        assert listings[0].market_id == "1.234567"
+
+    def test_the_window_is_bounded_and_appears_in_the_filter(self):
+        seen, call = self._calls()
+
+        self._source(call).list_markets(within_hours=6)
+
+        market_filter = seen[0][1]["filter"]["marketStartTime"]
+        assert market_filter["from"] and market_filter["to"]
+        assert market_filter["from"] < market_filter["to"]
+
+    def test_only_markets_with_an_unambiguous_outcome_set_are_requested(self):
+        """Totals and handicaps need a line as well as a side; find_arb needs the set."""
+
+        seen, call = self._calls()
+
+        self._source(call).list_markets()
+
+        assert seen[0][1]["filter"]["marketTypeCodes"] == ["MATCH_ODDS"]
+
+    def test_busiest_first_so_requests_are_spent_where_depth_is(self):
+        seen, call = self._calls()
+
+        self._source(call).list_markets()
+
+        assert seen[0][1]["sort"] == "MAXIMUM_TRADED"
+
+    def test_an_unconfigured_source_lists_nothing_rather_than_raising(self):
+        from connectors.betfair import BetfairSource
+
+        assert BetfairSource.from_directory("/tmp/definitely-not-here").list_markets() == ()

@@ -2,6 +2,7 @@
 
     python scan_arb.py                       list the sports currently in season
     python scan_arb.py soccer_epl            scan one sport via the aggregator
+    python scan_arb.py --live                what is on at Betfair in the next 24h
     python scan_arb.py --market 1.234567     scan named exchange markets directly
     python scan_arb.py soccer_epl --json     machine-readable, for a scheduler
 
@@ -85,6 +86,31 @@ def exchange_quotes(markets: Sequence[str]) -> tuple[tuple, list[str]]:
                 break
             collected.extend(quotes_from_legs(answer.legs))
     return tuple(collected), silent
+
+
+def list_live(within_hours: int = 24, limit: int = 25) -> int:
+    """What is on, so market IDs do not have to be typed by hand."""
+
+    from connectors.betfair import BetfairSource
+
+    source = BetfairSource.from_directory()
+    listings = source.list_markets(within_hours=within_hours, limit=limit)
+    if not listings:
+        print(source.quote("any").describe())
+        print("\nNo market listing was retrieved. This is NOT a finding that nothing is "
+              "on.")
+        return 2
+
+    print(f"{len(listings)} market(s) starting within {within_hours}h, "
+          f"busiest first:\n")
+    for listing in listings:
+        print(f"  {listing.describe()}")
+    print("\nScan them: python scan_arb.py --market " +
+          " ".join(l.market_id for l in listings[:3]))
+    print("\nOne exchange is one counterparty: a market priced under 100% at Betfair "
+          "alone\nreports SINGLE_BOOK and does not surface. A second source is what makes "
+          "these\nscannable.")
+    return 0
 
 
 def scan_exchanges(market_ids: Sequence[str]) -> int:
@@ -198,6 +224,8 @@ if __name__ == "__main__":
     if "--help" in argv or "-h" in argv:
         print(__doc__)
         raise SystemExit(0)
+    if "--live" in argv:
+        raise SystemExit(list_live())
     if "--market" in argv:
         ids = argv[argv.index("--market") + 1:]
         raise SystemExit(scan_exchanges([i for i in ids if not i.startswith("--")]))
