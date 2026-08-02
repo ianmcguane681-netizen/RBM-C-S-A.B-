@@ -30,6 +30,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Sequence
 
+from lib.store import JSON_BACKEND, LOST, Receipt, StoreStatus, inspect
+
+def _now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 NEW = "NEW"
 SEEN_BEFORE = "SEEN_BEFORE"
 ACTED_ON = "ACTED_ON"
@@ -90,9 +98,14 @@ class SeenRegister:
 
     def __init__(self, path: str | Path, *, readable: bool = True, reason: str = "") -> None:
         self.path = Path(path)
+        self.receipt_path = self.path.with_suffix(".receipt.json")
         self.readable = readable
         self.reason = reason
         self._sightings: dict[str, Sighting] = {}
+        self.status: StoreStatus = inspect(
+            self.path.name, receipt_path=self.receipt_path,
+            rows_found=None if not readable else 0, reason=reason,
+        )
 
     @classmethod
     def load(cls, path: str | Path) -> "SeenRegister":
@@ -112,6 +125,12 @@ class SeenRegister:
                 register._sightings[sighting.identity] = sighting
         except (OSError, ValueError, TypeError) as error:
             return cls(path, readable=False, reason=f"{type(error).__name__}: {error}"[:120])
+        # Re-inspected with the real row count, so a register whose file vanished after
+        # forty-seven writes is LOST rather than answering NEW to everything.
+        register.status = inspect(
+            register.path.name, receipt_path=register.receipt_path,
+            rows_found=len(register._sightings),
+        )
         return register
 
     def __len__(self) -> int:
@@ -122,6 +141,10 @@ class SeenRegister:
 
         if not self.readable:
             return SeenVerdict(UNCHECKED, identity, reason=self.reason)
+        if self.status.state == LOST:
+            # Answering NEW here would re-surface an entire backlog as novel, which is the
+            # expensive direction: the register HAS been written and its memory is gone.
+            return SeenVerdict(UNCHECKED, identity, reason=self.status.describe())
         sighting = self._sightings.get(identity)
         if sighting is None:
             return SeenVerdict(NEW, identity)
@@ -160,9 +183,11 @@ class SeenRegister:
             acted_at=when,
         )
 
-    def save(self) -> None:
+    def save(self, when: str = "") -> None:
         if not self.readable:
             raise RuntimeError("refusing to overwrite an unreadable register")
         rows = [asdict(s) for s in sorted(self._sightings.values(), key=lambda s: s.identity)]
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+        previous = Receipt.load(self.receipt_path) or Receipt(self.path.name, JSON_BACKEND)
+        previous.written(when or _now(), len(rows)).save(self.receipt_path)

@@ -27,6 +27,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from lib.ledger import Ledger, Observation, summarise
+from lib.sizing import obligations_for, summarise_obligations
+from lib.store import LOST
 
 LEDGER = Path("data/monitor-ledger.json")
 
@@ -140,6 +142,11 @@ def main(path: str) -> int:
 
     ledger = Ledger(LEDGER)
     known = len(ledger)
+    if ledger.status.state == LOST:
+        # A ledger written many times and then lost would otherwise report FIRST_SEEN for
+        # every fact and look exactly like a working monitor on a new watchlist.
+        print(ledger.status.describe())
+        print()
     changes = ledger.compare(observations)
     ledger.record(observations)
     ledger.save()
@@ -150,7 +157,18 @@ def main(path: str) -> int:
     print(f"  ledger held {known} fact(s) before this run, {len(ledger)} after\n")
     print(summarise(changes))
 
+    # What the changes oblige, from a policy table decided in advance rather than a
+    # judgement made now. An UNREADABLE fact obliges nothing.
+    obligations = obligations_for(changes)
+    if any(o.action != "NONE" for o in obligations):
+        print()
+        print("=" * 74)
+        print(summarise_obligations(obligations))
+
     # Exit 4 on a material change so a scheduler can act on it without parsing text.
+    # Exit 5 when the ledger itself was lost: the run says nothing about the world.
+    if ledger.status.state == LOST:
+        return 5
     return 4 if any(c.is_material for c in changes) else 0
 
 

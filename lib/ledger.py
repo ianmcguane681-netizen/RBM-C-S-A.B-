@@ -28,6 +28,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from lib.store import JSON_BACKEND, Receipt, StoreStatus, inspect
+
+def _now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 FIRST_SEEN = "FIRST_SEEN"
 UNCHANGED = "UNCHANGED"
 CHANGED = "CHANGED"
@@ -102,11 +110,26 @@ class Ledger:
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
+        self.receipt_path = self.path.with_suffix(".receipt.json")
         self._entries: dict[tuple[str, str], Observation] = {}
+        rows: int | None = 0
+        reason = ""
         if self.path.is_file():
-            for row in json.loads(self.path.read_text(encoding="utf-8")):
-                observation = Observation(**row)
-                self._entries[observation.key] = observation
+            try:
+                for row in json.loads(self.path.read_text(encoding="utf-8")):
+                    observation = Observation(**row)
+                    self._entries[observation.key] = observation
+                rows = len(self._entries)
+            except (OSError, ValueError, TypeError) as error:
+                # A ledger that will not parse has NOT been read, and reporting its facts
+                # as absent would announce changes nobody made.
+                rows, reason = None, f"{type(error).__name__}: {error}"[:120]
+        # A ledger whose file is gone reports zero entries and would call every fact
+        # FIRST_SEEN, which is indistinguishable from a first run. The receipt is what
+        # tells them apart, and it outlives the data because it names no subjects.
+        self.status: StoreStatus = inspect(
+            self.path.name, receipt_path=self.receipt_path, rows_found=rows, reason=reason
+        )
 
     def __len__(self) -> int:
         return len(self._entries)
@@ -170,10 +193,15 @@ class Ledger:
                 continue
             self._entries[observation.key] = observation
 
-    def save(self) -> None:
+    def save(self, when: str = "") -> None:
         rows = [asdict(o) for o in sorted(self._entries.values(), key=lambda o: o.key)]
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+        # The receipt is committable and the data is not: it carries a count and dates,
+        # never a subject, so a public repository can hold proof the store existed without
+        # publishing what is being watched.
+        previous = Receipt.load(self.receipt_path) or Receipt(self.path.name, JSON_BACKEND)
+        previous.written(when or _now(), len(rows)).save(self.receipt_path)
 
 
 def summarise(changes: Sequence[Change]) -> str:
