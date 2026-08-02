@@ -108,8 +108,10 @@ class UnconfiguredSource:
 # covered two of five books, and which three it did not. Every entry stays here once a
 # real provider is implemented, so coverage is always reported against the full list.
 KNOWN_SOURCES: tuple[UnconfiguredSource, ...] = (
-    UnconfiguredSource("Betfair Exchange", EXCHANGE, "needs an app key and session token"),
-    UnconfiguredSource("Smarkets", EXCHANGE, "needs API credentials"),
+    UnconfiguredSource("Betfair Exchange", EXCHANGE,
+                       "needs an app key; live prices cost a one-off activation fee"),
+    UnconfiguredSource("Smarkets", EXCHANGE,
+                       "needs an account username and password in ~/.smarkets"),
     UnconfiguredSource("Matchbook", EXCHANGE, "needs API credentials"),
     UnconfiguredSource("Paddy Power", BOOKMAKER, "no public odds API; needs a licensed feed"),
     UnconfiguredSource("Bet365", BOOKMAKER, "no public odds API; needs a licensed feed"),
