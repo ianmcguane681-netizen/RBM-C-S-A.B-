@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "review_id": "RBM004-MOD-0001",
+  "review_date": "2026-08-02T12:00:00Z",
+  "trigger": "First review under RBM-004. Subject: Modine Manufacturing (MOD), chosen because its filing history is known to contain twenty spans filed at more than one value and two concepts that changed XBRL tag. A profile whose gates are about restatement and tag drift should be first pointed at a filer that has both, so a null result would mean the gates do not work rather than that the subject is clean.",
+  "tier": 2,
+  "tier_rationale": "The subject is a position-sized holding and the review reads a full reported history rather than a single figure, which is Tier 2 under RBM-004 section 8. Tier 3 is not claimed: SG-04 and SG-05 are unreached, and claiming a tier the evidence does not support is the defect the predecessor crypto review was re-run to correct.",
+  "artefact_sha": "edgar:0000067347",
+  "repository": "SEC EDGAR",
+  "architecture_authority": "RBE-001 v1.1.0",
+  "methodology_profile_id": "RBM-004",
+  "methodology_version": "1.0.0",
+  "methodology_status": "RELEASE_CANDIDATE",
+  "methodology_checksum": "sha256:0485c0ac581dabec94a74e91c21158f6b32cc8249b55b6f170360fbb063fd516",
+  "manifest_root_sha256": "sha256:ca7e43927b97124b3934d8b0d0c8011ae97eec927372ff2985ace2555e2809ef",
+  "human_approval_record": null,
+  "binding": false,
+  "board_chair": "ian.mcguane",
+  "methodology_auditor": "agent:ma",
+  "sceptical_reviewer": "agent:sr",
+  "specialists": {
+    "fva": "agent:fva",
+    "ria": "agent:ria",
+    "sda": "agent:sda",
+    "cra": null,
+    "mla": null,
+    "rpa": "agent:rpa"
+  },
+  "input_process_status": "READY",
+  "omitted_roles": [
+    {
+      "role": "CRA",
+      "justification": "SG-04 is unreached in this review: control and related-party disclosure is narrative text in the 10-K body and the proxy statement, and the connector reads XBRL only. A seat with no evidence to read would produce a report that looked like an assessment, which is worse than an omission recorded here."
+    },
+    {
+      "role": "MLA",
+      "justification": "SG-05 is unreached in this review: exit liquidity for a listed equity needs traded volume and depth, and no market data source is configured. Recorded as an omission for the same reason as CRA."
+    }
+  ]
+}

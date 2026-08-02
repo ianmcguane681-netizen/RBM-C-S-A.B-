@@ -365,6 +365,173 @@ def cmd_chain_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_filing_evidence(args: argparse.Namespace) -> int:
+    """Register a filer's own reported figures as evidence, pinned to accession numbers.
+
+    The equity analogue of `chain-evidence`. A filing is the same class of artefact as a
+    commit or a contract at a block: immutable once submitted, independently retrievable by
+    anyone, and identified precisely enough that two people arguing about a figure can
+    settle it.
+
+    **What pins it.** A chain review pins to a block height. EDGAR has no height, but it is
+    append-only, and a filer's most recent accession is the analogue: if an amendment lands
+    after this evidence is registered, a re-run sees a different latest accession and the
+    review knows its evidence set is behind. Both the retrieval instant and that accession
+    are recorded, so staleness is detectable rather than assumed absent.
+
+    **What this cannot reach.** SG-04 and SG-05 are registered NOT_ASSESSED with a stated
+    reason rather than skipped. Control and related-party disclosure is narrative text in
+    the 10-K body, not XBRL; exit liquidity for an equity needs market data EDGAR does not
+    carry. A gate that is silent about itself is indistinguishable from one that passed,
+    which is the failure this whole repository is organised against.
+    """
+
+    from datetime import datetime, timezone
+
+    from connectors.edgar import INDETERMINATE, NOT_REPORTED, REPORTED, EdgarClient
+    from check_stock import CONCEPTS
+
+    runtime = _runtime(args)
+    client = EdgarClient()
+    ticker = args.ticker.upper()
+    cik = client.cik_for_ticker(ticker)
+    retrieved_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    print(f"Reading {ticker} (CIK {cik}) from SEC EDGAR")
+    print(f"Retrieved at {retrieved_at}; no API key exists to obtain")
+
+    def _register(label: str, body: str, tier: str, provenance: dict[str, Any]) -> None:
+        runtime.register_evidence(
+            args.review,
+            locator=f"edgar:{cik}:{label}",
+            content=body.encode("utf-8"),
+            description=f"{label} for {ticker} (CIK {cik})",
+            source_tier=tier,
+            provenance={
+                "kind": "SEC_FILING", "cik": cik, "ticker": ticker,
+                "retrieved_at": retrieved_at, "reading": label, **provenance,
+            },
+            actor=args.actor,
+            idempotency_key=f"edgar-{cik}-{label}",
+        )
+        print(f"  {tier}  {label:<22} {provenance.get('status', '')}")
+
+    latest_accession = ""
+    restated_spans = 0
+    tag_changes: list[str] = []
+
+    for concept_label, tags in CONCEPTS.items():
+        series = client.first_reported(cik, tags)
+        slug = concept_label.replace(" ", "_")
+
+        if series.status == INDETERMINATE:
+            # A rate limit is not a filer's silence. It must never register as NOT_REPORTED.
+            _register(f"sg01:{slug}", series.describe(), "T2", {
+                "status": INDETERMINATE, "gate": "SG-01", "reason": series.reason,
+                "candidate_tags": list(tags),
+            })
+            continue
+        if series.status == NOT_REPORTED:
+            _register(f"sg01:{slug}", series.describe(), "T2", {
+                "status": NOT_REPORTED, "gate": "SG-01",
+                "candidate_tags": list(tags), "taxonomy_asked": series.taxonomy,
+            })
+            continue
+
+        # SG-01: the figure, and the filing that produced it.
+        latest = series.latest_annual()
+        if latest:
+            latest_accession = max(latest_accession, latest.accession)
+            _register(f"sg01:{slug}", f"{latest.value:.0f} {latest.unit}  [{latest.cite()}]",
+                      "T1", {
+                          "status": REPORTED, "gate": "SG-01", "value": latest.value,
+                          "unit": latest.unit, "duration": latest.duration,
+                          "accession": latest.accession, "form": latest.form,
+                          "filed": latest.filed, "tag": series.concept,
+                          "taxonomy": series.taxonomy,
+                      })
+        else:
+            _register(f"sg01:{slug}", "reported, but no annual span found", "T2", {
+                "status": "NO_ANNUAL_SPAN", "gate": "SG-01",
+                "spans_seen": len(series.durations), "tag": series.concept,
+            })
+
+        # SG-02: every span filed at more than one value, with all the values.
+        revised = series.revised_durations()
+        restated_spans += len(revised)
+        if revised:
+            body = "\n".join(
+                f"{duration}\n" + "\n".join(
+                    f"  {f.value:,.0f}  {f.form} filed {f.filed}  {f.accession}"
+                    for f in filings
+                )
+                for duration, filings in revised.items()
+            )
+            _register(f"sg02:{slug}", body, "T1", {
+                "status": "RESTATED", "gate": "SG-02", "spans_revised": len(revised),
+                "tag": series.concept,
+            })
+
+        # SG-02 again: a tag change splits a history across two tags, and reading either
+        # alone gives a series that goes quiet without saying so. NVIDIA's revenue.
+        if series.alternates_with_data:
+            tag_changes.append(concept_label)
+            _register(f"sg02:tag:{slug}", (
+                f"{concept_label} is currently reported under {series.concept} and also "
+                f"carries data under {', '.join(series.alternates_with_data)}. The history "
+                f"spans both; neither alone is the whole series."
+            ), "T1", {
+                "status": "TAG_CHANGED", "gate": "SG-02", "current_tag": series.concept,
+                "alternates": list(series.alternates_with_data),
+            })
+
+    # SG-03 is assessed from the share series registered above rather than re-fetched, so
+    # the gate reads exactly what the board reads.
+    _register("sg03:dilution", (
+        "Share counts are registered above under SG-01 with their spans. Dilution is the "
+        "movement between them and is assessed by the SDA seat against those records. "
+        "Note that a cover-page share count is as-of a date near filing, not the fiscal "
+        "year end, so a per-share figure crossing the two measures the gap as well."
+    ), "T2", {"status": "ASSESSED_FROM_REGISTERED_SERIES", "gate": "SG-03"})
+
+    # SG-04 and SG-05: named, and named as unreached.
+    _register("sg04:control", (
+        "NOT ASSESSED. Control and related-party disclosure is narrative text in the 10-K "
+        "body and the proxy statement, not XBRL, and this connector reads XBRL only. This "
+        "is a statement about the retrieval method and NOT a finding that the filer has no "
+        "related-party transactions."
+    ), "T2", {"status": "NOT_ASSESSED", "gate": "SG-04",
+              "reason": "narrative disclosure is outside XBRL"})
+
+    _register("sg05:liquidity", (
+        "NOT ASSESSED. Exit liquidity for a listed equity needs traded volume and depth, "
+        "which EDGAR does not carry. No market data source is configured. This is a "
+        "statement about coverage and NOT a finding that the position is liquid."
+    ), "T2", {"status": "NOT_ASSESSED", "gate": "SG-05",
+              "reason": "no market data source configured"})
+
+    # SG-06: what someone else needs to get this same evidence back.
+    _register("sg06:reproduction", (
+        f"Every figure above is retrievable from data.sec.gov/api/xbrl/companyconcept for "
+        f"CIK {cik} under the tag and taxonomy recorded with it. No API key exists to "
+        f"obtain; EDGAR asks only for a User-Agent identifying the caller.\n"
+        f"Retrieved at {retrieved_at}.\n"
+        f"Latest accession seen across all concepts: {latest_accession or 'none'}.\n"
+        f"EDGAR is append-only: a re-run that sees a later accession is reading a filing "
+        f"set this evidence never saw, which is how staleness is detected here rather than "
+        f"assumed absent."
+    ), "T1", {
+        "status": "REPRODUCIBLE", "gate": "SG-06", "retrieved_at": retrieved_at,
+        "latest_accession_seen": latest_accession, "user_agent": client.user_agent,
+        "restated_spans": restated_spans, "tag_changes": tag_changes,
+    })
+
+    print(f"\n  {restated_spans} span(s) filed at more than one value; "
+          f"{len(tag_changes)} concept(s) changed tag")
+    _print_next("board advance --to EVIDENCE_LOCKED, then ASSIGNMENT")
+    return 0
+
+
 def cmd_advance(args: argparse.Namespace) -> int:
     """Move the review to its next lifecycle state."""
 
@@ -811,6 +978,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Blocks of Transfer history for CG-02, ending at the pinned block.",
     )
     chain.set_defaults(func=cmd_chain_evidence)
+
+    filing = sub.add_parser(
+        "filing-evidence", help="Register a filer's reported figures (stocks review)"
+    )
+    filing.add_argument("--review", required=True)
+    filing.add_argument("--ticker", required=True, help="Ticker to resolve to a CIK")
+    filing.add_argument("--actor", required=True)
+    filing.set_defaults(func=cmd_filing_evidence)
 
     advance = sub.add_parser("advance", help="Move to the next lifecycle state")
     advance.add_argument("--review", required=True)

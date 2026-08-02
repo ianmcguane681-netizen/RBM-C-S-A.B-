@@ -13,6 +13,9 @@ disagrees fails to load.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from controlled_authority import profiles
@@ -253,3 +256,64 @@ class TestTheLoader:
             AuthorityBundle.load(repo_root=tmp_path)
 
         assert error.value.code == "RBE_AUTHORITY_ROOT_NOT_VALIDATABLE"
+
+
+class TestEveryProfileCanActuallyConvene:
+    """Loading a profile is not running one, and only the second finds a copied constant.
+
+    RBM-004 and RBM-005 were authored by copying the RBM-003 package. Both loaded, both
+    validated, and 506 tests passed while their schemas still fixed
+    `methodology_profile_id` to `"RBM-003"`, their `specialists` object enumerated the
+    crypto roles under `additionalProperties: false`, and their `permitted_agent_roles`
+    granted agent seats to CVA, ADA and TKA -- roles neither profile has -- while refusing
+    them to FVA, RIA and SDA, which RBM-004 does.
+
+    That last one is a governance defect, not a typo: the profile's own statement about
+    which seats may be held by automation described a different profile's board.
+
+    None of it was reachable from a test that only loaded packages, because a package that
+    is never asked to convene is never asked whether its schemas describe itself. This is
+    EG-02 wearing a new hat -- a check passing over evidence it never touched -- and the
+    fix is the same one: iterate the registry rather than a list, so a sixth profile is
+    covered the moment it is registered.
+    """
+
+    @pytest.mark.parametrize("profile_id", sorted(profiles.PROFILES))
+    def test_the_schemas_name_the_profile_they_belong_to(self, profile_id):
+        bundle = AuthorityBundle.load(profile_id=profile_id)
+
+        for name, path in bundle.schemas.items():
+            schema = json.loads(Path(path).read_text(encoding="utf-8"))
+            const = (schema.get("properties", {})
+                     .get("methodology_profile_id", {})
+                     .get("const"))
+            if const is not None:
+                assert const == profile_id, f"{name} in {profile_id} is fixed to {const}"
+
+    @pytest.mark.parametrize("profile_id", sorted(profiles.PROFILES))
+    def test_agent_seats_are_permitted_for_roles_the_profile_actually_has(self, profile_id):
+        profile = AuthorityBundle.load(profile_id=profile_id).profile
+        policy = profile.get("agent_seat_policy") or {}
+        permitted = set(policy.get("permitted_agent_roles", []))
+        pool = {role for tier in profile["quorum"].values()
+                for role in tier["specialist_pool"]}
+
+        unknown = permitted - pool - {"MA", "SR"}
+        assert not unknown, f"{profile_id} permits agent seats for absent roles: {unknown}"
+
+    @pytest.mark.parametrize("profile_id", sorted(profiles.PROFILES))
+    def test_the_specialists_schema_accepts_the_profiles_own_pool(self, profile_id):
+        """`additionalProperties: false` over another board's roles rejects every
+        initiation this profile could ever legitimately receive."""
+
+        bundle = AuthorityBundle.load(profile_id=profile_id)
+        schema = json.loads(Path(bundle.schemas["tpl-rir"]).read_text(encoding="utf-8"))
+        block = (schema.get("properties", {}).get("specialists") or {})
+        if block.get("additionalProperties") is not False:
+            pytest.skip("this profile's initiation schema does not enumerate specialists")
+
+        allowed = set(block.get("properties", {}))
+        pool = {role.lower() for tier in bundle.profile["quorum"].values()
+                for role in tier["specialist_pool"]}
+
+        assert pool <= allowed, f"{profile_id} cannot name its own {sorted(pool - allowed)}"

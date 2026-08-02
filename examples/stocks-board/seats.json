@@ -1,0 +1,38 @@
+[
+  {
+    "role": "MA",
+    "model": "provena-eq-a",
+    "instruction_version": "SMA-001",
+    "name": "ma"
+  },
+  {
+    "role": "FVA",
+    "model": "provena-eq-b",
+    "instruction_version": "FVA-001",
+    "name": "fva"
+  },
+  {
+    "role": "RIA",
+    "model": "provena-eq-b",
+    "instruction_version": "RIA-001",
+    "name": "ria"
+  },
+  {
+    "role": "SDA",
+    "model": "provena-eq-c",
+    "instruction_version": "SDA-001",
+    "name": "sda"
+  },
+  {
+    "role": "RPA",
+    "model": "provena-eq-c",
+    "instruction_version": "RPA-001",
+    "name": "rpa"
+  },
+  {
+    "role": "SR",
+    "model": "provena-eq-d",
+    "instruction_version": "SSR-001",
+    "name": "sr"
+  }
+]

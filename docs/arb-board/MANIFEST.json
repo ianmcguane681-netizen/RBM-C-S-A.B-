@@ -5,48 +5,48 @@
   "files": [
     {
       "path": "ARBITRAGE-REVIEW-METHODOLOGY.md",
-      "sha256": "8d2947248ad60f9aef6671c5641c7c9cc096ca10d070f046f68138c6c2614a97",
-      "size": 9272
+      "sha256": "2812b5ee13fb252d5599f341471a78791207e2348106e32634f681a3085d789d",
+      "size": 9276
     },
     {
       "path": "PROFILE.json",
-      "sha256": "838cf47fc3ba85103edb86f12735f9cab70e8963fa4386b0f2479bd6d1e499dc",
+      "sha256": "1caac45fb491e16be706535c3e5486d99a2562986b59b28a97d08ed04f2847a0",
       "size": 8276
     },
     {
       "path": "schemas/tpl-bdr.schema.json",
-      "sha256": "085890dbf1cd465a98fa9e4966a1789ef6d11f8b765cc61bc667643b91e5dfcb",
-      "size": 6094
+      "sha256": "a0d82a11bcfeb76b7fb14e6b39496c85953d250a8cdf7c48f81196ea4409967a",
+      "size": 6091
     },
     {
       "path": "schemas/tpl-cor.schema.json",
-      "sha256": "88ca0dbd34c5fa5210e901f97bba1231222bd84e1b0c5822ea8ad1aca958c6f2",
-      "size": 2600
+      "sha256": "c200ba49167e9e6ee3b882f4b25be09fe5cf8ab5e3b45f253279fb920c68924d",
+      "size": 2597
     },
     {
       "path": "schemas/tpl-fnd.schema.json",
-      "sha256": "dd72035e3bef626a76a3f641819924ee12c70293f33bd8c8a136cc0461f1db2c",
-      "size": 2609
+      "sha256": "59674bd9d2fc9823a7db2f812a0219cfd9849189e4e3053684162767a061f62b",
+      "size": 2606
     },
     {
       "path": "schemas/tpl-mri.schema.json",
-      "sha256": "6ba74a14abf1088c6d64ff6302bb3547d9b81437db0ed20661024a7705e76f49",
-      "size": 5123
+      "sha256": "58574a84eea73ec947ed54db20101ddc497fa75d384f3473689ec04a20459148",
+      "size": 5120
     },
     {
       "path": "schemas/tpl-rir.schema.json",
-      "sha256": "7e472f3ccd396237341bace79ba71c98a59e5f4f9e98ff467220e150b53786c6",
-      "size": 3616
+      "sha256": "0fb64b310ae9138c34f25d264330bb15b2ffa19078832ba14c0f85dcdc316536",
+      "size": 3613
     },
     {
       "path": "schemas/tpl-rmp.schema.json",
-      "sha256": "ae0b0a0730c57ffd78b641118ff4c4012db31fd822a02ce9c387c5b924cb07e6",
-      "size": 2044
+      "sha256": "c0ff6d771d4c26eee8a6c74cf8537dd2fa5aa7ce9afaaf3769f65c659b3c8039",
+      "size": 2041
     },
     {
       "path": "schemas/tpl-rrr.schema.json",
-      "sha256": "ad2aca416c73c9201c471d75cef794cd3d6da9030e4136428d79f1d314bb20e9",
-      "size": 1603
+      "sha256": "34b9ab751ce4cb98710344e307c5cb0a678da40bbcc3422ae2e64a580e06f874",
+      "size": 1600
     },
     {
       "path": "specs/RBS-001-METHODOLOGY-AUDIT.md",
@@ -89,5 +89,5 @@
       "size": 2526
     }
   ],
-  "root_sha256": "sha256:2eb05f9d7fbc93e970b4f590e755186d6211a5042bef2f08619643e0a3a74437"
+  "root_sha256": "sha256:ebc7568750d22e042c84e99d1361b07e9c5974b5287d0e2c13a0712ff1418077"
 }

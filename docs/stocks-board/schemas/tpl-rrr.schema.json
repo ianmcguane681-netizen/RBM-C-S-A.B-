@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "provena-foundry/crypto-board/tpl-rrr/1.0.0",
+  "$id": "provena-foundry/stocks-board/tpl-rrr/1.0.0",
   "title": "TPL-RRR Reviewer Report",
   "type": "object",
   "additionalProperties": false,

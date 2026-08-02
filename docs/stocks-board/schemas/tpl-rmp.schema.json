@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "provena-foundry/crypto-board/tpl-rmp/1.0.0",
+  "$id": "provena-foundry/stocks-board/tpl-rmp/1.0.0",
   "title": "TPL-RMP Remediation Plan",
   "type": "object",
   "additionalProperties": false,

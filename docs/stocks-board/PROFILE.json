@@ -9,7 +9,7 @@
   },
   "owner": "Provena Foundry Governance",
   "human_approval_record": null,
-  "checksum": "sha256:2ea1207eb9c0f2f9e8564e010347519963fb6ae05fd704837de1b66b2a9d3627",
+  "checksum": "sha256:0485c0ac581dabec94a74e91c21158f6b32cc8249b55b6f170360fbb063fd516",
   "manifest": "MANIFEST.json",
   "binding": false,
   "permitted_outcomes": [
@@ -186,12 +186,12 @@
     "agent_seats_permitted": true,
     "permitted_agent_roles": [
       "MA",
-      "CVA",
-      "ADA",
-      "TKA",
-      "CAA",
-      "LQA",
+      "CRA",
+      "FVA",
+      "MLA",
+      "RIA",
       "RPA",
+      "SDA",
       "SR"
     ],
     "prohibited_agent_roles": [

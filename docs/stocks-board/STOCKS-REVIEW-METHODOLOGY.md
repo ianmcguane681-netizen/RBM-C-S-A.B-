@@ -12,8 +12,8 @@
 
 ### 6B. Canonical RBE Lifecycle Mapping
 
-RBM-003 maps onto the RBE-001 canonical lifecycle without modification, identically to
-RBM-001 and RBM-002. The lifecycle belongs to the architecture. A profile that could
+RBM-004 maps onto the RBE-001 canonical lifecycle without modification, identically to
+RBM-001, RBM-002 and RBM-003. The lifecycle belongs to the architecture. A profile that could
 rewrite it could invent a state in which its own findings did not have to be answered.
 
 ### 16.2 Activation Gate

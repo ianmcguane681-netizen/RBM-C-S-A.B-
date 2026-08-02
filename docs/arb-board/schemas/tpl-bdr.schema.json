@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "provena-foundry/crypto-board/tpl-bdr/1.0.0",
+  "$id": "provena-foundry/arb-board/tpl-bdr/1.0.0",
   "title": "TPL-BDR Board Decision Record",
   "type": "object",
   "additionalProperties": false,
@@ -48,7 +48,7 @@
       ]
     },
     "methodology_profile_id": {
-      "const": "RBM-003"
+      "const": "RBM-005"
     },
     "methodology_version": {
       "const": "1.0.0"

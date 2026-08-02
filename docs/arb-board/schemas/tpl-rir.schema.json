@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "provena-foundry/crypto-board/tpl-rir/1.0.0",
+  "$id": "provena-foundry/arb-board/tpl-rir/1.0.0",
   "title": "TPL-RIR Review Initiation Record",
   "type": "object",
   "additionalProperties": false,
@@ -68,7 +68,7 @@
       "minLength": 1
     },
     "methodology_profile_id": {
-      "const": "RBM-003"
+      "const": "RBM-005"
     },
     "methodology_version": {
       "const": "1.0.0"
@@ -113,39 +113,39 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "cva",
-        "ada",
-        "tka",
-        "caa",
-        "lqa",
+        "ala",
+        "cpa",
+        "exa",
+        "mia",
+        "pqa",
         "rpa"
       ],
       "properties": {
-        "cva": {
+        "ala": {
           "type": [
             "string",
             "null"
           ]
         },
-        "ada": {
+        "cpa": {
           "type": [
             "string",
             "null"
           ]
         },
-        "tka": {
+        "exa": {
           "type": [
             "string",
             "null"
           ]
         },
-        "caa": {
+        "mia": {
           "type": [
             "string",
             "null"
           ]
         },
-        "lqa": {
+        "pqa": {
           "type": [
             "string",
             "null"

@@ -5,42 +5,42 @@
   "files": [
     {
       "path": "PROFILE.json",
-      "sha256": "755c19678bf6515302dd7dbe9f53b37514ca6757e4dfd60818f2108fa32c99d1",
+      "sha256": "f1a337a5424e1cae03c1237b3d41d739e12d27f97c20eebda3220b4019f9672d",
       "size": 8561
     },
     {
       "path": "schemas/tpl-bdr.schema.json",
-      "sha256": "085890dbf1cd465a98fa9e4966a1789ef6d11f8b765cc61bc667643b91e5dfcb",
+      "sha256": "4bb8147223b6fc0698fc8cc5024f6dc730ec9352cadf8e40aab29b5f8d180b95",
       "size": 6094
     },
     {
       "path": "schemas/tpl-cor.schema.json",
-      "sha256": "88ca0dbd34c5fa5210e901f97bba1231222bd84e1b0c5822ea8ad1aca958c6f2",
+      "sha256": "b6f8cfed17b9dc086e683b1d0bd8b68be5344b03763bc3a8f9f2d13068c9cedd",
       "size": 2600
     },
     {
       "path": "schemas/tpl-fnd.schema.json",
-      "sha256": "dd72035e3bef626a76a3f641819924ee12c70293f33bd8c8a136cc0461f1db2c",
+      "sha256": "1b9b9cf21cc33ad830c79a71004ebe0c2e152e0050346cf10363c46952630b93",
       "size": 2609
     },
     {
       "path": "schemas/tpl-mri.schema.json",
-      "sha256": "6ba74a14abf1088c6d64ff6302bb3547d9b81437db0ed20661024a7705e76f49",
+      "sha256": "d889cf03457f08d8a9ff8f00c1ef7900cd07d0e78963e86fec86f8ffb716bc00",
       "size": 5123
     },
     {
       "path": "schemas/tpl-rir.schema.json",
-      "sha256": "7e472f3ccd396237341bace79ba71c98a59e5f4f9e98ff467220e150b53786c6",
+      "sha256": "c439aef23d0a64bb0d318f858af4bfba31fdc9df12953fe671ea0186148146fd",
       "size": 3616
     },
     {
       "path": "schemas/tpl-rmp.schema.json",
-      "sha256": "ae0b0a0730c57ffd78b641118ff4c4012db31fd822a02ce9c387c5b924cb07e6",
+      "sha256": "79fefd46b380c41791d66f6c2cd5ff1615998d6fea6f476d9cedbb32ef4d14ce",
       "size": 2044
     },
     {
       "path": "schemas/tpl-rrr.schema.json",
-      "sha256": "ad2aca416c73c9201c471d75cef794cd3d6da9030e4136428d79f1d314bb20e9",
+      "sha256": "528d0ab5ce3045aed3fe3ca933575d44d4a77d0950ac0094f27b78d978e2fd4a",
       "size": 1603
     },
     {
@@ -85,9 +85,9 @@
     },
     {
       "path": "STOCKS-REVIEW-METHODOLOGY.md",
-      "sha256": "35a15cd0f77579630c544bf8dc657f48c95d322ede04a64acabdfb984fcc5ddf",
-      "size": 9947
+      "sha256": "839ebc4f17d87500586b4b968da8ff7c02c4f2411ac1b53a25887c3cbfbf6423",
+      "size": 9956
     }
   ],
-  "root_sha256": "sha256:adb5b806877cb33dda9d82fd24f899413ba2a2f7a886557152fca24cd633dab9"
+  "root_sha256": "sha256:ca7e43927b97124b3934d8b0d0c8011ae97eec927372ff2985ace2555e2809ef"
 }

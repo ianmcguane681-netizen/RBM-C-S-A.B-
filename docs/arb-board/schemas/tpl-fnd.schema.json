@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "provena-foundry/crypto-board/tpl-fnd/1.0.0",
+  "$id": "provena-foundry/arb-board/tpl-fnd/1.0.0",
   "title": "TPL-FND Finding Record",
   "type": "object",
   "additionalProperties": false,
