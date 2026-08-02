@@ -145,6 +145,40 @@ Each of these has caught something on live data that reasoning alone did not:
 | **USDC** | upgradeable behind a proxy whose EIP-1967 slots are empty, so the standard check reports it immutable |
 | **Betfair vs bet365** | non-runner settlement diverging by 0.15–0.45 in odds, larger than most arb margins |
 
+## After the review: knowing when it stops being true
+
+A review is a snapshot pinned to a block height or a filing. It says nothing about
+tomorrow, and the gap between *reviewed once* and *still true* is where a holder actually
+lives. `monitor.py` closes that gap, and needs no view of the future to do it — only a
+memory of the last observation.
+
+```bash
+python monitor.py watchlist.json     # {"tokens": ["0xA0b8..."], "tickers": ["NET", "MOD"]}
+```
+
+```text
+crypto   proxy status, implementation, admin, owner, minter, pause switch, supply
+stocks   any reporting span refiled at a new value, and any change of XBRL tag
+```
+
+It decides nothing. A changed implementation address does not mean sell; it means every
+fact the board established was established about different code, and the conclusion rests
+on nothing until the review is re-run. That is why material changes are separated from the
+rest, and why the process exits `4` on one — a scheduler can act without parsing text.
+
+Five states, and the middle pair is the whole point:
+
+```text
+FIRST_SEEN · UNCHANGED · CHANGED · ABSENT · UNREADABLE
+```
+
+`ABSENT` means the read succeeded and the fact is gone. `UNREADABLE` means it was not read
+at all. A rate-limited node and a renounced owner both leave the field empty — this is the
+repository's recurring defect in its most consequential form, because reporting the first
+as the second announces a change nobody made. So an unreadable observation **never
+overwrites the baseline**: a monitor that forgets what it knew whenever a request times out
+would report `FIRST_SEEN` on the next run and look exactly like one that is working.
+
 ## From a verdict to an action
 
 `rbe_runtime/mandate.py` is the piece between the board and anything that moves money. Given
@@ -205,7 +239,7 @@ controlled_authority/ controlled-package validation and the profile registry
 board/                CLI front door, agent seats, challenge sheets
 connectors/           the evidence readers: chain, EDGAR filings, exchange odds
 guards/               agent output governance
-lib/                  arbitrage maths, adjudication standing, retry policy, term matching
+lib/                  arbitrage maths, the monitor ledger, adjudication standing, retry policy
 docs/rbe-001/         the architecture package
 docs/review-board/      RBM-001    research
 docs/engineering-board/ RBM-002    engineering
@@ -216,6 +250,7 @@ check_token.py        one command, six chain gates
 check_stock.py        one command, the filing gates
 check_arb.py          is a claimed arb real, from two screens
 trade_sheet.py        board verdict, round-trip cost, and your own target
+monitor.py            has anything a review relied on moved since last time
 ```
 
 `connectors/` is where the evidence comes from and where most of the defects were found.
