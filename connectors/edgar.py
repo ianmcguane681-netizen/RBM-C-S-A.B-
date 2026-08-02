@@ -114,6 +114,10 @@ class ConceptSeries:
     # Other candidate tags that also carried data. A filer switching tags splits its
     # history across two of them, and neither alone is the whole series.
     alternates_with_data: tuple[str, ...] = ()
+    # Which namespace was actually asked. NOT_REPORTED means "not under this taxonomy",
+    # and saying which one keeps a wrong-namespace query from reading as a fact about the
+    # company. Cover-page facts live in `dei`; asking `us-gaap` for them finds nothing.
+    taxonomy: str = "us-gaap"
 
     @property
     def durations(self) -> tuple[str, ...]:
@@ -161,9 +165,11 @@ class ConceptSeries:
     def describe(self) -> str:
         if self.status == NOT_REPORTED:
             return (
-                f"{self.entity or self.cik} does not report {self.concept}. This is a "
-                f"statement about the filer's tagging, NOT a value of zero, and the same "
-                f"quantity may be reported under a different tag."
+                f"{self.entity or self.cik} does not report {self.concept} under the "
+                f"{self.taxonomy} taxonomy. This is a statement about the filer's tagging "
+                f"AND about which namespace was asked, NOT a value of zero. The same "
+                f"quantity may be reported under a different tag or a different taxonomy "
+                f"— cover-page facts live in `dei`, not `us-gaap`."
             )
         if self.status == INDETERMINATE:
             return (
@@ -240,17 +246,30 @@ class EdgarClient:
         raise LookupError(f"No CIK for ticker {ticker!r} in the SEC index")
 
     def concept(self, cik: str, concept: str, *, taxonomy: str = "us-gaap") -> ConceptSeries:
-        """One tag's full reported history, revisions and all."""
+        """One tag's full reported history, revisions and all.
 
+        A tag may name its own taxonomy as `dei:EntityCommonStockSharesOutstanding`.
+        Cover-page facts live in `dei`, not `us-gaap`, and asking the wrong namespace
+        returns nothing — which then renders as "the filer does not report it". That is a
+        statement about the query wearing the clothes of a statement about the company,
+        and it is how Modine came to be described as not reporting a share count it
+        reports in every filing.
+        """
+
+        namespace, _, tag = concept.rpartition(":")
+        taxonomy, concept = (namespace or taxonomy), tag
         cik = cik.zfill(10) if cik.isdigit() else cik
         url = f"{BASE}/api/xbrl/companyconcept/CIK{cik}/{taxonomy}/{concept}.json"
         try:
             payload = self._get(url)
         except FileNotFoundError:
-            # The filer does not use this tag. Not zero, not absent from the world.
-            return ConceptSeries(NOT_REPORTED, cik, concept)
+            # The filer does not use this tag IN THIS TAXONOMY. Not zero, not absent from
+            # the world, and not necessarily absent from the filing.
+            return ConceptSeries(NOT_REPORTED, cik, concept, taxonomy=taxonomy)
         except TransientRetrievalError as error:
-            return ConceptSeries(INDETERMINATE, cik, concept, reason=str(error)[:120])
+            return ConceptSeries(
+                INDETERMINATE, cik, concept, reason=str(error)[:120], taxonomy=taxonomy
+            )
 
         points: list[Datapoint] = []
         for unit, rows in (payload.get("units") or {}).items():
@@ -266,13 +285,15 @@ class EdgarClient:
                 ))
         if not points:
             return ConceptSeries(
-                NOT_REPORTED, cik, concept, entity=str(payload.get("entityName") or "")
+                NOT_REPORTED, cik, concept,
+                entity=str(payload.get("entityName") or ""), taxonomy=taxonomy,
             )
         return ConceptSeries(
             REPORTED, cik, concept,
             entity=str(payload.get("entityName") or ""),
             datapoints=tuple(points),
             units_seen=tuple(sorted({p.unit for p in points})),
+            taxonomy=taxonomy,
         )
 
     def first_reported(
@@ -316,5 +337,5 @@ class EdgarClient:
         return ConceptSeries(
             current.status, current.cik, current.concept, current.entity,
             current.datapoints, current.units_seen, current.reason,
-            alternates_with_data=others,
+            alternates_with_data=others, taxonomy=current.taxonomy,
         )

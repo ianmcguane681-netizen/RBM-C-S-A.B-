@@ -202,3 +202,68 @@ class TestTheClientIdentifiesItself:
 
     def test_a_contactable_agent_is_accepted(self):
         assert EdgarClient("evidence-board someone@example.com").user_agent
+
+
+class TestTheTaxonomyIsPartOfTheQuestion:
+    """A cover-page fact asked of the wrong namespace 404s, and the 404 reads as a fact.
+
+    Modine reports its share count in every filing, under
+    `dei:EntityCommonStockSharesOutstanding`. Asked under `us-gaap` -- the default, and the
+    only namespace the first version of this module knew -- EDGAR returned 404 and the tool
+    reported "Modine does not report a share count". A statement about the query wearing the
+    clothes of a statement about the company.
+    """
+
+    def _urls(self):
+        seen: list[str] = []
+
+        def _open(request, **_kw):
+            seen.append(request.full_url)
+            return FakeResponse(json.dumps(facts([row(1, "2026-03-31", "a")])).encode())
+
+        return seen, _open
+
+    def test_a_prefixed_tag_is_asked_of_its_own_taxonomy(self):
+        seen, opener = self._urls()
+        client = EdgarClient("test test@example.com", opener=opener)
+
+        client.concept("0000067347", "dei:EntityCommonStockSharesOutstanding")
+
+        assert "/dei/EntityCommonStockSharesOutstanding.json" in seen[0]
+
+    def test_an_unprefixed_tag_still_defaults_to_us_gaap(self):
+        seen, opener = self._urls()
+        client = EdgarClient("test test@example.com", opener=opener)
+
+        client.concept("0000067347", "Revenues")
+
+        assert "/us-gaap/Revenues.json" in seen[0]
+
+    def test_not_reported_names_the_namespace_it_asked(self):
+        """Otherwise the reader cannot tell a filer's silence from a wrong question."""
+
+        client = EdgarClient("test test@example.com", opener=responder(status=404))
+
+        described = client.concept("0000067347", "dei:EntityCommonStockSharesOutstanding").describe()
+
+        assert "dei" in described
+        assert "which namespace was asked" in described
+
+    def test_first_reported_routes_each_candidate_to_its_own_taxonomy(self):
+        seen: list[str] = []
+
+        def _open(request, **_kw):
+            seen.append(request.full_url)
+            if "/dei/" not in request.full_url:
+                raise urllib.error.HTTPError(request.full_url, 404, "err", {}, None)
+            return FakeResponse(json.dumps(facts([row(52_815_785, "2026-05-22", "a")])).encode())
+
+        client = EdgarClient("test test@example.com", opener=_open)
+
+        series = client.first_reported(
+            "0000067347", ["CommonStockSharesOutstanding", "dei:EntityCommonStockSharesOutstanding"]
+        )
+
+        assert series.status == REPORTED
+        assert series.taxonomy == "dei"
+        assert any("/us-gaap/" in url for url in seen)

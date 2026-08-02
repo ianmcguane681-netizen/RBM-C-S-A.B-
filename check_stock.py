@@ -35,9 +35,13 @@ CONCEPTS = {
         "LongTermDebtAndCapitalLeaseObligations",
         "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
     ],
+    # The second is a COVER PAGE fact and lives in the `dei` taxonomy, not `us-gaap`.
+    # Asked under us-gaap it 404s, and the 404 rendered as "Modine does not report a
+    # share count" — a statement about the namespace queried, wearing the clothes of a
+    # statement about the company. Modine reports it in every filing.
     "shares outstanding": [
         "CommonStockSharesOutstanding",
-        "EntityCommonStockSharesOutstanding",
+        "dei:EntityCommonStockSharesOutstanding",
     ],
     "diluted shares": ["WeightedAverageNumberOfDilutedSharesOutstanding"],
 }
