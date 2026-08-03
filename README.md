@@ -14,6 +14,48 @@ Evidence must prove.
 Deterministic rules must decide.
 ```
 
+## Current state — 3 August 2026
+
+**992 tests, 2 skipped.** Two things live here: the **review board engine** (the original
+project, five methodology profiles, three published and ratified decisions) and the
+**reaper lanes** built on top of it, which run the same gates without convening a board.
+
+```
+   RESEARCH ─────────────────────────────────────────►  EXECUTION
+   ┌──────────────────────────────────────────┐         ┌──────────────┐
+   │ look → screen → gates → thesis → size    │         │   adapter    │
+   │                          │               │         │   places it  │
+   │                     ┌────▼────┐          │         │              │
+   │                     │BREAKERS │          │         └──────┬───────┘
+   │                     └────┬────┘          │                │
+   │                          ▼               │                │
+   │                       READY  ────────────┼── ✗ ───────────┘
+   └──────────────────────────────────────────┘   GAP: NOT WIRED
+                                                            │
+                              ┌── ✗ ─────────────────────────┘
+                              │   GAP: NO RETURN LEG
+                         ┌────▼────┐
+                         │BREAKERS │  ← never receives an outcome
+                         └─────────┘
+```
+
+| | works | not yet |
+|---|---|---|
+| **arb** | discovery → cascade → slip, stakes to the penny | needs an odds API key and a settlement declaration |
+| **stocks** | filings → cascade → whole shares at the ask | `StockOrder` → `Instruction` bridge missing |
+| **crypto** | contract → cascade → unsigned transactions | *nothing to wire — it cannot sign, by design* |
+| **breakers** | kill switch, position cap, sanity bound | daily loss, losing run, previously-tripped — **all read zero, because nothing records an outcome** |
+
+**Read [`docs/next-work.md`](docs/next-work.md) for the full checkpoint**: every claim above
+grepped with file and line, the five gaps in priority order, and the next piece designed far
+enough to build from. It is written to be picked up by someone — or something — with none of
+the conversation behind it.
+
+Honest summary of the stage: **everything up to a sized, permitted instruction is built and
+tested. Nothing places anything, and nothing yet records what happened after.** The second
+of those is the one that matters, because three circuit-breaker controls look present and
+cannot currently engage.
+
 ## What it actually does
 
 ```text
