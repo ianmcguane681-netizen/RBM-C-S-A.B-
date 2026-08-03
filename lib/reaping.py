@@ -70,6 +70,8 @@ class Reaping:
     applications: tuple[Any, ...] = field(default_factory=tuple)
     #: Who is placing for each lane — the machine, or the owner.
     modes: tuple[Any, ...] = field(default_factory=tuple)
+    #: What was actually submitted. Empty when nothing was, which is the usual case.
+    placements: tuple[Any, ...] = field(default_factory=tuple)
 
     @property
     def ready(self) -> tuple[str, ...]:
@@ -117,8 +119,18 @@ class Reaping:
         for harvest in self.harvests:
             lines.append(harvest.describe())
             lines.append("")
+        if self.placements:
+            from lib.placing import describe_placements
+
+            lines.append(describe_placements(self.placements))
+            lines.append("")
+
         ready = [h for h in self.harvests if h.status == "READY"]
-        if ready:
+        placed = [p for p in self.placements if p.status == "PLACED"]
+        if ready and placed:
+            lines.append(f"{len(ready)} instruction(s) reached READY and {len(placed)} "
+                         f"went in. MONEY HAS MOVED — see PLACING above.")
+        elif ready:
             lines.append(f"{len(ready)} instruction(s) reached READY. NOTHING HAS BEEN "
                          f"PLACED, SIGNED OR SENT.")
         elif not self.looked:
@@ -351,6 +363,8 @@ def reap(
     directory: Path = BREAKER_DIR,
     kill_switch: Path = KILL_SWITCH,
     theses_path: Path = THESES,
+    place: bool = True,
+    brokers: Any = None,
 ) -> Reaping:
     """Assemble, apply what settled, then run every lane. Keep the ones that could not look.
 
@@ -392,5 +406,34 @@ def reap(
         # check refuses it, and reading the refusal with its reason beats the lane silently
         # vanishing from the report.
         harvests.extend(assembly.reaper.reap())
+    placements = _place(harvests, modes, ledger, brokers) if place else ()
     return Reaping(assemblies, tuple(harvests), applications=applications,
-                   modes=tuple(modes[lane] for lane in LANES))
+                   modes=tuple(modes[lane] for lane in LANES),
+                   placements=placements)
+
+
+def _place(harvests, modes, ledger, brokers) -> tuple[Any, ...]:
+    """Submit what the mode permits. Everything else is reported, not silently dropped.
+
+    A harvest that was not placed still produces a `Placement` saying why, because "your
+    lane is owner-operating so this is waiting for you" and "nothing reached READY" are
+    different facts and only one of them needs you.
+    """
+
+    from lib.placing import place_harvest
+
+    supplied = brokers or {}
+    out = []
+    for harvest in harvests:
+        if harvest.status != "READY":
+            continue
+        broker = supplied.get(harvest.lane)
+        if broker is None and harvest.lane == "stocks":
+            from connectors.alpaca import AlpacaBroker
+
+            broker = AlpacaBroker.from_directory()
+        thesis = getattr(harvest.permission, "subject", "")
+        out.append(place_harvest(
+            harvest, mode=modes[harvest.lane], ledger=ledger, broker=broker,
+            thesis_declared_at=str(thesis)))
+    return tuple(out)

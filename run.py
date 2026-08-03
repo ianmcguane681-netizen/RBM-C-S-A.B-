@@ -3,7 +3,8 @@
     python run.py                 what would run, and why the rest would not
     python run.py --go            actually run them
     python run.py --queue         just the human queue
-    python run.py --reap          all three reaper lanes
+    python run.py --reap          all three reaper lanes; places where the mode allows
+    python run.py --reap --dry    the same, and sends nothing whatever the mode says
     python run.py --manual "reason"          take the wheel: lanes keep running, you place
     python run.py --resume "Your Name" "reason"   hand placing back to the machine
     python run.py --resolve DEC-0001 "confirmed and placed"
@@ -21,10 +22,17 @@ one stops instead.
 `NEVER_RAN`, `HELD` and `FAILED` are four different facts and none of them is a result.
 
 `--reap` is the other half and works the same way. It runs the arb, stocks and chain
-reapers from `data/reapers.json` — look, screen, gate, authorise, size — and stops at a
-sized instruction. It places nothing, signs nothing and sends nothing, and a lane nobody
+reapers from `data/reapers.json` — look, screen, gate, authorise, size — and a lane nobody
 configured is reported as `NOT_CONFIGURED` rather than folded in beside the lanes that
 looked and found nothing.
+
+**A lane places only when its mode is AUTONOMOUS**, which needs an explicit
+`autonomous_execution: true` and no `data/MANUAL` or `data/HALT` overriding it. Every
+lane's mode is printed above its harvest, so what is about to happen appears above the
+thing that happens. `--dry` sends nothing whatever the modes say, because "show me what it
+would do" is a fair question about a live system and answering it should not mean editing
+config. The arb lane has no adapter (bookmakers take no orders from programs) and the chain
+lane cannot sign; both report that rather than looking unfinished.
 """
 from __future__ import annotations
 
@@ -143,8 +151,17 @@ def main(go: bool) -> int:
     return 1 if orchestrator.open_decisions else 0
 
 
-def reap() -> int:
-    """Every configured lane, to a sized instruction and no further.
+def reap(dry: bool = False) -> int:
+    """Every configured lane, to a sized instruction — and placed where the mode allows.
+
+    A lane places only when its mode is AUTONOMOUS, which requires an explicit
+    `autonomous_execution: true` with no `data/MANUAL` or `data/HALT` overriding it. The
+    mode for every lane is printed before the harvests, so what will happen is visible
+    above the thing that happens.
+
+    `--dry` forces research-only regardless of mode. It exists because "I want to see what
+    it would do" is a question people ask about live systems, and the answer should not
+    require editing config.
 
     Exit codes match the rest of the repository's convention: 1 means something wants a
     person, 2 means nothing was looked at.
@@ -159,11 +176,13 @@ def reap() -> int:
 
     from lib.reaping import reap as run_reapers
 
-    reaping = run_reapers()
+    reaping = run_reapers(place=not dry)
     print(reaping.describe())
 
     if reaping.refusal or not reaping.ready or not reaping.looked:
         return 2
+    if any(p.needs_a_person for p in reaping.placements):
+        return 1
     return 1 if any(h.status == "READY" for h in reaping.harvests) else 0
 
 
@@ -246,7 +265,7 @@ if __name__ == "__main__":
             raise SystemExit(2)
         raise SystemExit(hand_back(rest[0], rest[1], rest[2] if len(rest) > 2 else ""))
     if "--reap" in argv:
-        raise SystemExit(reap())
+        raise SystemExit(reap(dry="--dry" in argv))
     if "--queue" in argv:
         raise SystemExit(0 if not print(Orchestrator(LANES, STATE).describe_queue()) else 0)
     raise SystemExit(main("--go" in argv))

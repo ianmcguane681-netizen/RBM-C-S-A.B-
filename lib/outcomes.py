@@ -323,6 +323,32 @@ class OutcomeLedger:
         return self._replace(position, status=UNKNOWN, settled_at=at or _now(),
                              note=reason)
 
+    def amend_stake(self, identifier: str, staked: float, *, note: str = "") -> Position:
+        """Correct a live position to what actually went on. Downward only.
+
+        A part fill is the case: 3 shares of a requested 49 went on, and leaving the
+        position at the requested size would overstate `unsettled_exposure` for the rest of
+        its life. Increases are refused because a fill cannot exceed its request, so an
+        upward amendment is a bug somewhere else rather than a correction.
+        """
+
+        self._require_readable()
+        position = self._must_be_live(identifier)
+        if staked <= 0:
+            raise ValueError(
+                "a position amended to nothing is not a position. If nothing went on, "
+                "void it — that says the same thing and says it in the status"
+            )
+        if staked > position.staked:
+            raise ValueError(
+                f"refusing to raise {identifier} from {position.staked:,.2f} to "
+                f"{staked:,.2f}: a fill cannot exceed its request, so this is a defect "
+                f"upstream rather than a correction"
+            )
+        return self._replace(position, staked=float(staked),
+                             note=(f"{position.note}; {note}" if position.note and note
+                                   else note or position.note))
+
     def _must_be_live(self, identifier: str) -> Position:
         position = self.get(identifier)
         if position is None:
