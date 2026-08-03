@@ -1,11 +1,14 @@
 # Next work — checkpoint 2026-08-03
 
-> **Updated `102e8b9`.** Gap 1 is now *mostly* closed: `lib/outcomes.py` exists with 42
-> tests, and four losses recorded through it trip the lane. **What remains of Gap 1 is
-> `positions.py`** — the CLI described below — plus calling `apply_to_breakers` from
-> `run.py --reap`. Everything about Gap 1's design below is now implemented; read it as
-> the rationale for code that exists rather than as a plan. Gaps 2–5 are untouched.
-> 1034 tests.
+> **Updated `6597fae`. GAP 1 IS CLOSED.** `lib/outcomes.py` records what was placed and
+> what became of it; `positions.py` is where a person enters it; `lib/reaping.apply_outcomes`
+> hands settled results to each lane's breakers **before** that lane looks at anything. Four
+> losses now actually trip a lane, end to end through the command a person types. The Gap 1
+> section below is the rationale for code that exists, not a plan.
+>
+> **Next is Gap 3 (dedup — small), then Gap 2 (`READY` → adapter), then 4 and 5.** Gap 2 is
+> the one with real decisions left in it: what happens to a position on an `UNKNOWN` order
+> result, and whether placing is ever allowed to be automatic. 1065 tests.
 
 Written to be picked up cold, by a session that has none of the conversation behind it.
 Read this, then `README.md`'s "Running the lanes without a board" section, and you have
@@ -55,7 +58,7 @@ Checked at this checkpoint with grep:
 
 ---
 
-## Gap 1 — the return leg *(do this first, on its own)*
+## Gap 1 — the return leg  ✅ CLOSED
 
 Three of the six circuit-breaker controls can never fire, because nothing ever tells a
 breaker what happened. Daily loss reads zero. Consecutive losses reads zero.
@@ -133,7 +136,7 @@ A crash between the flag and the ledger save double-counts a loss on the next ru
 trips a breaker *earlier*. The reverse ordering would silently drop the loss. Fail toward
 stopping. State this in the docstring.
 
-### `positions.py` — the CLI
+### `positions.py` — the CLI  *(built)*
 
 Bookmakers have no settlement API, so manual entry is the honest interface for the arb lane.
 That is fine. What is not fine is a breaker silently reading zero.

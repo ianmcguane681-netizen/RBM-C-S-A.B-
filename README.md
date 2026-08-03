@@ -16,7 +16,7 @@ Deterministic rules must decide.
 
 ## Current state — 3 August 2026
 
-**992 tests, 2 skipped.** Two things live here: the **review board engine** (the original
+**1065 tests, 2 skipped.** Two things live here: the **review board engine** (the original
 project, five methodology profiles, three published and ratified decisions) and the
 **reaper lanes** built on top of it, which run the same gates without convening a board.
 
@@ -32,10 +32,10 @@ project, five methodology profiles, three published and ratified decisions) and 
    │                       READY  ────────────┼── ✗ ───────────┘
    └──────────────────────────────────────────┘   GAP: NOT WIRED
                                                             │
-                              ┌── ✗ ─────────────────────────┘
-                              │   GAP: NO RETURN LEG
+                              ┌── ✓ ─────────────────────────┘
+                              │   positions.py, applied before each lane runs
                          ┌────▼────┐
-                         │BREAKERS │  ← never receives an outcome
+                         │BREAKERS │
                          └─────────┘
 ```
 
@@ -44,7 +44,7 @@ project, five methodology profiles, three published and ratified decisions) and 
 | **arb** | discovery → cascade → slip, stakes to the penny | needs an odds API key and a settlement declaration |
 | **stocks** | filings → cascade → whole shares at the ask | `StockOrder` → `Instruction` bridge missing |
 | **crypto** | contract → cascade → unsigned transactions | *nothing to wire — it cannot sign, by design* |
-| **breakers** | kill switch, position cap, sanity bound | daily loss, losing run, previously-tripped — **all read zero, because nothing records an outcome** |
+| **breakers** | all six controls, fed by `positions.py` before every run | — |
 
 **Read [`docs/next-work.md`](docs/next-work.md) for the full checkpoint**: every claim above
 grepped with file and line, the five gaps in priority order, and the next piece designed far
@@ -52,9 +52,8 @@ enough to build from. It is written to be picked up by someone — or something 
 the conversation behind it.
 
 Honest summary of the stage: **everything up to a sized, permitted instruction is built and
-tested. Nothing places anything, and nothing yet records what happened after.** The second
-of those is the one that matters, because three circuit-breaker controls look present and
-cannot currently engage.
+tested, and what happens afterwards is now recorded and fed back. Nothing places anything.**
+Placing is the remaining gap for stocks; for crypto it is the design.
 
 ## What it actually does
 
@@ -255,8 +254,17 @@ money on a Tuesday morning. So the lanes also run without one.
 
 ```bash
 cp examples/reapers.example.json data/reapers.json   # then edit it
-python run.py --reap
+python run.py --reap                                  # look → … → a sized instruction
+
+python positions.py --placed arb "Arsenal v Chelsea" --staked 499.98
+python positions.py --settle POS-abc123 --returned 541.08
 ```
+
+Recording the outcome is not optional bookkeeping. Three of the six circuit-breaker controls
+— the daily loss limit, the losing run, and the previously-tripped check — are computed from
+settled results, so a lane nobody settles is a lane whose limits read zero forever. `--reap`
+applies whatever has settled **before** each lane looks at anything, because a breaker that
+has not heard about yesterday's four losses will permit a fifth position perfectly happily.
 
 A **reaper** takes one lane from *look* to *here is a sized instruction that is permitted*
 and does everything in between unasked. What it never does is place it.
@@ -354,6 +362,8 @@ trade_sheet.py        board verdict, round-trip cost, and your own target
 monitor.py            has anything a review relied on moved since last time
 preflight.py          what each lane needs before it can read anything
 run.py --reap         all three lanes, board-free, to a sized instruction and no further
+positions.py          what you placed and what came back; feeds the breakers
+lib/outcomes.py       the ledger behind it — OPEN / SETTLED / VOID / UNKNOWN, never a zero
 lib/reaper.py         the sequence a lane runs; lib/{arb,stocks,crypto}_reaper.py fill it
 lib/breakers.py       ring-fence, position cap, daily loss, losing run, and a kill file
 tools/repin_package.py  the only sanctioned way to re-hash a controlled package
