@@ -329,6 +329,10 @@ def gates_for(
     Deliberately short. Every reading here is a precondition; observations that are merely
     worth knowing (book concentration, unread maximum stakes) already appear on the slip and
     would only dilute the findings if repeated as ones that block.
+
+    The seen register is NOT here. It used to be, and it was the only lane that checked it —
+    `lib.reaper` now does it for every lane, and two mechanisms for one job is how they
+    drift apart.
     """
 
     moment = now or _now()
@@ -356,12 +360,6 @@ def gates_for(
             f"started {commencement.isoformat(timespec='seconds')}, which is in the past",
         ))
 
-    if register is not None and not getattr(register, "readable", True):
-        readings.append(Reading(
-            "SEEN_REGISTER_UNREADABLE",
-            ("the register of what has already been surfaced could not be read, so whether "
-             "this is new is unknown rather than yes"),
-        ))
     return tuple(readings)
 
 
@@ -417,6 +415,21 @@ def measure_slip(slip) -> tuple[float, float]:
 
 
 # --- assembly ----------------------------------------------------------------------
+
+def arb_identity_for(candidate: ArbCandidate, *, prefer_distinct_books: bool = True) -> str:
+    """The market and the (book, selection) pairs that will be backed. Never the price.
+
+    Same combination the cascade screened and the slip will size, for the same reason: an
+    identity built from the cheapest quotes while the diversified ones are placed would
+    dedupe a position nobody takes. And the odds are excluded deliberately — including them
+    makes every tick a new sighting, and the register dedupes nothing while appearing to.
+    """
+
+    from lib.seen import arb_identity
+
+    placed = chosen_quotes(candidate, prefer_distinct_books=prefer_distinct_books)
+    return arb_identity(candidate.market, [(q.book, q.selection) for q in placed])
+
 
 def build_arb_reaper(
     *,
@@ -490,4 +503,7 @@ def build_arb_reaper(
             prefer_distinct_books=prefer_distinct_books),
         breakers=breakers,
         measure=measure_slip,
+        register=register,
+        identity=lambda c: arb_identity_for(
+            c, prefer_distinct_books=prefer_distinct_books),
     )

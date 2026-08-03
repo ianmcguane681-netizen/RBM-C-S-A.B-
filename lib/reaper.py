@@ -73,6 +73,18 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+def _seconds_since(stamp: str) -> float | None:
+    """`None` on an unreadable stamp, so unknown age never reads as long ago."""
+
+    try:
+        seen = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+    except (ValueError, AttributeError, TypeError):
+        return None
+    if seen.tzinfo is None:
+        seen = seen.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - seen).total_seconds()
+
+
 def _stage_reason(verdict: Any, prefix: str) -> str:
     """Name the deciding stage AND carry its detail up.
 
@@ -163,6 +175,9 @@ class Harvest:
     #: True when no board decision backed the veto. Stated so a decision taken this way is
     #: never mistaken for one taken under review.
     board_convened: bool = False
+    #: Whether this has been put in front of somebody before. `None` when no register was
+    #: attached, which is different from having looked and found nothing.
+    seen: Any = None
 
     @property
     def coverage(self) -> str:
@@ -198,6 +213,13 @@ class Harvest:
                 "  A condition could not be evaluated. That is not a refusal and it is not "
                 "permission."
             )
+
+        if self.status == READY:
+            lines.append(
+                f"  {self.seen.describe()}" if self.seen is not None else
+                "  No seen register is attached, so whether this has been surfaced before "
+                "was not checked. A lane on a cadence re-reports a standing opportunity "
+                "every run.")
 
         if self.status in {READY, REFUSED, INDETERMINATE} and not self.board_convened:
             lines.append(
@@ -238,6 +260,17 @@ class Reaper:
     #: rather than having to understand what a bet or an order is.
     measure: Callable[[Any], tuple[float, float]] | None = None
     autonomous_execution: bool = False
+    #: Where sightings are kept, so a lane on a 30-minute cadence does not present the
+    #: same standing opportunity as news every time it runs. Optional: absent means dedup
+    #: was never asked for, which the harvest states rather than hides.
+    register: Any = None
+    #: (subject) -> a stable identity string. `lib.seen.arb_identity` is the worked example;
+    #: identity must EXCLUDE the price, or every tick is a new sighting and the register
+    #: dedupes nothing while appearing to work.
+    identity: Callable[[Any], str] | None = None
+    #: How long a repeat is treated as the same opportunity rather than a fresh one. Only
+    #: consulted when the lane would place by itself — see `_seen_check`.
+    cooldown_seconds: float = 6 * 3600
 
     def __post_init__(self) -> None:
         if self.autonomous_execution and self.lane in NEVER_AUTONOMOUS:
@@ -269,6 +302,13 @@ class Reaper:
         harvests: list[Harvest] = []
         for subject in subjects:
             harvests.append(self._work(subject, asked, answered, evaluate, PERMITTED))
+
+        # Saved once per run rather than per subject, and only if something was surfaced.
+        # Checking without recording is the shape of bug this repository keeps producing:
+        # the lookup works, nothing is ever written, and the dedup silently never fires.
+        if any(h.status == READY for h in harvests) and self.register is not None:
+            if getattr(self.register, "readable", False):
+                self.register.save()
         return tuple(harvests)
 
     def _work(self, subject, asked, answered, evaluate, permitted) -> Harvest:
@@ -328,5 +368,83 @@ class Reaper:
                                f"the breakers blocked it: {', '.join(verdict.blocked_by)}"),
                            **common)
 
+        seen, refusal = self._seen_check(subject, name)
+        if refusal:
+            return Harvest(self.lane, REFUSED, instruction=instruction,
+                           permission=permission, reason=refusal, seen=seen, **common)
+
+        self._record_sighting(subject)
         return Harvest(self.lane, READY, instruction=instruction, permission=permission,
-                       **common)
+                       seen=seen, **common)
+
+    def _record_sighting(self, subject: Any) -> None:
+        """Note that this was put in front of somebody. Only on READY.
+
+        Recording every subject examined would make the register a log of everything the
+        lane ever looked at, and `SEEN_BEFORE` would then mean "considered and rejected once"
+        as often as "offered to you". It means the second, so only a READY harvest counts.
+        """
+
+        if self.register is None or self.identity is None:
+            return
+        if not getattr(self.register, "readable", False):
+            return
+        try:
+            self.register.record(self.identity(subject), _now())
+        except Exception:  # noqa: BLE001 - a register that will not take a write is not
+            # a reason to withhold an instruction that already passed every gate. The next
+            # run reads UNCHECKED and refuses there, which is the right place for it.
+            pass
+
+    def _seen_check(self, subject: Any, name: str) -> tuple[Any, str]:
+        """Has this already been put in front of somebody, and does that matter here?
+
+        `lib/seen.py` argues that seen-before is not a refusal, because a standing
+        opportunity that is still there is still real and auto-rejecting repeats would hide
+        a persistent genuine edge. That argument is correct and it assumed a person reading
+        a report and deciding each time.
+
+        It stops being correct when the lane places by itself. A market re-surfacing every
+        thirty minutes, placed on each pass, is one opportunity taken eight times before
+        lunch — and the deployed-capital cap bounds that but does not prevent it. So the
+        register still only ever REPORTS, and this decides:
+
+            owner-operating   a repeat is information. READY, with the sighting attached.
+            autonomous        a repeat inside the cooldown is REFUSED as already taken.
+
+        An UNCHECKED register refuses either way. It has been written and its memory is
+        gone, so answering "new" would re-surface an entire backlog as novel at exactly the
+        moment there is least reason to trust it.
+        """
+
+        if self.register is None or self.identity is None:
+            return None, ""
+
+        from lib.seen import ACTED_ON, NEW, SEEN_BEFORE, UNCHECKED
+
+        try:
+            verdict = self.register.check(self.identity(subject))
+        except Exception as error:  # noqa: BLE001 - a register that raises is UNCHECKED
+            return None, (f"the seen register could not be consulted "
+                          f"({type(error).__name__}: {error}). This candidate is NOT "
+                          f"established as new; it has not been looked up at all.")
+
+        if verdict.status == UNCHECKED:
+            return verdict, (
+                f"{verdict.describe()} A lane cannot tell a standing opportunity from a "
+                f"fresh one with no memory, and on the run where the register is lost "
+                f"every backlog item looks new at once.")
+
+        if verdict.status == NEW or not self.autonomous_execution:
+            return verdict, ""
+
+        age = _seconds_since(getattr(verdict.sighting, "last_seen", ""))
+        if age is not None and age > self.cooldown_seconds:
+            return verdict, ""
+
+        taken = "acted on" if verdict.status == ACTED_ON else "surfaced"
+        return verdict, (
+            f"already {taken} — {verdict.describe()} This lane places by itself, so a "
+            f"repeat inside {self.cooldown_seconds / 3600:.0f}h is the same opportunity "
+            f"rather than a new one. Under owner-operating it would be reported and left "
+            f"to you.")

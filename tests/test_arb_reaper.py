@@ -241,13 +241,18 @@ class TestTheGatesAreOnlyPreconditions:
 
         assert "EVENT_ALREADY_STARTED" in statuses
 
-    def test_an_unreadable_seen_register_blocks(self):
+    def test_the_seen_register_is_no_longer_checked_here(self):
+        """It moved to lib.reaper, which does it for every lane.
+
+        It used to live in this function and arb was the only lane that deduped at all.
+        Two mechanisms for one job is how they drift apart, so this asserts the duplicate
+        is gone rather than leaving it to be rediscovered.
+        """
+
         lost = type("R", (), {"readable": False})()
 
-        statuses = {r.status for r in gates_for(
-            candidate(), declarations={ANY_BOOKS: declaration()}, register=lost, now=NOW)}
-
-        assert "SEEN_REGISTER_UNREADABLE" in statuses
+        assert gates_for(candidate(), declarations={ANY_BOOKS: declaration()},
+                         register=lost, now=NOW) == ()
 
     def test_a_clean_candidate_produces_no_gate_readings(self):
         assert gates_for(candidate(), declarations={ANY_BOOKS: declaration()},

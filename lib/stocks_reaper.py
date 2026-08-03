@@ -445,6 +445,7 @@ def build_stocks_reaper(
     client: Any = None,
     concepts: Mapping[str, Sequence[str]] | None = None,
     portfolio: Any = None,
+    register: Any = None,
     pct_of_balance: float = 5.0,
     tolerated_move_pct: float = TOLERATED_MOVE_PCT,
     max_spread_pct: float = MAX_SPREAD_PCT,
@@ -520,6 +521,10 @@ def build_stocks_reaper(
             currency=currency),
         breakers=breakers,
         measure=measure_order,
+        register=register,
+        # The ticker, not the price or the size. Buying MODN today and again tomorrow at a
+        # different price is the same watchlist entry acted on twice.
+        identity=lambda s: f"stocks:{s.ticker}",
     )
 
 

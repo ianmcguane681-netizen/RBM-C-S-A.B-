@@ -207,6 +207,7 @@ def build_crypto_reaper(
     client: Any = None,
     quote_name: str = "USDC",
     portfolio: Any = None,
+    register: Any = None,
     slippage_bps: int = SLIPPAGE_BPS,
     max_breakeven_move_pct: float = MAX_BREAKEVEN_MOVE_PCT,
     deadline_seconds: int = 600,
@@ -300,4 +301,6 @@ def build_crypto_reaper(
         size=size,
         breakers=breakers,
         measure=measure,
+        register=register,
+        identity=lambda s: f"crypto:{s.token.lower()}",
     )

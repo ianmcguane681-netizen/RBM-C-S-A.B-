@@ -269,3 +269,181 @@ class TestTheBreakersAreTheLastGate:
         """You want to see WHAT was refused, not just that something was."""
 
         assert armed(tmp_path, size=500.0).reap()[0].instruction == "an instruction"
+
+
+class TestSurfacingTheSameThingTwice:
+    """`lib/seen.py` argues seen-before is not a refusal. That was right, and it assumed
+    a person reading a report and deciding each time.
+
+    It stops being right when the lane places by itself. A market re-surfacing every thirty
+    minutes and placed on each pass is one opportunity taken eight times before lunch — the
+    deployed-capital cap bounds that and does not prevent it. So the register still only
+    ever REPORTS, and the reaper decides what that means for the mode it is in.
+    """
+
+    def _reaper(self, tmp_path, *, seen=(), autonomous=False, **kw):
+        from lib.seen import SeenRegister
+
+        register = SeenRegister.load(tmp_path / "seen.json")
+        for identity, when in seen:
+            register.record(identity, when)
+
+        base = armed(tmp_path, lane="stocks" if autonomous else "arb")
+        return Reaper(
+            name=base.name, lane=base.lane, look=base.look, screen=base.screen,
+            gates=base.gates, thesis_for=base.thesis_for, size=base.size,
+            breakers=base.breakers, measure=base.measure,
+            autonomous_execution=autonomous,
+            register=register, identity=lambda _s: "the-same-thing", **kw)
+
+    def _now(self, hours_ago=0.0):
+        from datetime import datetime, timedelta, timezone
+
+        return (datetime.now(timezone.utc)
+                - timedelta(hours=hours_ago)).isoformat(timespec="seconds")
+
+    def test_a_new_candidate_is_ready_and_says_so(self, tmp_path):
+        harvest = self._reaper(tmp_path).reap()[0]
+
+        assert harvest.status == READY
+        assert "NEW" in harvest.describe()
+
+    def test_a_repeat_under_owner_operating_is_still_ready(self, tmp_path):
+        """A standing opportunity that is still there is still real, and you decide."""
+
+        harvest = self._reaper(
+            tmp_path, seen=[("the-same-thing", self._now())]).reap()[0]
+
+        assert harvest.status == READY
+        assert "SEEN_BEFORE" in harvest.describe()
+
+    def test_a_repeat_under_autonomy_is_refused_as_the_same_opportunity(self, tmp_path):
+        harvest = self._reaper(
+            tmp_path, seen=[("the-same-thing", self._now())], autonomous=True).reap()[0]
+
+        assert harvest.status == REFUSED
+        assert "already surfaced" in harvest.reason
+        assert "the same opportunity rather than a new one" in harvest.reason
+
+    def test_the_refusal_says_what_owner_operating_would_have_done(self, tmp_path):
+        harvest = self._reaper(
+            tmp_path, seen=[("the-same-thing", self._now())], autonomous=True).reap()[0]
+
+        assert "it would be reported and left to you" in harvest.reason
+
+    def test_past_the_cooldown_an_autonomous_lane_may_take_it_again(self, tmp_path):
+        harvest = self._reaper(
+            tmp_path, seen=[("the-same-thing", self._now(hours_ago=48))],
+            autonomous=True, cooldown_seconds=6 * 3600).reap()[0]
+
+        assert harvest.status == READY
+
+    def test_an_unreadable_register_refuses_even_under_owner_operating(self, tmp_path):
+        """It HAS been written and its memory is gone, so everything looks new at once."""
+
+        from lib.seen import SeenRegister
+
+        base = armed(tmp_path)
+        lane = Reaper(
+            name=base.name, lane=base.lane, look=base.look, screen=base.screen,
+            gates=base.gates, thesis_for=base.thesis_for, size=base.size,
+            breakers=base.breakers, measure=base.measure,
+            register=SeenRegister(tmp_path / "seen.json", readable=False,
+                                  reason="JSONDecodeError"),
+            identity=lambda _s: "x")
+
+        harvest = lane.reap()[0]
+
+        assert harvest.status == REFUSED
+        assert "NOT established as new" in harvest.reason
+
+    def test_a_register_that_raises_is_unchecked_rather_than_new(self, tmp_path):
+        class Exploding:
+            def check(self, _identity):
+                raise RuntimeError("disk gone")
+
+        base = armed(tmp_path)
+        lane = Reaper(
+            name=base.name, lane=base.lane, look=base.look, screen=base.screen,
+            gates=base.gates, thesis_for=base.thesis_for, size=base.size,
+            breakers=base.breakers, measure=base.measure,
+            register=Exploding(), identity=lambda _s: "x")
+
+        harvest = lane.reap()[0]
+
+        assert harvest.status == REFUSED
+        assert "has not been looked up at all" in harvest.reason
+
+    def test_no_register_attached_is_ready_and_states_the_omission(self, tmp_path):
+        """Never asked for is not the same as asked for and unavailable."""
+
+        harvest = armed(tmp_path).reap()[0]
+
+        assert harvest.status == READY
+        assert harvest.seen is None
+        assert "was not checked" in harvest.describe()
+
+
+class TestCheckingWithoutRecordingWouldNeverFire:
+    """The lookup working and nothing ever being written is the bug this repo keeps making.
+
+    `Breakers.record()` was called by no production code for weeks while every control
+    looked present. A seen register that is consulted and never written to is the same
+    shape: the dedup reads NEW forever and the code that implements it all runs.
+    """
+
+    def _lane(self, tmp_path, **kw):
+        from lib.seen import SeenRegister
+
+        base = armed(tmp_path)
+        kw.setdefault("lane", base.lane)
+        return Reaper(
+            name=base.name, look=base.look, screen=base.screen,
+            gates=base.gates, thesis_for=base.thesis_for, size=base.size,
+            breakers=base.breakers, measure=base.measure,
+            register=SeenRegister.load(tmp_path / "seen.json"),
+            identity=lambda _s: "the-same-thing", **kw)
+
+    def test_a_ready_harvest_is_written_to_the_register(self, tmp_path):
+        from lib.seen import SEEN_BEFORE, SeenRegister
+
+        self._lane(tmp_path).reap()
+
+        reloaded = SeenRegister.load(tmp_path / "seen.json")
+        assert reloaded.check("the-same-thing").status == SEEN_BEFORE
+
+    def test_the_second_run_sees_the_first(self, tmp_path):
+        lane = self._lane(tmp_path)
+        lane.reap()
+
+        described = self._lane(tmp_path).reap()[0].describe()
+
+        assert "SEEN_BEFORE" in described
+
+    def test_an_autonomous_lane_refuses_its_own_repeat_on_the_next_run(self, tmp_path):
+        """End to end: the whole point of the feature, through two actual runs."""
+
+        first = self._lane(tmp_path, lane="stocks", autonomous_execution=True)
+        assert first.reap()[0].status == READY
+
+        second = self._lane(tmp_path, lane="stocks", autonomous_execution=True)
+
+        assert second.reap()[0].status == REFUSED
+
+    def test_a_refused_harvest_is_not_recorded(self, tmp_path):
+        """The register means "offered to you", not "everything the lane ever looked at"."""
+
+        from lib.seen import NEW, SeenRegister
+
+        base = armed(tmp_path, verdict="REFUSED")
+        lane = Reaper(
+            name=base.name, lane=base.lane, look=base.look, screen=base.screen,
+            gates=base.gates, thesis_for=base.thesis_for, size=base.size,
+            breakers=base.breakers, measure=base.measure,
+            register=SeenRegister.load(tmp_path / "seen.json"),
+            identity=lambda _s: "the-same-thing")
+
+        lane.reap()
+
+        assert SeenRegister.load(tmp_path / "seen.json").check(
+            "the-same-thing").status == NEW

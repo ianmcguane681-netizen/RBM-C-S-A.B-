@@ -28,6 +28,7 @@ UNREADABLE = "UNREADABLE"
 REFUSED = "REFUSED"
 
 CONFIG = Path("data/reapers.json")
+SEEN = Path("data/seen-register.json")
 LEDGER = Path("data/outcomes.json")
 THESES = Path("data/theses.json")
 BREAKER_DIR = Path("data")
@@ -179,6 +180,7 @@ def breakers_for(lane: str, settings: dict, *, directory: Path, kill_switch: Pat
 
 def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assembly:
     from lib.arb import EquivalenceDeclaration
+    from lib.seen import SeenRegister
     from lib.arb_reaper import StandingAuthority, build_arb_reaper
 
     grant = settings.get("authority") or {}
@@ -215,6 +217,7 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
             f"loss is not a satisfied daily loss limit."))
 
     return Assembly("arb", CONFIGURED, build_arb_reaper(
+        register=SeenRegister.load(directory / SEEN.name),
         authority=authority, breakers=breakers,
         sports=tuple(settings.get("sports", ())), declarations=declarations,
         prefer_distinct_books=bool(settings.get("prefer_distinct_books", True)),
@@ -223,6 +226,7 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
 
 def assemble_stocks(settings: dict, *, directory: Path, kill_switch: Path,
                     theses_path: Path) -> Assembly:
+    from lib.seen import SeenRegister
     from lib.stocks_reaper import build_stocks_reaper
     from lib.thesis import ThesisRegister
 
@@ -243,6 +247,7 @@ def assemble_stocks(settings: dict, *, directory: Path, kill_switch: Path,
             f"the breaker state would not parse ({breakers.reason})."))
 
     return Assembly("stocks", CONFIGURED, build_stocks_reaper(
+        register=SeenRegister.load(directory / SEEN.name),
         watchlist=tuple(settings.get("watchlist", ())), theses=theses, breakers=breakers,
         free_balance=float(settings.get("free_balance", settings["balance"])),
         currency=str(settings.get("currency", "USD")),
@@ -252,6 +257,7 @@ def assemble_stocks(settings: dict, *, directory: Path, kill_switch: Path,
 def assemble_crypto(settings: dict, *, directory: Path, kill_switch: Path,
                     theses_path: Path) -> Assembly:
     from lib.crypto_reaper import build_crypto_reaper
+    from lib.seen import SeenRegister
     from lib.thesis import ThesisRegister
 
     wallet = str(settings.get("wallet", "")).strip()
@@ -280,6 +286,7 @@ def assemble_crypto(settings: dict, *, directory: Path, kill_switch: Path,
             f"the breaker state would not parse ({breakers.reason})."))
 
     return Assembly("crypto", CONFIGURED, build_crypto_reaper(
+        register=SeenRegister.load(directory / SEEN.name),
         watchlist=tuple(settings.get("watchlist", ())), theses=theses, breakers=breakers,
         wallet=wallet, client=client,
         quote_name=str(settings.get("quote_name", "USDC")),
