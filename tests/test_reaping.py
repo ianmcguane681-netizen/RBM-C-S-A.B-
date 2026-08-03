@@ -249,6 +249,62 @@ class TestTheCommand:
         assert reaping.ready == ("arb",)
         assert [h.status for h in reaping.harvests] == [COULD_NOT_LOOK]
 
+    def test_settled_outcomes_reach_the_breakers_before_the_lane_looks(self, tmp_path):
+        """A breaker not told about yesterday's four losses permits a fifth position.
+
+        Asserted against the reaper's OWN breakers object rather than a freshly loaded
+        one, because that is the failure mode: applying to a second instance writes the
+        trip to disk and leaves the reaper checking the armed copy it loaded at assembly
+        time — tripping and permitting in the same run.
+        """
+
+        from lib.breakers import TRIPPED
+        from lib.outcomes import OutcomeLedger
+
+        book = OutcomeLedger(tmp_path / "outcomes.json")
+        for index in range(4):
+            position = book.open_position("arb", f"match {index}", 5.0,
+                                          at=f"2026-08-03T0{index}:00:00Z")
+            book.settle(position.position_id, 0.0)
+        book.save()
+
+        reaping = reap(config_path=self._write(tmp_path, config()),
+                       ledger_path=tmp_path / "outcomes.json", **paths(tmp_path))
+
+        arb = next(a for a in reaping.assemblies if a.lane == "arb")
+        assert arb.reaper.breakers.state.status == TRIPPED
+
+    def test_the_applications_are_carried_and_printed(self, tmp_path):
+        reaping = reap(config_path=self._write(tmp_path, config()),
+                       ledger_path=tmp_path / "outcomes.json", **paths(tmp_path))
+
+        assert len(reaping.applications) == 2      # arb and stocks; crypto is disabled
+        assert "OUTCOMES APPLIED BEFORE REAPING" in reaping.describe()
+
+    def test_a_lane_holding_outcomes_with_no_breakers_is_reported(self, tmp_path):
+        """Otherwise its losses reach nothing while the report reads tidy."""
+
+        from lib.outcomes import OutcomeLedger
+
+        book = OutcomeLedger(tmp_path / "outcomes.json")
+        position = book.open_position("crypto", "0xdead", 100.0, at="2026-08-03T01:00:00Z")
+        book.settle(position.position_id, 0.0)
+        book.save()
+
+        reaping = reap(config_path=self._write(tmp_path, config()),
+                       ledger_path=tmp_path / "outcomes.json", **paths(tmp_path))
+
+        assert "its results reach nothing" in reaping.describe()
+
+    def test_an_unreadable_ledger_does_not_silently_apply_an_empty_day(self, tmp_path):
+        (tmp_path / "outcomes.json").write_text("{not json", encoding="utf-8")
+
+        reaping = reap(config_path=self._write(tmp_path, config()),
+                       ledger_path=tmp_path / "outcomes.json", **paths(tmp_path))
+
+        assert all(a.refusal for a in reaping.applications)
+        assert "the day went fine" in reaping.describe()
+
     def test_the_kill_switch_does_not_hide_the_lanes(self, tmp_path):
         """A halted lane still reports. Silence would look like nothing to do."""
 

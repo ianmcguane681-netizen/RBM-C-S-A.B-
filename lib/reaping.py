@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 CONFIGURED = "CONFIGURED"
 NOT_CONFIGURED = "NOT_CONFIGURED"
@@ -28,6 +28,7 @@ UNREADABLE = "UNREADABLE"
 REFUSED = "REFUSED"
 
 CONFIG = Path("data/reapers.json")
+LEDGER = Path("data/outcomes.json")
 THESES = Path("data/theses.json")
 BREAKER_DIR = Path("data")
 KILL_SWITCH = Path("data/HALT")
@@ -65,6 +66,8 @@ class Reaping:
     assemblies: tuple[Assembly, ...] = ()
     harvests: tuple[Any, ...] = field(default_factory=tuple)
     refusal: str = ""
+    #: What settled since the last run, handed to each lane's breakers before it reaped.
+    applications: tuple[Any, ...] = field(default_factory=tuple)
 
     @property
     def ready(self) -> tuple[str, ...]:
@@ -88,6 +91,11 @@ class Reaping:
         lines = ["LANES"]
         lines += [f"  {a.describe()}" for a in self.assemblies]
         lines.append("")
+
+        if self.applications:
+            lines.append("OUTCOMES APPLIED BEFORE REAPING")
+            lines += [f"  {a.describe()}" for a in self.applications]
+            lines.append("")
         if not self.ready:
             lines.append(
                 "No lane was configured, so NOTHING was looked at. This is not a report "
@@ -130,7 +138,7 @@ def load_config(path: Path = CONFIG) -> tuple[dict, str]:
     return payload, ""
 
 
-def _breakers(lane: str, settings: dict, *, directory: Path, kill_switch: Path):
+def breakers_for(lane: str, settings: dict, *, directory: Path, kill_switch: Path):
     from lib.breakers import Breakers, Ringfence
 
     ring = Ringfence(
@@ -169,7 +177,7 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
             )
             for key, row in (settings.get("declarations") or {}).items()
         }
-        breakers = _breakers("arb", settings, directory=directory,
+        breakers = breakers_for("arb", settings, directory=directory,
                              kill_switch=kill_switch)
     except (KeyError, TypeError, ValueError) as error:
         return Assembly("arb", REFUSED, reason=f"{type(error).__name__}: {error}"[:200])
@@ -198,7 +206,7 @@ def assemble_stocks(settings: dict, *, directory: Path, kill_switch: Path,
             f"is unknown rather than nothing."))
 
     try:
-        breakers = _breakers("stocks", settings, directory=directory,
+        breakers = breakers_for("stocks", settings, directory=directory,
                              kill_switch=kill_switch)
     except (KeyError, TypeError, ValueError) as error:
         return Assembly("stocks", REFUSED, reason=f"{type(error).__name__}: {error}"[:200])
@@ -232,7 +240,7 @@ def assemble_crypto(settings: dict, *, directory: Path, kill_switch: Path,
             f"is unknown rather than nothing."))
 
     try:
-        breakers = _breakers("crypto", settings, directory=directory,
+        breakers = breakers_for("crypto", settings, directory=directory,
                              kill_switch=kill_switch)
         client = _chain_client(settings)
     except (KeyError, TypeError, ValueError) as error:
@@ -293,14 +301,57 @@ def assemble(
     return tuple(out)
 
 
+def apply_outcomes(assemblies: Sequence[Assembly], ledger: Any) -> tuple[Any, ...]:
+    """Tell every lane's breakers what settled, before that lane looks at anything.
+
+    Applied to the reaper's OWN `Breakers` object rather than to a freshly loaded one.
+    Building a second instance would write the trip to disk and leave the reaper checking
+    the in-memory copy it loaded at assembly time, which is armed — the breaker would trip
+    and permit the position in the same run.
+
+    A lane holding settled outcomes with no breakers to apply them to is reported rather
+    than skipped. Silence there would mean a lane's losses reach nothing at all while the
+    report shows two tidy lines about the lanes that worked.
+    """
+
+    from lib.outcomes import SETTLED, Application, apply_to_breakers
+
+    applications: list[Any] = []
+    configured = set()
+    for assembly in assemblies:
+        if assembly.status != CONFIGURED or assembly.reaper is None:
+            continue
+        configured.add(assembly.lane)
+        applications.append(
+            apply_to_breakers(ledger, assembly.reaper.breakers, lane=assembly.lane))
+
+    if getattr(ledger, "readable", False):
+        orphaned = {p.lane for p in ledger.positions
+                    if p.status == SETTLED and not p.applied_to_breakers} - configured
+        for lane in sorted(orphaned):
+            applications.append(Application(lane, refusal=(
+                f"{lane} has settled outcomes and no configured breakers, so its results "
+                f"reach nothing. Enable the lane in the reaper config or its losses go "
+                f"uncounted.")))
+    return tuple(applications)
+
+
 def reap(
     *,
     config_path: Path = CONFIG,
+    ledger_path: Path = LEDGER,
     directory: Path = BREAKER_DIR,
     kill_switch: Path = KILL_SWITCH,
     theses_path: Path = THESES,
 ) -> Reaping:
-    """Assemble, run every configured lane, and keep the ones that could not look."""
+    """Assemble, apply what settled, then run every lane. Keep the ones that could not look.
+
+    Applying comes FIRST and that ordering is the point. A breaker that has not been told
+    about yesterday's four losses will permit a fifth position perfectly happily, which is
+    the failure the breakers exist to prevent and the reason `lib/outcomes` was written.
+    """
+
+    from lib.outcomes import OutcomeLedger
 
     config, unreadable = load_config(config_path)
     if unreadable:
@@ -312,9 +363,14 @@ def reap(
     assemblies = assemble(config, directory=directory, kill_switch=kill_switch,
                           theses_path=theses_path)
 
+    applications = apply_outcomes(assemblies, OutcomeLedger(ledger_path))
+
     harvests: list[Any] = []
     for assembly in assemblies:
         if assembly.status != CONFIGURED:
             continue
+        # A lane whose breaker just tripped during application still runs. Its own breaker
+        # check refuses it, and reading the refusal with its reason beats the lane silently
+        # vanishing from the report.
         harvests.extend(assembly.reaper.reap())
-    return Reaping(assemblies, tuple(harvests))
+    return Reaping(assemblies, tuple(harvests), applications=applications)
