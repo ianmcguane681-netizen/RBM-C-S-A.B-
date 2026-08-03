@@ -1,14 +1,13 @@
 # Next work — checkpoint 2026-08-03
 
-> **Updated `6597fae`. GAP 1 IS CLOSED.** `lib/outcomes.py` records what was placed and
-> what became of it; `positions.py` is where a person enters it; `lib/reaping.apply_outcomes`
-> hands settled results to each lane's breakers **before** that lane looks at anything. Four
-> losses now actually trip a lane, end to end through the command a person types. The Gap 1
-> section below is the rationale for code that exists, not a plan.
+> **Updated `48e0e04`. GAPS 1 AND 2 ARE CLOSED.** The stocks lane now runs end to end:
+> research → breakers → place at Alpaca → position recorded → settled outcome fed back to
+> the breakers that gate the next one. `lib/operating.py` decides who places (AUTONOMOUS /
+> owner-operating / halted, per lane, switchable from a file that beats the config);
+> `lib/placing.py` submits and records. Arb and crypto deliberately have no adapter.
 >
-> **Next is Gap 3 (dedup — small), then Gap 2 (`READY` → adapter), then 4 and 5.** Gap 2 is
-> the one with real decisions left in it: what happens to a position on an `UNKNOWN` order
-> result, and whether placing is ever allowed to be automatic. 1065 tests.
+> **Remaining: Gap 3 (dedup), Gap 4 (cadence), Gap 5 (status.py money view).** Gaps 4 and 5
+> may be with Codex — check for an open PR before starting them. 1147 tests.
 
 Written to be picked up cold, by a session that has none of the conversation behind it.
 Read this, then `README.md`'s "Running the lanes without a board" section, and you have
@@ -170,9 +169,7 @@ subjects).
 
 ---
 
-## Gap 2 — `READY` → adapter
-
-**Not until Gap 1 is closed.**
+## Gap 2 — `READY` → adapter  ✅ CLOSED
 
 The seam is a missing conversion. `lib/stocks_reaper.StockOrder` carries ticker, shares,
 price, cash, bound_by. `connectors/alpaca.Instruction` needs symbol, side, quantity,

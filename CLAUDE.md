@@ -72,7 +72,10 @@ order, and what is deliberately absent. Read it before planning anything.
 
 ```bash
 python -m pytest -q          # must stay green; ~1000 tests
-python run.py --reap         # all three lanes, to a sized instruction and no further
+python run.py --reap         # all three lanes; places where the lane's mode allows
+python run.py --reap --dry   # the same, sending nothing whatever the modes say
+python run.py --manual "why" # take the wheel: lanes keep running, you place
+python positions.py          # what is open; --settle feeds the breakers
 python run.py                # the orchestrator: what is due, what is held
 python preflight.py          # what each lane needs before it can read anything
 ```
@@ -83,9 +86,20 @@ The **review board** convenes seats, locks evidence, and publishes auditable dec
 can veto and can never authorise.
 
 The **reapers** (`lib/*_reaper.py`) run the same gates without convening a board, for one
-person spending their own money. They stop at `READY` — a sized, permitted instruction —
-and place nothing. The audit chain is what is lost, and every harvest says so rather than
-letting a working decision be mistaken for a reviewed one.
+person spending their own money. They reach `READY` — a sized, permitted instruction — and
+the audit chain is what is lost, which every harvest says rather than letting a working
+decision be mistaken for a reviewed one.
+
+**Placing may be automatic, and `lib/operating.py` decides whether it is.** Three modes per
+lane: `AUTONOMOUS`, `OWNER_OPERATING_MANUALLY`, `HALTED`. Autonomy is asserted and never
+assumed — an absent key, a `"true"` string, an unreadable ledger all resolve to manual.
+`data/MANUAL` beats the config because a switch a setting could override is not a switch.
+Owner-operating still runs the research; only `HALT` stops that too. Resuming refuses every
+automation prefix.
+
+**`lib/placing.py` records the position BEFORE sending the order.** Placing first leaves a
+window where a crash produces a position nothing in this system knows about. Recording first
+can leave a phantom on rejection, which is visible and fixed in one command.
 
 **The chain lane cannot sign, and that is not a setting.** `connectors/chain_exec.py` has no
 key path, no signing library and no send method. Do not add one.

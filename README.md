@@ -16,44 +16,49 @@ Deterministic rules must decide.
 
 ## Current state — 3 August 2026
 
-**1065 tests, 2 skipped.** Two things live here: the **review board engine** (the original
+**1147 tests, 2 skipped.** Two things live here: the **review board engine** (the original
 project, five methodology profiles, three published and ratified decisions) and the
 **reaper lanes** built on top of it, which run the same gates without convening a board.
 
 ```
    RESEARCH ─────────────────────────────────────────►  EXECUTION
    ┌──────────────────────────────────────────┐         ┌──────────────┐
-   │ look → screen → gates → thesis → size    │         │   adapter    │
-   │                          │               │         │   places it  │
-   │                     ┌────▼────┐          │         │              │
-   │                     │BREAKERS │          │         └──────┬───────┘
+   │ look → screen → gates → thesis → size    │         │  the broker  │
+   │                          │               │         │              │
+   │                     ┌────▼────┐          │         └──────┬───────┘
+   │                     │BREAKERS │          │                │
    │                     └────┬────┘          │                │
    │                          ▼               │                │
-   │                       READY  ────────────┼── ✗ ───────────┘
-   └──────────────────────────────────────────┘   GAP: NOT WIRED
-                                                            │
-                              ┌── ✓ ─────────────────────────┘
-                              │   positions.py, applied before each lane runs
-                         ┌────▼────┐
-                         │BREAKERS │
-                         └─────────┘
+   │                       READY  ────────────┼────────────────┘
+   └──────────────────────────────────────────┘  only if the lane's mode
+                                    │              is AUTONOMOUS
+                                    │                       │
+              positions.py ─────────┴───────────────────────┘
+                    │        the position is recorded BEFORE the order is sent
+               ┌────▼────┐
+               │BREAKERS │
+               └─────────┘
 ```
 
 | | works | not yet |
 |---|---|---|
 | **arb** | discovery → cascade → slip, stakes to the penny | needs an odds API key and a settlement declaration |
-| **stocks** | filings → cascade → whole shares at the ask | `StockOrder` → `Instruction` bridge missing |
+| **stocks** | filings → cascade → shares at the ask → **placed at Alpaca** | needs an Alpaca key |
 | **crypto** | contract → cascade → unsigned transactions | *nothing to wire — it cannot sign, by design* |
 | **breakers** | all six controls, fed by `positions.py` before every run | — |
+| **modes** | `AUTONOMOUS` / owner-operating / halted, per lane, switchable from a file | — |
 
 **Read [`docs/next-work.md`](docs/next-work.md) for the full checkpoint**: every claim above
 grepped with file and line, the five gaps in priority order, and the next piece designed far
 enough to build from. It is written to be picked up by someone — or something — with none of
 the conversation behind it.
 
-Honest summary of the stage: **everything up to a sized, permitted instruction is built and
-tested, and what happens afterwards is now recorded and fed back. Nothing places anything.**
-Placing is the remaining gap for stocks; for crypto it is the design.
+Honest summary of the stage: **the stocks lane runs end to end — research, sizing, breakers,
+placing, and the outcome fed back to the breakers that gate the next one.** It places only
+when you have said `autonomous_execution: true` and no switch overrides it, and the default
+everywhere is that a person places. The arb lane stops at a slip because bookmakers accept
+no orders from programs, and the chain lane stops at an unsigned transaction because it has
+no key path. Neither is unfinished.
 
 ## What it actually does
 
