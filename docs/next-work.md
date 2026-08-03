@@ -1,13 +1,17 @@
 # Next work — checkpoint 2026-08-03
 
-> **Updated `48e0e04`. GAPS 1 AND 2 ARE CLOSED.** The stocks lane now runs end to end:
-> research → breakers → place at Alpaca → position recorded → settled outcome fed back to
-> the breakers that gate the next one. `lib/operating.py` decides who places (AUTONOMOUS /
-> owner-operating / halted, per lane, switchable from a file that beats the config);
-> `lib/placing.py` submits and records. Arb and crypto deliberately have no adapter.
+> **Updated `7d7b12b`. ALL FIVE GAPS ARE CLOSED.** The checkpoint below is the record of
+> how they were closed, not a plan. Gaps 4 and 5 came from Codex on
+> `codex/request-for-feedback` and were merged at `c6c02ce`.
 >
-> **Remaining: Gap 3 (dedup), Gap 4 (cadence), Gap 5 (status.py money view).** Gaps 4 and 5
-> may be with Codex — check for an open PR before starting them. 1147 tests.
+> The stocks lane runs the whole loop unattended: research → breakers → place at Alpaca →
+> position recorded → settled outcome fed back to the breakers that gate the next one, on a
+> 24h cadence, deduped, with the owner able to take the wheel from a file.
+>
+> **Next is not a gap — it is the fourth of the seven functions: the flipper.** See the
+> "After the gaps" section for why it needs a different architecture from these three.
+> Open questions: no sizing ramp (a lane with zero settled outcomes sizes like one with
+> two hundred), and no Obsidian vault. 1187 tests.
 
 Written to be picked up cold, by a session that has none of the conversation behind it.
 Read this, then `README.md`'s "Running the lanes without a board" section, and you have
@@ -198,7 +202,7 @@ Design notes:
 
 ---
 
-## Gap 3 — dedup *(small, rides along with Gap 1)*
+## Gap 3 — dedup  ✅ CLOSED
 
 `SeenRegister` exists and no reaper uses it, so the same arb resurfaces every 30 minutes as
 if new.
@@ -219,7 +223,7 @@ mechanisms doing the same job. Its test moves to the reaper-level tests.
 
 ---
 
-## Gap 4 — cadence
+## Gap 4 — cadence  ✅ CLOSED (Codex)
 
 `--reap` is manual. Add it to `run.py`'s `LANES` so it runs under the orchestrator's queue
 throttle — which matters here, because three lanes producing `READY` instructions is exactly
@@ -241,7 +245,7 @@ by subprocess is safe — `--reap` does not call `main()`, so there is no recurs
 
 ---
 
-## Gap 5 — `status.py` sees the money side
+## Gap 5 — `status.py` sees the money side  ✅ CLOSED (Codex)
 
 Currently reports connector readiness and nothing about money. Add:
 

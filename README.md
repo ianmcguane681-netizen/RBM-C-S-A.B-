@@ -16,7 +16,7 @@ Deterministic rules must decide.
 
 ## Current state — 3 August 2026
 
-**1147 tests, 2 skipped.** Two things live here: the **review board engine** (the original
+**1187 tests, 2 skipped.** Two things live here: the **review board engine** (the original
 project, five methodology profiles, three published and ratified decisions) and the
 **reaper lanes** built on top of it, which run the same gates without convening a board.
 
@@ -47,6 +47,7 @@ project, five methodology profiles, three published and ratified decisions) and 
 | **crypto** | contract → cascade → unsigned transactions | *nothing to wire — it cannot sign, by design* |
 | **breakers** | all six controls, fed by `positions.py` before every run | — |
 | **modes** | `AUTONOMOUS` / owner-operating / halted, per lane, switchable from a file | — |
+| **cadence** | arb 30 min, crypto 6 h, stocks 24 h, under the orchestrator's queue throttle | — |
 
 **Read [`docs/next-work.md`](docs/next-work.md) for the full checkpoint**: every claim above
 grepped with file and line, the five gaps in priority order, and the next piece designed far
@@ -290,6 +291,14 @@ working decision be mistaken for a reviewed one.
 
 Four things hold the boundary:
 
+- **A lane cannot spend itself.** Per position 5% of its ring-fence, no more than 40% out
+  at once across every live position, at most 8 concurrent, a 3% daily settled loss trips
+  it, and four losses in a row trips it. The deployed cap is the one the per-position cap
+  never bounded — twenty positions at 5% is the whole ring-fence, and for a lane whose bets
+  settle on Sunday that is a normal Saturday.
+- **A repeat is not news.** A lane on a cadence records what it surfaced; under
+  owner-operating a repeat is reported and left to you, and under autonomy a repeat inside
+  the cooldown is refused as the same opportunity already taken.
 - **Circuit breakers are the last gate**, checked after sizing because a breaker needs a
   number. A reaper with none attached cannot reach `READY` at all — remembering to call
   them separately works right up until the evening somebody forgets. `data/HALT` is a file;
