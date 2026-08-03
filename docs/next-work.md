@@ -1,5 +1,12 @@
 # Next work — checkpoint 2026-08-03
 
+> **Updated `102e8b9`.** Gap 1 is now *mostly* closed: `lib/outcomes.py` exists with 42
+> tests, and four losses recorded through it trip the lane. **What remains of Gap 1 is
+> `positions.py`** — the CLI described below — plus calling `apply_to_breakers` from
+> `run.py --reap`. Everything about Gap 1's design below is now implemented; read it as
+> the rationale for code that exists rather than as a plan. Gaps 2–5 are untouched.
+> 1034 tests.
+
 Written to be picked up cold, by a session that has none of the conversation behind it.
 Read this, then `README.md`'s "Running the lanes without a board" section, and you have
 enough.
