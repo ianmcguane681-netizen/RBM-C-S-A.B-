@@ -110,6 +110,16 @@ class Mode:
                 f"  The lane still looks, screens, gates, authorises and sizes. Nothing "
                 f"is placed automatically; each instruction waits for you.")
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "lane": self.lane,
+            "status": self.mode,
+            "source": self.source,
+            "reason": self.reason or None,
+            "may_reap": self.may_reap,
+            "may_place": self.may_place,
+        }
+
 
 def _present(directory: Path, name: str, lane: str) -> Path | None:
     """The global file, or the per-lane one. Either is enough."""

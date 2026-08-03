@@ -38,7 +38,12 @@
 
     "balance": 500.0,
     "currency": "EUR",
-    "sports": ["soccer_epl", "soccer_efl_champ"],
+    "_quota_scope": [
+      "Start with one competition and only usable books. Filtering is sent to the API;",
+      "downloading a regional universe and discarding it afterwards still spends quota."
+    ],
+    "sports": ["soccer_epl"],
+    "bookmakers": ["bet365", "skybet", "paddypower", "williamhill", "betfair_ex_eu"],
     "prefer_distinct_books": true,
 
     "_authority": [
@@ -65,17 +70,37 @@
       "wants to use. An odds feed returns odds, not settlement terms, and the only real",
       "position this board examined had a positive margin and voided on one leg only.",
       "",
-      "The key is the books that will be PLACED, sorted and joined with |. Run the lane",
-      "once with none and it tells you the exact key it wants. A declaration is a",
-      "one-time act per set of books: read their abandonment and non-runner rules once.",
+      "Declare each book once after reading abandonment, postponement and dead-heat rules.",
+      "Every book in a combination must be covered. An exact-set key remains supported",
+      "and wins over individual declarations when a combination needs special treatment.",
       "",
       "'*' matches any books. It exists, it is deliberately awkward to reach for, and a",
       "declaration that two unnamed books settle alike is not a judgement anybody made."
     ],
     "declarations": {
-      "Sky Bet|bet365": {
+      "bet365": {
         "declared_by": "YOUR NAME",
-        "reasoning": "read both books' football rules for abandonment and non-runners; both void the market and return stakes if the fixture is not replayed within 48 hours",
+        "reasoning": "read bet365 football settlement rules",
+        "scenarios_checked": ["abandonment", "postponement", "dead heat"]
+      },
+      "Sky Bet": {
+        "declared_by": "YOUR NAME",
+        "reasoning": "read Sky Bet football settlement rules",
+        "scenarios_checked": ["abandonment", "postponement", "dead heat"]
+      },
+      "Paddy Power": {
+        "declared_by": "YOUR NAME",
+        "reasoning": "read Paddy Power football settlement rules",
+        "scenarios_checked": ["abandonment", "postponement", "dead heat"]
+      },
+      "William Hill": {
+        "declared_by": "YOUR NAME",
+        "reasoning": "read William Hill football settlement rules",
+        "scenarios_checked": ["abandonment", "postponement", "dead heat"]
+      },
+      "Betfair": {
+        "declared_by": "YOUR NAME",
+        "reasoning": "read Betfair football settlement rules",
         "scenarios_checked": ["abandonment", "postponement", "dead heat"]
       }
     }

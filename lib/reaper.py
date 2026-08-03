@@ -53,7 +53,7 @@ separate deliberate act, because everything upstream of it is reversible and it 
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Sequence
 
@@ -206,6 +206,38 @@ class Harvest:
                 "reviewed one."
             )
         return "\n".join(lines)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Stable UI state; absent instructions and permissions remain null."""
+
+        def serialise(value: Any) -> Any:
+            if value is None or isinstance(value, (str, int, float, bool)):
+                return value
+            if hasattr(value, "to_dict"):
+                return value.to_dict()
+            if is_dataclass(value):
+                return {key: serialise(item) for key, item in asdict(value).items()}
+            if isinstance(value, (tuple, list)):
+                return [serialise(item) for item in value]
+            if isinstance(value, dict):
+                return {str(key): serialise(item) for key, item in value.items()}
+            return str(value)
+
+        return {
+            "lane": self.lane,
+            "status": self.status,
+            "at": self.at or None,
+            "subject": self.subject or None,
+            "reason": self.reason or None,
+            "instruction": serialise(self.instruction),
+            "permission": serialise(self.permission),
+            "sources": {
+                "status": "KNOWN" if self.sources_asked else "NOT_DECLARED",
+                "asked": self.sources_asked if self.sources_asked else None,
+                "answered": self.sources_answered if self.sources_asked else None,
+            },
+            "board_convened": self.board_convened,
+        }
 
 
 @dataclass(frozen=True, slots=True)

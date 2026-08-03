@@ -157,6 +157,24 @@ class Position:
         return (f"{head}\n  OPEN  {self.staked:,.2f} at risk since {self.opened_at}. No "
                 f"profit exists yet, so none is reported and none is applied.")
 
+    def to_dict(self) -> dict[str, Any]:
+        """A position without inventing a return or profit before one exists."""
+
+        return {
+            "position_id": self.position_id,
+            "lane": self.lane,
+            "subject": self.subject,
+            "status": self.status,
+            "staked": self.staked,
+            "returned": self.returned if self.status in {SETTLED, VOID} else None,
+            "profit": self.profit,
+            "opened_at": self.opened_at or None,
+            "settled_at": self.settled_at or None,
+            "source": self.source or None,
+            "note": self.note or None,
+            "applied_to_breakers": self.applied_to_breakers,
+        }
+
 
 @dataclass(frozen=True, slots=True)
 class Application:
@@ -188,6 +206,18 @@ class Application:
                 f"  BREAKER TRIPPED: {self.tripped_by}. It does not reset itself — "
                 f"clearing it is a human act and is recorded with a reason.")
         return "\n".join(lines)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "lane": self.lane,
+            "status": "REFUSED" if self.refusal else "APPLIED",
+            "applied": list(self.applied),
+            "skipped_unsettled": list(self.skipped_unsettled),
+            "skipped_void": list(self.skipped_void),
+            "already_applied": list(self.already_applied),
+            "tripped_by": self.tripped_by or None,
+            "reason": self.refusal or None,
+        }
 
 
 class OutcomeLedger:
@@ -394,7 +424,8 @@ def apply_to_breakers(ledger: OutcomeLedger, breakers: Any,
     )
 
 
-def describe_ledger(ledger: OutcomeLedger, *, now: datetime | None = None) -> str:
+def describe_ledger(ledger: OutcomeLedger, *, lane: str = "",
+                    now: datetime | None = None) -> str:
     """The money view: what is out, what is stuck, and what the breakers cannot see."""
 
     if not ledger.readable:
@@ -407,15 +438,17 @@ def describe_ledger(ledger: OutcomeLedger, *, now: datetime | None = None) -> st
         lines.append(status.describe())
         lines.append("")
 
-    live = ledger.live()
+    live = ledger.live(lane)
     if not live:
         lines.append("No position is open. Every placement recorded here has settled.")
     else:
-        lines.append(f"{len(live)} position(s) live, {ledger.unsettled_exposure():,.2f} "
+        lines.append(f"{len(live)} position(s) live, "
+                     f"{ledger.unsettled_exposure(lane):,.2f} "
                      f"at risk and invisible to the daily loss limit:")
         lines += [f"  {p.describe()}" for p in live]
 
-    stale = ledger.stale_open(now=now)
+    stale = tuple(position for position in ledger.stale_open(now=now)
+                  if not lane or position.lane == lane)
     if stale:
         lines.append("")
         lines.append(
@@ -423,7 +456,8 @@ def describe_ledger(ledger: OutcomeLedger, *, now: datetime | None = None) -> st
             f"that old is usually an UNKNOWN nobody chased, and it is holding the breakers "
             f"short of the full picture.")
 
-    pending = ledger.pending_application()
+    pending = tuple(position for position in ledger.pending_application()
+                    if not lane or position.lane == lane)
     if pending:
         lines.append("")
         lines.append(f"  {len(pending)} settled outcome(s) have not reached the breakers "

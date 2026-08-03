@@ -6,6 +6,7 @@
     python positions.py --void POS-abc123 --note "abandoned; both books voided"
     python positions.py --unknown POS-abc123 --note "bet365 restricted the account"
     python positions.py --apply                           feed settled outcomes to breakers
+    python positions.py --json                            the same state for a UI
 
 **Typing this in is the honest interface, not a shortcoming.** bet365 and Sky Bet have no
 settlement API and never will, so the alternative to a person entering the result is not an
@@ -27,6 +28,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -50,9 +52,16 @@ from lib.reaping import (
 SOURCES = (MANUAL, BROKER, CHAIN)
 
 
-def _ledger(path: Path) -> tuple[OutcomeLedger | None, int]:
+def _emit(payload: dict) -> None:
+    print(json.dumps({"schema_version": "1.0", **payload}, indent=2))
+
+
+def _ledger(path: Path, *, as_json: bool = False) -> tuple[OutcomeLedger | None, int]:
     book = OutcomeLedger(path)
     if not book.readable:
+        if as_json:
+            _emit({"status": "UNREADABLE", "reason": book.reason, "position": None})
+            return None, 2
         print(f"REFUSING TO WRITE  the outcome ledger at {path} could not be read "
               f"({book.reason}).")
         print("  Overwriting it would erase positions that are still holding money and "
@@ -62,8 +71,31 @@ def _ledger(path: Path) -> tuple[OutcomeLedger | None, int]:
     return book, 0
 
 
-def show(path: Path) -> int:
+def show(path: Path, *, as_json: bool = False) -> int:
+    configured = path.is_file()
     book = OutcomeLedger(path)
+    if as_json:
+        status = "NOT_CONFIGURED" if not configured else (
+            "UNREADABLE" if not book.readable else (
+                "OPEN" if book.live() else "SETTLED"
+            )
+        )
+        _emit({
+            "status": status,
+            "reason": book.reason or None,
+            "unsettled_exposure": (
+                book.unsettled_exposure() if configured and book.readable else None
+            ),
+            "positions": (
+                [item.to_dict() for item in book.positions]
+                if configured and book.readable else None
+            ),
+        })
+        if not configured:
+            return 0
+        if not book.readable:
+            return 2
+        return 1 if (book.live() or book.pending_application()) else 0
     print(describe_ledger(book))
     if not book.readable:
         return 2
@@ -74,12 +106,16 @@ def show(path: Path) -> int:
     return 1 if book.pending_application() else 0
 
 
-def placed(path: Path, lane: str, subject: str, staked: float, source: str) -> int:
-    book, code = _ledger(path)
+def placed(path: Path, lane: str, subject: str, staked: float, source: str, *,
+           as_json: bool = False) -> int:
+    book, code = _ledger(path, as_json=as_json)
     if book is None:
         return code
     position = book.open_position(lane, subject, staked, source=source)
     book.save()
+    if as_json:
+        _emit({"status": "OPEN", "position": position.to_dict()})
+        return 1
     print(position.describe())
     print()
     print(f"  Settle it with:  python positions.py --settle {position.position_id} "
@@ -88,13 +124,18 @@ def placed(path: Path, lane: str, subject: str, staked: float, source: str) -> i
 
 
 def resolve(path: Path, action: str, identifier: str, *,
-            returned: float | None = None, note: str = "", source: str = MANUAL) -> int:
-    book, code = _ledger(path)
+            returned: float | None = None, note: str = "", source: str = MANUAL,
+            as_json: bool = False) -> int:
+    book, code = _ledger(path, as_json=as_json)
     if book is None:
         return code
 
     if action == "settle":
         if returned is None:
+            if as_json:
+                _emit({"status": "REFUSED", "position": None,
+                       "reason": "--settle needs --returned; no amount was assumed"})
+                return 2
             print("--settle needs --returned. A settlement with no amount is not a "
                   "settlement, and guessing zero would record a total loss.")
             return 2
@@ -105,13 +146,16 @@ def resolve(path: Path, action: str, identifier: str, *,
         position = book.mark_unknown(identifier, note)
 
     book.save()
+    if as_json:
+        _emit({"status": position.status, "position": position.to_dict()})
+        return 1
     print(position.describe())
     print()
     print("  Not yet counted by any breaker. Apply it with:  python positions.py --apply")
     return 1
 
 
-def apply(path: Path, config_path: Path) -> int:
+def apply(path: Path, config_path: Path, *, as_json: bool = False) -> int:
     """Every configured lane's breakers, told what settled since the last time.
 
     Assembles the lanes exactly as `run.py --reap` does rather than building breakers
@@ -132,6 +176,10 @@ def apply(path: Path, config_path: Path) -> int:
 
     config, unreadable = load_config(config_path)
     if unreadable:
+        if as_json:
+            _emit({"status": "UNREADABLE", "reason": unreadable,
+                   "applications": None})
+            return 2
         print(f"REFUSING TO APPLY  {config_path} could not be read ({unreadable}).")
         print("  Applying anyway would treat every lane as unconfigured, and its losses "
               "would reach nothing while this printed a tidy summary.")
@@ -143,15 +191,28 @@ def apply(path: Path, config_path: Path) -> int:
     applications = apply_outcomes(assemblies, book)
 
     if not applications:
+        if as_json:
+            _emit({"status": "NOT_CONFIGURED", "applications": [],
+                   "reason": "no configured lane has breakers to receive outcomes"})
+            return 2
         print("No lane is configured and nothing was applied. Any settled outcome on file "
               "is reaching no breaker at all.")
         return 2
 
     tripped = False
     for application in applications:
-        print(application.describe())
-        print()
+        if not as_json:
+            print(application.describe())
+            print()
         tripped = tripped or bool(application.tripped_by)
+
+    if as_json:
+        _emit({
+            "status": "UNREADABLE" if not book.readable else (
+                "TRIPPED" if tripped else "APPLIED"
+            ),
+            "applications": [item.to_dict() for item in applications],
+        })
 
     if not book.readable:
         return 2
@@ -175,31 +236,41 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--ledger", default=str(LEDGER))
     parser.add_argument("--config", default=str(CONFIG))
+    parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
     path = Path(args.ledger)
 
     if args.apply:
-        return apply(path, Path(args.config))
+        return apply(path, Path(args.config), as_json=args.json)
     if args.placed:
         if args.staked is None or args.staked <= 0:
+            if args.json:
+                _emit({"status": "REFUSED", "position": None,
+                       "reason": "--placed needs a positive --staked"})
+                return 2
             print("--placed needs a positive --staked. A position with no stake is not a "
                   "position, and it would tell the breakers nothing was at risk.")
             return 2
-        return placed(path, args.placed[0], args.placed[1], args.staked, args.source)
+        return placed(path, args.placed[0], args.placed[1], args.staked, args.source,
+                      as_json=args.json)
     if args.settle:
         return resolve(path, "settle", args.settle, returned=args.returned,
-                       note=args.note, source=args.source)
+                       note=args.note, source=args.source, as_json=args.json)
     if args.void:
-        return resolve(path, "void", args.void, note=args.note)
+        return resolve(path, "void", args.void, note=args.note, as_json=args.json)
     if args.unknown:
         if not args.note.strip():
+            if args.json:
+                _emit({"status": "REFUSED", "position": None,
+                       "reason": "--unknown needs a note naming what must be chased"})
+                return 2
             print("--unknown needs a --note. An UNKNOWN without a stated reason is "
                   "indistinguishable from neglect, and it is holding the breakers short "
                   "of the full picture until somebody chases it.")
             return 2
-        return resolve(path, "unknown", args.unknown, note=args.note)
-    return show(path)
+        return resolve(path, "unknown", args.unknown, note=args.note, as_json=args.json)
+    return show(path, as_json=args.json)
 
 
 if __name__ == "__main__":

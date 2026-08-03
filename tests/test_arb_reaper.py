@@ -153,6 +153,24 @@ class TestTheDeclarationLookupIsExact:
     def test_no_declarations_at_all_is_not_a_match(self):
         assert declaration_for(["bet365"], None) is None
 
+    def test_per_book_declarations_cover_new_combinations_without_new_attestations(self):
+        declarations = {
+            "bet365": declaration(),
+            "Sky Bet": declaration(),
+            "Paddy Power": declaration(),
+        }
+
+        assert declaration_for(["bet365", "Sky Bet"], declarations) is not None
+        assert declaration_for(["bet365", "Paddy Power"], declarations) is not None
+
+    def test_a_missing_book_is_named_so_a_person_can_read_its_rules(self):
+        screened = screen_candidate(
+            candidate(), declarations={"bet365": declaration(), "Sky Bet": declaration()},
+            now=NOW,
+        )
+
+        assert "missing per-book declaration(s): Paddy Power" in screened.decided_by.detail
+
 
 class TestTheRestOfTheCascade:
     def _declared(self, cand):

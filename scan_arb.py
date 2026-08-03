@@ -189,7 +189,7 @@ def main(sport: str, *, as_json: bool) -> int:
     if as_json:
         print(json.dumps({
             "sport": sport,
-            "quota_remaining": source.usage.remaining,
+            "quota": source.usage.to_dict(),
             "books": list(result.books_seen),
             "markets_examined": result.markets_examined,
             "incomplete_markets": len(result.incomplete),

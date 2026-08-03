@@ -54,6 +54,12 @@ H2H = "h2h"
 #: asked while looking exactly like an answer to the one they did.
 UK_IE_EU = "uk,eu"
 
+#: Provider keys for the five books whose settlement rules are being tracked. Filtering in
+#: the HTTP request preserves quota; discarding unwanted books afterwards is already paid.
+DEFAULT_BOOKMAKERS = (
+    "bet365", "skybet", "paddypower", "williamhill", "betfair_ex_eu",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class OddsApiCredentials:
@@ -79,6 +85,7 @@ class Usage:
 
     remaining: int = -1
     used: int = -1
+    last: int = -1
 
     @property
     def is_known(self) -> bool:
@@ -88,6 +95,14 @@ class Usage:
         if not self.is_known:
             return "quota unknown (the response carried no usage headers)"
         return f"{self.remaining} request(s) remaining, {self.used} used"
+
+    def to_dict(self) -> dict[str, int | str | None]:
+        return {
+            "status": "KNOWN" if self.is_known else "UNKNOWN",
+            "remaining": self.remaining if self.is_known else None,
+            "used": self.used if self.used >= 0 else None,
+            "last_request_cost": self.last if self.last >= 0 else None,
+        }
 
 
 class OddsApiSource:
@@ -101,10 +116,19 @@ class OddsApiSource:
         credentials: OddsApiCredentials | None,
         *,
         regions: str = UK_IE_EU,
+        bookmakers: Sequence[str] = DEFAULT_BOOKMAKERS,
         opener: Callable[..., Any] = retrying_urlopen,
     ) -> None:
         self.credentials = credentials
         self.regions = regions
+        self.bookmakers = tuple(dict.fromkeys(
+            str(book).strip() for book in bookmakers if str(book).strip()
+        ))
+        if len(self.bookmakers) > 10:
+            raise ValueError(
+                "bookmakers must contain at most 10 provider keys; split a wider universe "
+                "into a deliberate second request so its quota cost stays visible"
+            )
         self._opener = opener
         self.usage = Usage()
 
@@ -130,6 +154,7 @@ class OddsApiSource:
                     self.usage = Usage(
                         int(headers.get("x-requests-remaining", -1)),
                         int(headers.get("x-requests-used", -1)),
+                        int(headers.get("x-requests-last", -1)),
                     )
                 except (TypeError, ValueError):
                     self.usage = Usage()
@@ -156,10 +181,12 @@ class OddsApiSource:
         if not self.is_configured:
             return ()
 
-        payload = self._get(
-            f"/sports/{sport}/odds",
-            {"regions": self.regions, "markets": market, "oddsFormat": "decimal"},
-        )
+        params = {"markets": market, "oddsFormat": "decimal"}
+        if self.bookmakers:
+            params["bookmakers"] = ",".join(self.bookmakers)
+        else:
+            params["regions"] = self.regions
+        payload = self._get(f"/sports/{sport}/odds", params)
 
         out: list[Quote] = []
         for event in payload or []:

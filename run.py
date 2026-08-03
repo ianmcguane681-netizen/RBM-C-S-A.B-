@@ -3,7 +3,7 @@
     python run.py                 what would run, and why the rest would not
     python run.py --go            actually run them
     python run.py --queue         just the human queue
-    python run.py --reap          all three reaper lanes
+    python run.py --reap [lane] [--json]   all lanes, or one, as prose or UI JSON
     python run.py --manual "reason"          take the wheel: lanes keep running, you place
     python run.py --resume "Your Name" "reason"   hand placing back to the machine
     python run.py --resolve DEC-0001 "confirmed and placed"
@@ -28,6 +28,7 @@ looked and found nothing.
 """
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -76,6 +77,32 @@ LANES = (
         produces_decisions=False,
         # 1 = a lane is DEGRADED, 2 = a lane is BLOCKED. Both are the report doing its job.
         unconfigured_exit_codes=(1, 2),
+    ),
+    Lane(
+        name="reap-arb",
+        command=("python", "run.py", "--reap", "arb"),
+        cadence_seconds=30 * 60,
+        produces_decisions=True,
+        findings_exit_codes=(1,),
+        # 2 means NOTHING WAS LOOKED AT. A scheduler must not turn a blind lane into a
+        # quiet market by treating that as a successful run.
+        unconfigured_exit_codes=(2,),
+    ),
+    Lane(
+        name="reap-crypto",
+        command=("python", "run.py", "--reap", "crypto"),
+        cadence_seconds=6 * 3600,
+        produces_decisions=True,
+        findings_exit_codes=(1,),
+        unconfigured_exit_codes=(2,),
+    ),
+    Lane(
+        name="reap-stocks",
+        command=("python", "run.py", "--reap", "stocks"),
+        cadence_seconds=24 * 3600,
+        produces_decisions=True,
+        findings_exit_codes=(1,),
+        unconfigured_exit_codes=(2,),
     ),
 )
 
@@ -143,8 +170,8 @@ def main(go: bool) -> int:
     return 1 if orchestrator.open_decisions else 0
 
 
-def reap() -> int:
-    """Every configured lane, to a sized instruction and no further.
+def reap(lane: str = "", *, as_json: bool = False) -> int:
+    """Every configured lane, or one named lane, to a sized instruction and no further.
 
     Exit codes match the rest of the repository's convention: 1 means something wants a
     person, 2 means nothing was looked at.
@@ -159,8 +186,19 @@ def reap() -> int:
 
     from lib.reaping import reap as run_reapers
 
-    reaping = run_reapers()
-    print(reaping.describe())
+    if lane and lane not in {"arb", "crypto", "stocks"}:
+        if as_json:
+            print(json.dumps({
+                "schema_version": "1.0",
+                "status": "REFUSED",
+                "reason": f"unknown lane {lane!r}; choose arb, crypto or stocks",
+            }))
+        else:
+            print(f"Unknown reaper lane {lane!r}. Choose arb, crypto or stocks.")
+        return 2
+
+    reaping = run_reapers(lanes=(lane,) if lane else None)
+    print(json.dumps(reaping.to_dict(), indent=2) if as_json else reaping.describe())
 
     if reaping.refusal or not reaping.ready or not reaping.looked:
         return 2
@@ -246,7 +284,8 @@ if __name__ == "__main__":
             raise SystemExit(2)
         raise SystemExit(hand_back(rest[0], rest[1], rest[2] if len(rest) > 2 else ""))
     if "--reap" in argv:
-        raise SystemExit(reap())
+        rest = [item for item in argv[argv.index("--reap") + 1:] if item != "--json"]
+        raise SystemExit(reap(rest[0] if rest else "", as_json="--json" in argv))
     if "--queue" in argv:
         raise SystemExit(0 if not print(Orchestrator(LANES, STATE).describe_queue()) else 0)
     raise SystemExit(main("--go" in argv))

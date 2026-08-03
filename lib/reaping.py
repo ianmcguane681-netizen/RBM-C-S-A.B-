@@ -131,6 +131,25 @@ class Reaping:
             lines.append("Nothing reached READY. Every lane's reason is stated above.")
         return "\n".join(lines)
 
+    def to_dict(self) -> dict[str, Any]:
+        """The full reaper response consumed by the UI, including lanes that did not run."""
+
+        return {
+            "schema_version": "1.0",
+            "status": "REFUSED" if self.refusal else (
+                "LOOKED" if self.looked else "NOTHING_WAS_LOOKED_AT"
+            ),
+            "reason": self.refusal or None,
+            "assemblies": [
+                {"lane": item.lane, "status": item.status,
+                 "reason": item.reason or None}
+                for item in self.assemblies
+            ],
+            "modes": [item.to_dict() for item in self.modes],
+            "applications": [item.to_dict() for item in self.applications],
+            "harvests": [item.to_dict() for item in self.harvests],
+        }
+
 
 def load_config(path: Path = CONFIG) -> tuple[dict, str]:
     """The config, or the reason there isn't one. An absent file is not a broken one."""
@@ -169,6 +188,10 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
             "is one nobody authorised."))
 
     try:
+        bookmaker_rows = settings.get("bookmakers")
+        if isinstance(bookmaker_rows, str):
+            raise ValueError("bookmakers must be a JSON list, not one string")
+        bookmakers = tuple(bookmaker_rows) if bookmaker_rows is not None else None
         authority = StandingAuthority(
             declared_by=str(grant["declared_by"]),
             reasoning=str(grant["reasoning"]),
@@ -198,6 +221,7 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
     return Assembly("arb", CONFIGURED, build_arb_reaper(
         authority=authority, breakers=breakers,
         sports=tuple(settings.get("sports", ())), declarations=declarations,
+        bookmakers=bookmakers,
         prefer_distinct_books=bool(settings.get("prefer_distinct_books", True)),
     ))
 
@@ -346,13 +370,14 @@ def apply_outcomes(assemblies: Sequence[Assembly], ledger: Any) -> tuple[Any, ..
 
 def reap(
     *,
+    lanes: Sequence[str] | None = None,
     config_path: Path = CONFIG,
     ledger_path: Path = LEDGER,
     directory: Path = BREAKER_DIR,
     kill_switch: Path = KILL_SWITCH,
     theses_path: Path = THESES,
 ) -> Reaping:
-    """Assemble, apply what settled, then run every lane. Keep the ones that could not look.
+    """Assemble, apply outcomes, then run every selected lane.
 
     Applying comes FIRST and that ordering is the point. A breaker that has not been told
     about yesterday's four losses will permit a fifth position perfectly happily, which is
@@ -369,12 +394,23 @@ def reap(
             f"every lane as unconfigured, which is a confident answer assembled out of a "
             f"parse error."))
 
-    assemblies = assemble(config, directory=directory, kill_switch=kill_switch,
-                          theses_path=theses_path)
+    selected = tuple(lanes) if lanes is not None else LANES
+    unknown = set(selected) - set(LANES)
+    if unknown:
+        return Reaping(refusal=(
+            f"unknown reaper lane(s): {', '.join(sorted(unknown))}. Choose from "
+            f"{', '.join(LANES)}."))
+
+    assemblies = tuple(
+        assembly for assembly in assemble(
+            config, directory=directory, kill_switch=kill_switch,
+            theses_path=theses_path
+        ) if assembly.lane in selected
+    )
 
     ledger = OutcomeLedger(ledger_path)
     applications = apply_outcomes(assemblies, ledger)
-    modes = {m.lane: m for m in modes_for(LANES, config, directory=directory,
+    modes = {m.lane: m for m in modes_for(selected, config, directory=directory,
                                           ledger=ledger)}
 
     harvests: list[Any] = []
@@ -393,4 +429,4 @@ def reap(
         # vanishing from the report.
         harvests.extend(assembly.reaper.reap())
     return Reaping(assemblies, tuple(harvests), applications=applications,
-                   modes=tuple(modes[lane] for lane in LANES))
+                   modes=tuple(modes[lane] for lane in selected))

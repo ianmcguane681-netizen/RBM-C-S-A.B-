@@ -69,6 +69,25 @@ FRESHNESS_SECONDS = 180
 ANY_BOOKS = "*"
 
 
+@dataclass(frozen=True, slots=True)
+class DeclarationCoverage:
+    """Individual human declarations that together cover every book in a position."""
+
+    books: tuple[str, ...]
+    declarations: tuple[Any, ...]
+
+    @property
+    def declared_by(self) -> str:
+        return ", ".join(dict.fromkeys(item.declared_by for item in self.declarations))
+
+    @property
+    def reasoning(self) -> str:
+        return "; ".join(
+            f"{book}: {item.reasoning}"
+            for book, item in zip(self.books, self.declarations)
+        )
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -174,11 +193,30 @@ def books_key(books: Sequence[str]) -> str:
 
 
 def declaration_for(books: Sequence[str], declarations: Mapping[str, Any] | None):
-    """The declaration covering exactly these books, or the explicit any-books one."""
+    """Exact-set coverage first, then complete per-book coverage, then ANY_BOOKS."""
 
     if not declarations:
         return None
-    return declarations.get(books_key(books)) or declarations.get(ANY_BOOKS)
+    exact = declarations.get(books_key(books))
+    if exact is not None:
+        return exact
+    named = tuple(sorted(set(books)))
+    per_book = tuple(declarations.get(book) for book in named)
+    if named and all(item is not None for item in per_book):
+        return DeclarationCoverage(named, per_book)
+    return declarations.get(ANY_BOOKS)
+
+
+def missing_declaration_books(
+    books: Sequence[str], declarations: Mapping[str, Any] | None
+) -> tuple[str, ...]:
+    named = tuple(sorted(set(books)))
+    if declarations and (
+        declarations.get(books_key(named)) is not None
+        or declarations.get(ANY_BOOKS) is not None
+    ):
+        return ()
+    return tuple(book for book in named if not declarations or declarations.get(book) is None)
 
 
 # --- the cascade -------------------------------------------------------------------
@@ -228,9 +266,11 @@ def screen_candidate(
                     f"{declaration.reasoning}"),
         ))
     else:
+        missing = missing_declaration_books(books, declarations)
         stages.append(Stage(
             "settlement equivalence", INDETERMINATE, disqualifying=True,
-            detail=(f"no declaration covers {books_key(books)}. A price feed does not carry "
+            detail=(f"no declaration covers {books_key(books)}; missing per-book "
+                    f"declaration(s): {', '.join(missing)}. A price feed does not carry "
                     f"a book's terms, and the only real position this board examined had a "
                     f"positive margin and voided on one leg only. Read both books' rules "
                     f"once and record an EquivalenceDeclaration under this key."),
@@ -337,9 +377,11 @@ def gates_for(
         candidate, prefer_distinct_books=prefer_distinct_books)}))
 
     if declaration_for(books, declarations) is None:
+        missing = missing_declaration_books(books, declarations)
         readings.append(Reading(
             "SETTLEMENT_RULES_NOT_DECLARED",
-            f"no EquivalenceDeclaration covers {books_key(books)}",
+            (f"no EquivalenceDeclaration covers {books_key(books)}; read and declare: "
+             f"{', '.join(missing)}"),
         ))
 
     commencement = starts_at(candidate.market)
@@ -423,6 +465,7 @@ def build_arb_reaper(
     authority: StandingAuthority,
     breakers: Any,
     sports: Sequence[str] = (),
+    bookmakers: Sequence[str] | None = None,
     declarations: Mapping[str, Any] | None = None,
     source: Any = None,
     register: Any = None,
@@ -445,7 +488,8 @@ def build_arb_reaper(
     def look():
         from connectors.oddsapi import H2H, OddsApiSource
 
-        feed = source if source is not None else OddsApiSource.from_directory()
+        options = {} if bookmakers is None else {"bookmakers": bookmakers}
+        feed = source if source is not None else OddsApiSource.from_directory(**options)
         if not getattr(feed, "is_configured", False):
             # Raising is correct: this is COULD_NOT_LOOK, and reporting it as an empty
             # scan is the exact confusion the reaper's status set exists to prevent.
