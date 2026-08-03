@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#050b13">
+  <title>Provena · Nexus</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Provena Nexus home">
+      <span class="brand-mark">P</span><span><b>PROVENA</b><small>FOUNDER OS</small></span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a class="active" href="#nexus">NEXUS</a><a href="#divisions">DIVISIONS</a>
+      <a href="#reapers">REAPERS</a><a href="#capital">CAPITAL</a>
+      <a href="#activity">ACTIVITY</a><a href="/docs">API</a>
+    </nav>
+    <div class="profile"><span class="live-dot"></span><span>Founder<small>Operator</small></span><b>F</b></div>
+  </header>
+
+  <main id="nexus">
+    <section class="hero">
+      <div class="eyebrow">OPERATOR CONTROL CENTRE</div>
+      <h1>NEXUS <span>HQ</span></h1>
+      <p>Governed research, execution and evidence—one truthful operating view.</p>
+      <div class="connection" id="connection"><span></span> Connecting to operator API</div>
+    </section>
+
+    <section class="metrics" id="capital" aria-label="Capital overview">
+      <article><label>CAPITAL AT COST</label><strong id="capital-cost">—</strong><small id="capital-state">Loading</small></article>
+      <article><label>OPEN DECISIONS</label><strong id="decision-count">—</strong><small id="decision-limit">Loading</small></article>
+      <article><label>ACTIVE POSITIONS</label><strong id="position-count">—</strong><small id="position-state">Loading</small></article>
+      <article><label>ENGINE COVERAGE</label><strong id="engine-count">—</strong><small id="engine-state">Loading</small></article>
+    </section>
+
+    <section class="workspace" id="divisions">
+      <aside class="panel overview-panel">
+        <div class="panel-title"><span>CAPITAL OVERVIEW</span><span class="tag">LIVE STATE</span></div>
+        <div class="capital-figure" id="side-capital">—</div>
+        <div class="muted" id="valuation-note">Retrieving portfolio state</div>
+        <div class="divider"></div>
+        <h3>System posture</h3>
+        <ul class="system-list" id="system-posture"><li>Loading operating controls…</li></ul>
+        <a class="button secondary" href="/api/v1/overview">VIEW RAW STATE</a>
+      </aside>
+
+      <section class="command-map">
+        <div class="map-grid"></div><div class="orb orb-one"></div><div class="orb orb-two"></div>
+        <div class="hub"><span class="hub-ring"></span><b>P</b><small>PROVENA CORE</small></div>
+        <div class="division-grid" id="division-grid" aria-live="polite">
+          <article class="division skeleton"></article><article class="division skeleton"></article>
+          <article class="division skeleton"></article>
+        </div>
+        <div class="flow"><span>RESEARCH</span><i></i><b>GOVERNED CAPITAL FLOW</b><i></i><span>EXECUTION</span></div>
+      </section>
+
+      <aside class="panel" id="reapers">
+        <div class="panel-title"><span>REAPER STATUS</span><span class="tag" id="reaper-total">3 LANES</span></div>
+        <div id="reaper-list" class="reaper-list"><div class="loading-line"></div><div class="loading-line"></div></div>
+        <div class="divider"></div>
+        <h3>Safety controls</h3>
+        <div id="safety-list" class="safety-list"></div>
+        <a class="button secondary" href="/docs#/default/run_reapers_api_v1_reapers_run_post">OPEN COMMAND API</a>
+      </aside>
+    </section>
+
+    <section class="bottom-grid" id="activity">
+      <article class="panel wide"><div class="panel-title">RECENT RUNS <span class="tag">LAST 10</span></div><div id="runs" class="empty">Retrieving activity…</div></article>
+      <article class="panel"><div class="panel-title">DECISION QUEUE</div><div id="decisions" class="empty">Retrieving decisions…</div></article>
+      <article class="panel"><div class="panel-title">CONNECTOR HEALTH</div><div id="connectors" class="empty">Retrieving connectors…</div></article>
+    </section>
+  </main>
+  <footer><span>PROVENA FOUNDER OS</span><span>Facts before forecasts · Unknown is never zero</span><span id="generated">—</span></footer>
+  <script src="app.js" defer></script>
+</body>
+</html>

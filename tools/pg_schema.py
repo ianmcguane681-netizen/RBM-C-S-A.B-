@@ -57,6 +57,35 @@ def to_postgres(sql: str) -> str:
     return sql.strip().rstrip(";")
 
 
+def dependency_order(rows: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Put referenced tables before their dependants, retaining stable order otherwise.
+
+    ``sqlite_master`` is alphabetical, which is valid for introspection but not for Postgres
+    DDL: Postgres requires a referenced relation to exist when a foreign key is declared.
+    Cycles retain their input order and must be handled as deferred constraints if one is ever
+    introduced; the current review-store graph is acyclic.
+    """
+
+    names = {name for name, _ in rows}
+    remaining = list(rows)
+    emitted: set[str] = set()
+    ordered: list[tuple[str, str]] = []
+    reference = re.compile(r"\bREFERENCES\s+[\"`]?([A-Za-z_][A-Za-z0-9_]*)", re.I)
+    while remaining:
+        ready = [
+            row for row in remaining
+            if ({match for match in reference.findall(row[1]) if match in names} - emitted)
+            <= {row[0]}
+        ]
+        if not ready:
+            return ordered + remaining
+        for row in ready:
+            ordered.append(row)
+            emitted.add(row[0])
+            remaining.remove(row)
+    return ordered
+
+
 def main() -> int:
     if not STORE.is_file():
         print(f"-- no store at {STORE}; nothing to derive from", file=sys.stderr)
@@ -67,6 +96,7 @@ def main() -> int:
         "SELECT name, sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL "
         "ORDER BY name"
     ).fetchall()
+    rows = dependency_order([(name, sql) for name, sql in rows if not name.startswith("sqlite_")])
 
     out: list[str] = [
         "-- Review store, derived from the live SQLite schema by tools/pg_schema.py.",
@@ -82,8 +112,6 @@ def main() -> int:
 
     names: list[str] = []
     for name, sql in rows:
-        if name.startswith("sqlite_"):
-            continue
         names.append(name)
         out.append(to_postgres(sql) + ";")
         out.append("")

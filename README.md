@@ -54,6 +54,39 @@ grepped with file and line, the five gaps in priority order, and the next piece 
 enough to build from. It is written to be picked up by someone — or something — with none of
 the conversation behind it.
 
+## Operator API
+
+The UI backend projects the same status and reaper domain objects used by the CLI; it does
+not reconstruct operating truth in a web controller.
+
+```bash
+python -m backend
+# Open http://127.0.0.1:8000/ for the operator dashboard
+# GET http://127.0.0.1:8000/api/v1/overview
+# GET http://127.0.0.1:8000/api/v1/connectors
+```
+
+The server binds to `0.0.0.0` so container and IDE previews can reach it, and reads the
+platform-provided `PORT` (default `8000`). `HOST` may override the bind address when a local
+machine deliberately wants loopback-only access.
+
+Static-site previews may publish the repository root directly: `index.html` is a complete
+dashboard entry point. Without the Python API it renders an explicitly labelled offline
+layout with unknown values; it never turns an unavailable backend into zero capital or an
+empty operational history.
+
+Reaper commands require `PROVENA_COMMAND_KEY` and the matching
+`X-Provena-Command-Key` header. They are dry-run by default. Moving money additionally
+requires `PROVENA_EXECUTION_ENABLED=true` on the server and the exact request confirmation
+`MONEY MAY MOVE`; neither setting alone grants execution. Allowed browser origins are a
+comma-separated `PROVENA_UI_ORIGINS` value and default to `http://localhost:3000`.
+
+Supabase/Postgres migrations live in `migrations/`. `0001_review_store.sql` carries the
+governed review record; `0002_operational_backend.sql` adds reaper runs, harvests,
+executions, positions, capital snapshots, alerts and connector checks. Client roles receive
+only the narrow read views defined by the migration. Operational writes belong to the
+backend service role.
+
 Honest summary of the stage: **the stocks lane runs end to end — research, sizing, breakers,
 placing, and the outcome fed back to the breakers that gate the next one.** It places only
 when you have said `autonomous_execution: true` and no switch overrides it, and the default
