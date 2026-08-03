@@ -160,14 +160,21 @@ def load_config(path: Path = CONFIG) -> tuple[dict, str]:
 
 def breakers_for(lane: str, settings: dict, *, directory: Path, kill_switch: Path):
     from lib.breakers import Breakers, Ringfence
+    from lib.outcomes import LEDGER, OutcomeLedger
 
     ring = Ringfence(
         lane, float(settings["balance"]),
         currency=str(settings.get("currency", "EUR")),
         per_position_pct=float(settings.get("per_position_pct", 5.0)),
         daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
+        max_deployed_pct=float(settings.get("max_deployed_pct", 40.0)),
+        max_concurrent_positions=int(settings.get("max_concurrent_positions", 8)),
     )
-    return Breakers(ring, directory / f"breakers-{lane}.json", kill_switch=kill_switch)
+    # The ledger lives beside the breaker files, so the deployed-capital check can see what
+    # is already out. Without it that check cannot be evaluated and blocks — which is right,
+    # and would also mean no lane could ever place.
+    return Breakers(ring, directory / f"breakers-{lane}.json", kill_switch=kill_switch,
+                    positions=OutcomeLedger(directory / LEDGER.name))
 
 
 def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assembly:

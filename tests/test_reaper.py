@@ -78,9 +78,11 @@ def reaper(*, subjects=("Team A v Team B",), asked=5, answered=5, verdict="SURFA
 
 def breakers(tmp_path, **kw):
     from lib.breakers import Breakers, Ringfence
+    from lib.outcomes import OutcomeLedger
 
     return Breakers(Ringfence("arb", 1000.0, **kw), tmp_path / "b.json",
-                    kill_switch=tmp_path / "HALT")
+                    kill_switch=tmp_path / "HALT",
+                    positions=OutcomeLedger(tmp_path / "outcomes.json"))
 
 
 def armed(tmp_path, *, size=10.0, edge=2.0, book=None, **kw):

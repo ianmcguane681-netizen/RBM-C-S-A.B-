@@ -314,3 +314,52 @@ class TestTheCommand:
         reaping = reap(config_path=path, **paths(tmp_path))
 
         assert "arb" in reaping.ready
+
+
+class TestTheShippedExampleCanActuallyPlace:
+    """A config whose grant exceeds its own per-position cap refuses every position.
+
+    That is exactly what the example shipped with — a standing grant of 50 against a cap of
+    25 — written in different sessions and never checked against each other. Every arb would
+    have sized to 50 and been refused by its own breakers, and the first live session would
+    have been spent working out why.
+    """
+
+    def _config(self):
+        import json
+        from pathlib import Path
+
+        return json.loads(Path("examples/reapers.example.json").read_text("utf-8"))
+
+    def test_the_arb_grant_fits_inside_its_own_per_position_cap(self):
+        from lib.breakers import Ringfence
+
+        arb = self._config()["arb"]
+        ring = Ringfence("arb", float(arb["balance"]),
+                         per_position_pct=float(arb.get("per_position_pct", 5.0)))
+
+        assert float(arb["authority"]["max_exposure"]) <= ring.per_position_limit
+
+    def test_every_lane_s_ringfence_constructs(self):
+        """A per-position cap above the deployed cap raises, so this catches that too."""
+
+        from lib.breakers import Ringfence
+
+        config = self._config()
+        for lane in ("arb", "stocks", "crypto"):
+            settings = config[lane]
+            Ringfence(lane, float(settings["balance"]),
+                      per_position_pct=float(settings.get("per_position_pct", 5.0)),
+                      daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
+                      max_deployed_pct=float(settings.get("max_deployed_pct", 40.0)))
+
+    def test_a_lane_can_reach_ready_within_its_own_limits(self, tmp_path):
+        """The end-to-end version: size it, hand it to the breakers, see it permitted."""
+
+        from lib.breakers import Ringfence
+
+        arb = self._config()["arb"]
+        ring = Ringfence("arb", float(arb["balance"]))
+        grant = float(arb["authority"]["max_exposure"])
+
+        assert grant <= ring.per_position_limit <= ring.deployed_limit

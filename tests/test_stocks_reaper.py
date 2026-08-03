@@ -346,8 +346,11 @@ class TestTheLaneEndToEnd:
     def _breakers(self, tmp_path, balance=200_000.0):
         from lib.breakers import Breakers, Ringfence
 
+        from lib.outcomes import OutcomeLedger
+
         return Breakers(Ringfence("stocks", balance), tmp_path / "b.json",
-                        kill_switch=tmp_path / "HALT")
+                        kill_switch=tmp_path / "HALT",
+                        positions=OutcomeLedger(tmp_path / "outcomes.json"))
 
     def _reaper(self, tmp_path, *, register=None, edgar=None, desk=None, **kw):
         return build_stocks_reaper(

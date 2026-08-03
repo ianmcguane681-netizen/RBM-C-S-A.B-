@@ -39,7 +39,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 ARMED = "ARMED"
 TRIPPED = "TRIPPED"
@@ -76,15 +76,35 @@ class Ringfence:
     daily_loss_pct: float = 3.0
     max_consecutive_losses: int = 4
     sanity_edge_pct: float = DEFAULT_SANITY_EDGE_PCT
+    #: How much of the ring-fence may be OUT AT ONCE, across every live position.
+    #:
+    #: The per-position cap does not bound this and it was never meant to. Twenty
+    #: positions at 5% is the whole ring-fence deployed, and for a lane whose positions
+    #: settle days later — a Saturday's football, a stock held over a weekend — that is the
+    #: ordinary state of a busy week rather than a pathological one. The daily loss limit
+    #: cannot see it either, because it is computed from SETTLED outcomes and none of these
+    #: have settled.
+    max_deployed_pct: float = 40.0
+    #: A blunter instrument for the same failure, and it catches what a percentage misses
+    #: when the positions are individually small.
+    max_concurrent_positions: int = 8
 
     def __post_init__(self) -> None:
         if self.starting_balance <= 0:
             raise ValueError("a ring-fence needs a positive balance")
-        for name in ("per_position_pct", "daily_loss_pct"):
+        for name in ("per_position_pct", "daily_loss_pct", "max_deployed_pct"):
             if not 0 < getattr(self, name) <= 100:
                 raise ValueError(f"{name} must be between 0 and 100")
         if self.max_consecutive_losses < 1:
             raise ValueError("max_consecutive_losses must be at least 1")
+        if self.max_concurrent_positions < 1:
+            raise ValueError("max_concurrent_positions must be at least 1")
+        if self.per_position_pct > self.max_deployed_pct:
+            raise ValueError(
+                f"per_position_pct {self.per_position_pct} exceeds max_deployed_pct "
+                f"{self.max_deployed_pct}: a single position would breach the total cap, "
+                f"so the lane could never place anything"
+            )
 
     @property
     def per_position_limit(self) -> float:
@@ -93,6 +113,10 @@ class Ringfence:
     @property
     def daily_loss_limit(self) -> float:
         return self.starting_balance * self.daily_loss_pct / 100.0
+
+    @property
+    def deployed_limit(self) -> float:
+        return self.starting_balance * self.max_deployed_pct / 100.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,10 +180,15 @@ class Breakers:
     """Every control, checked together, failing closed."""
 
     def __init__(self, ringfence: Ringfence, path: str | Path,
-                 *, kill_switch: str | Path = KILL_SWITCH) -> None:
+                 *, kill_switch: str | Path = KILL_SWITCH, positions: Any = None) -> None:
         self.ringfence = ringfence
         self.path = Path(path)
         self.kill_switch = Path(kill_switch)
+        #: Anything exposing `unsettled_exposure(lane)` and `live(lane)` — in practice a
+        #: `lib.outcomes.OutcomeLedger`. Absent, the deployed-capital check cannot be
+        #: evaluated and therefore BLOCKS: an unknown total is not a total within limits,
+        #: and this is the one limit that stands between a lane and its whole ring-fence.
+        self.positions = positions
         self.outcomes: list[Outcome] = []
         self.state = BreakerState(ringfence.lane)
         self.readable = True
@@ -273,6 +302,8 @@ class Breakers:
                                 f"{proposed_size:,.2f} within "
                                 f"{self.ringfence.per_position_limit:,.2f}"))
 
+        checks.extend(self._deployment_checks(proposed_size))
+
         if claimed_edge_pct > self.ringfence.sanity_edge_pct:
             checks.append(Check(
                 "sanity bound", BLOCKED,
@@ -288,6 +319,55 @@ class Breakers:
         blocked = any(c.verdict == BLOCKED for c in checks)
         return Decision(BLOCKED if blocked else PERMITTED,
                         self.ringfence.lane, tuple(checks))
+
+    def _deployment_checks(self, proposed_size: float) -> list[Check]:
+        """What is already out, which the per-position cap has never bounded.
+
+        Fails closed on an absent or unreadable ledger, for the usual reason: an unknown
+        deployed total is not a deployed total within limits, and the cost of being wrong
+        here is the whole ring-fence rather than one position.
+        """
+
+        if self.positions is None or not getattr(self.positions, "readable", False):
+            detail = ("no readable record of open positions is attached, so how much is "
+                      "ALREADY out cannot be established. The per-position cap does not "
+                      "bound the total — twenty positions at 5% is the whole ring-fence — "
+                      "so an unknown total blocks rather than passes.")
+            return [Check("deployed capital", BLOCKED, detail),
+                    Check("concurrent positions", BLOCKED, detail)]
+
+        lane = self.ringfence.lane
+        already = float(self.positions.unsettled_exposure(lane))
+        limit = self.ringfence.deployed_limit
+        out = []
+
+        if already + max(proposed_size, 0.0) > limit:
+            out.append(Check(
+                "deployed capital", BLOCKED,
+                f"{already:,.2f} is already out and this would make it "
+                f"{already + proposed_size:,.2f}, against a cap of {limit:,.2f} "
+                f"({self.ringfence.max_deployed_pct:.1f}% of the ring-fence). Settling "
+                f"what is open is what frees this, not waiting.",
+            ))
+        else:
+            out.append(Check("deployed capital", PERMITTED,
+                             f"{already:,.2f} out, {already + proposed_size:,.2f} after "
+                             f"this, limit {limit:,.2f}"))
+
+        live = len(self.positions.live(lane))
+        if live >= self.ringfence.max_concurrent_positions:
+            out.append(Check(
+                "concurrent positions", BLOCKED,
+                f"{live} already live against a limit of "
+                f"{self.ringfence.max_concurrent_positions}. Small positions do not "
+                f"breach the cash cap and still add up to a lane with no attention left "
+                f"for any of them.",
+            ))
+        else:
+            out.append(Check("concurrent positions", PERMITTED,
+                             f"{live} live, limit "
+                             f"{self.ringfence.max_concurrent_positions}"))
+        return out
 
     # -- recording --------------------------------------------------------------------
 

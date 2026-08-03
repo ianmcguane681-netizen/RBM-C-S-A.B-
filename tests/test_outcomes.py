@@ -44,7 +44,8 @@ def ledger(tmp_path):
 
 def breakers(tmp_path, balance=1000.0, **kw):
     return Breakers(Ringfence("arb", balance, **kw), tmp_path / "b.json",
-                    kill_switch=tmp_path / "HALT")
+                    kill_switch=tmp_path / "HALT",
+                    positions=OutcomeLedger(tmp_path / "outcomes.json"))
 
 
 def placed(book, lane="arb", subject="Arsenal v Chelsea", staked=100.0, **kw):

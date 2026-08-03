@@ -39,6 +39,21 @@
     "balance": 500.0,
     "currency": "EUR",
     "sports": ["soccer_epl", "soccer_efl_champ"],
+
+    "_limits": [
+      "The ring-fence is all this lane may lose. Everything below is derived from it:",
+      "    per_position_pct 5      one position may be 25.00 of the 500 balance",
+      "    max_deployed_pct 40     no more than 200.00 may be OUT AT ONCE",
+      "    max_concurrent_positions 8",
+      "    daily_loss_pct 3        15.00 of settled losses in a day trips the lane",
+      "",
+      "The standing grant's max_exposure must fit INSIDE per_position_pct, or every slip",
+      "sizes to something the breakers then refuse. A test asserts that for this file.",
+      "",
+      "max_deployed_pct is the one the per-position cap never bounded. Eight positions at",
+      "5% is 40% of the ring-fence out at once, and for a lane whose bets settle on Sunday",
+      "that is a normal Saturday rather than an accident."
+    ],
     "prefer_distinct_books": true,
 
     "_authority": [
@@ -56,7 +71,7 @@
         "the price moves between placing the first leg and the second"
       ],
       "expires_at": "2026-09-01T00:00:00Z",
-      "max_exposure": 50.0,
+      "max_exposure": 20.0,
       "currency": "EUR"
     },
 
