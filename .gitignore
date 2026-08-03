@@ -46,3 +46,8 @@ data/HALT
 # reasoning as the ledger — it records what is being watched and how much is behind it,
 # and this repository is public. examples/reapers.example.json is the committed shape.
 data/reapers.json
+
+# What was placed and what it returned. Same reasoning as the seen register: it names
+# subjects and stakes, and this repository is public. The receipt beside it is committed —
+# it carries counts and dates, never subjects.
+data/outcomes.json
