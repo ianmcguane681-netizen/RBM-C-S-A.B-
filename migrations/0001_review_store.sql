@@ -7,6 +7,32 @@ BEGIN;
 CREATE SCHEMA IF NOT EXISTS board;
 SET search_path TO board, public;
 
+CREATE TABLE review_sessions (
+            session_id TEXT PRIMARY KEY,
+            target_type TEXT NOT NULL,
+            target_id TEXT NOT NULL,
+            target_version TEXT NOT NULL,
+            methodology_id TEXT NOT NULL,
+            methodology_version TEXT NOT NULL,
+            methodology_checksum TEXT NOT NULL,
+            engine_version TEXT NOT NULL,
+            schema_version TEXT NOT NULL,
+            status TEXT NOT NULL,
+            aggregate_version BIGINT NOT NULL,
+            execution_mode TEXT NOT NULL,
+            binding BIGINT NOT NULL CHECK (binding IN (0, 1)),
+            created_at TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+            completed_at TEXT,
+            parent_session_id TEXT REFERENCES review_sessions(session_id)
+        );
+
+CREATE TABLE schema_migrations (
+                    version BIGINT PRIMARY KEY,
+                    checksum TEXT NOT NULL,
+                    applied_at TEXT NOT NULL
+                );
+
 CREATE TABLE audit_log (
             audit_id TEXT PRIMARY KEY,
             session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
@@ -41,17 +67,6 @@ CREATE TABLE board_decisions (
         , single_authority BIGINT NOT NULL DEFAULT 0
             CHECK (single_authority IN (0, 1)));
 
-CREATE TABLE conflict_declarations (
-            declaration_id TEXT PRIMARY KEY,
-            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
-            assignment_id TEXT NOT NULL UNIQUE REFERENCES review_assignments(assignment_id),
-            actor TEXT NOT NULL,
-            has_material_conflict BIGINT NOT NULL CHECK (has_material_conflict IN (0, 1)),
-            basis TEXT,
-            human_signature_ref TEXT NOT NULL,
-            declared_at TEXT NOT NULL
-        );
-
 CREATE TABLE decision_candidates (
             candidate_id TEXT PRIMARY KEY,
             session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
@@ -64,21 +79,6 @@ CREATE TABLE decision_candidates (
             computed_by TEXT NOT NULL,
             supersedes_candidate_id TEXT REFERENCES decision_candidates(candidate_id),
             UNIQUE (session_id, candidate_version)
-        );
-
-CREATE TABLE "decision_ratifications" (
-            decision_id TEXT PRIMARY KEY REFERENCES board_decisions(decision_id),
-            candidate_id TEXT NOT NULL UNIQUE REFERENCES decision_candidates(candidate_id),
-            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
-            board_chair TEXT NOT NULL,
-            board_chair_signature_ref TEXT NOT NULL,
-            governance_validator TEXT,
-            governance_validation_ref TEXT,
-            ratified_at TEXT NOT NULL, single_authority_rationale TEXT,
-            CHECK (
-                (governance_validator IS NULL AND governance_validation_ref IS NULL)
-                OR (governance_validator IS NOT NULL AND governance_validation_ref IS NOT NULL)
-            )
         );
 
 CREATE TABLE evidence_references (
@@ -95,29 +95,6 @@ CREATE TABLE evidence_references (
             UNIQUE (session_id, locator, content_sha256)
         );
 
-CREATE TABLE finding_evidence_links (
-            finding_id TEXT NOT NULL REFERENCES findings(finding_id),
-            reference_id TEXT NOT NULL REFERENCES evidence_references(reference_id),
-            PRIMARY KEY (finding_id, reference_id)
-        );
-
-CREATE TABLE findings (
-            finding_id TEXT PRIMARY KEY,
-            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
-            source_report_id TEXT NOT NULL REFERENCES review_reports(report_id),
-            severity TEXT NOT NULL,
-            category TEXT NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL,
-            evidence_reference_ids_json TEXT NOT NULL,
-            status TEXT NOT NULL,
-            remediation_required BIGINT NOT NULL CHECK (remediation_required IN (0, 1)),
-            raw_record_json TEXT NOT NULL,
-            raw_record_sha256 TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            supersedes_finding_id TEXT REFERENCES findings(finding_id)
-        );
-
 CREATE TABLE idempotency_keys (
             session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
             command_name TEXT NOT NULL,
@@ -126,39 +103,6 @@ CREATE TABLE idempotency_keys (
             result_json TEXT NOT NULL,
             created_at TEXT NOT NULL,
             PRIMARY KEY (session_id, command_name, idempotency_key)
-        );
-
-CREATE TABLE "publications" (
-            publication_id TEXT PRIMARY KEY,
-            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
-            decision_id TEXT NOT NULL UNIQUE REFERENCES board_decisions(decision_id),
-            publication_authority TEXT NOT NULL,
-            indicator_json TEXT NOT NULL,
-            indicator_sha256 TEXT NOT NULL,
-            published_at TEXT NOT NULL
-        );
-
-CREATE TABLE remediation_plans (
-            plan_id TEXT PRIMARY KEY,
-            document_id TEXT NOT NULL,
-            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
-            finding_id TEXT NOT NULL REFERENCES findings(finding_id),
-            owner TEXT NOT NULL,
-            action TEXT NOT NULL,
-            due_date TEXT,
-            status TEXT NOT NULL,
-            verification_evidence_ids_json TEXT NOT NULL,
-            raw_record_json TEXT NOT NULL,
-            raw_record_sha256 TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            supersedes_plan_id TEXT REFERENCES remediation_plans(plan_id),
-            UNIQUE (document_id, finding_id)
-        );
-
-CREATE TABLE report_evidence_links (
-            report_id TEXT NOT NULL REFERENCES review_reports(report_id),
-            reference_id TEXT NOT NULL REFERENCES evidence_references(reference_id),
-            PRIMARY KEY (report_id, reference_id)
         );
 
 CREATE TABLE review_assignments (
@@ -191,6 +135,42 @@ CREATE TABLE review_packages (
             UNIQUE (session_id, package_version)
         );
 
+CREATE TABLE conflict_declarations (
+            declaration_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
+            assignment_id TEXT NOT NULL UNIQUE REFERENCES review_assignments(assignment_id),
+            actor TEXT NOT NULL,
+            has_material_conflict BIGINT NOT NULL CHECK (has_material_conflict IN (0, 1)),
+            basis TEXT,
+            human_signature_ref TEXT NOT NULL,
+            declared_at TEXT NOT NULL
+        );
+
+CREATE TABLE "decision_ratifications" (
+            decision_id TEXT PRIMARY KEY REFERENCES board_decisions(decision_id),
+            candidate_id TEXT NOT NULL UNIQUE REFERENCES decision_candidates(candidate_id),
+            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
+            board_chair TEXT NOT NULL,
+            board_chair_signature_ref TEXT NOT NULL,
+            governance_validator TEXT,
+            governance_validation_ref TEXT,
+            ratified_at TEXT NOT NULL, single_authority_rationale TEXT,
+            CHECK (
+                (governance_validator IS NULL AND governance_validation_ref IS NULL)
+                OR (governance_validator IS NOT NULL AND governance_validation_ref IS NOT NULL)
+            )
+        );
+
+CREATE TABLE "publications" (
+            publication_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
+            decision_id TEXT NOT NULL UNIQUE REFERENCES board_decisions(decision_id),
+            publication_authority TEXT NOT NULL,
+            indicator_json TEXT NOT NULL,
+            indicator_sha256 TEXT NOT NULL,
+            published_at TEXT NOT NULL
+        );
+
 CREATE TABLE review_reports (
             report_id TEXT PRIMARY KEY,
             session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
@@ -210,31 +190,51 @@ CREATE TABLE review_reports (
             UNIQUE (assignment_id, report_version)
         );
 
-CREATE TABLE review_sessions (
-            session_id TEXT PRIMARY KEY,
-            target_type TEXT NOT NULL,
-            target_id TEXT NOT NULL,
-            target_version TEXT NOT NULL,
-            methodology_id TEXT NOT NULL,
-            methodology_version TEXT NOT NULL,
-            methodology_checksum TEXT NOT NULL,
-            engine_version TEXT NOT NULL,
-            schema_version TEXT NOT NULL,
+CREATE TABLE findings (
+            finding_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
+            source_report_id TEXT NOT NULL REFERENCES review_reports(report_id),
+            severity TEXT NOT NULL,
+            category TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            evidence_reference_ids_json TEXT NOT NULL,
             status TEXT NOT NULL,
-            aggregate_version BIGINT NOT NULL,
-            execution_mode TEXT NOT NULL,
-            binding BIGINT NOT NULL CHECK (binding IN (0, 1)),
+            remediation_required BIGINT NOT NULL CHECK (remediation_required IN (0, 1)),
+            raw_record_json TEXT NOT NULL,
+            raw_record_sha256 TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            created_by TEXT NOT NULL,
-            completed_at TEXT,
-            parent_session_id TEXT REFERENCES review_sessions(session_id)
+            supersedes_finding_id TEXT REFERENCES findings(finding_id)
         );
 
-CREATE TABLE schema_migrations (
-                    version BIGINT PRIMARY KEY,
-                    checksum TEXT NOT NULL,
-                    applied_at TEXT NOT NULL
-                );
+CREATE TABLE report_evidence_links (
+            report_id TEXT NOT NULL REFERENCES review_reports(report_id),
+            reference_id TEXT NOT NULL REFERENCES evidence_references(reference_id),
+            PRIMARY KEY (report_id, reference_id)
+        );
+
+CREATE TABLE finding_evidence_links (
+            finding_id TEXT NOT NULL REFERENCES findings(finding_id),
+            reference_id TEXT NOT NULL REFERENCES evidence_references(reference_id),
+            PRIMARY KEY (finding_id, reference_id)
+        );
+
+CREATE TABLE remediation_plans (
+            plan_id TEXT PRIMARY KEY,
+            document_id TEXT NOT NULL,
+            session_id TEXT NOT NULL REFERENCES review_sessions(session_id),
+            finding_id TEXT NOT NULL REFERENCES findings(finding_id),
+            owner TEXT NOT NULL,
+            action TEXT NOT NULL,
+            due_date TEXT,
+            status TEXT NOT NULL,
+            verification_evidence_ids_json TEXT NOT NULL,
+            raw_record_json TEXT NOT NULL,
+            raw_record_sha256 TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            supersedes_plan_id TEXT REFERENCES remediation_plans(plan_id),
+            UNIQUE (document_id, finding_id)
+        );
 
 -- Row security: deny by default, on every table, before any data lands.
 -- A permissive default plus a public repository is how a published decision
