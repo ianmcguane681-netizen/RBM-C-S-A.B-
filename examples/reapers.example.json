@@ -15,6 +15,27 @@
 
   "arb": {
     "enabled": true,
+
+    "_autonomous_execution": [
+      "Whether this lane PLACES ITS OWN INSTRUCTIONS. Absent means no — autonomy is",
+      "asserted, never assumed, so a missing key or a typo can never resolve to placing",
+      "freely. Only the literal true grants it; \"true\" as a string does not.",
+      "",
+      "Two switches override it, and both beat this file because a switch a setting could",
+      "override would not be a switch:",
+      "    data/MANUAL          every lane drops to owner-operating; lanes keep running",
+      "    data/MANUAL-arb      one lane does",
+      "    data/HALT            nothing runs at all",
+      "",
+      "  python run.py --manual \"why\"                     take the wheel",
+      "  python run.py --resume \"Your Name\" \"what you checked\"   hand it back",
+      "",
+      "Taking the wheel does NOT stop the research. Every lane still looks, screens,",
+      "gates, authorises and sizes; only the placing waits for you. HALT is the one that",
+      "stops everything."
+    ],
+    "autonomous_execution": false,
+
     "balance": 500.0,
     "currency": "EUR",
     "sports": ["soccer_epl", "soccer_efl_champ"],
@@ -77,6 +98,7 @@
     "balance": 1000.0,
     "currency": "USD",
     "quote_name": "USDC",
+    "autonomous_execution": false,
     "wallet": "0xYOUR_WALLET_ADDRESS",
     "watchlist": ["0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"],
     "_note": [

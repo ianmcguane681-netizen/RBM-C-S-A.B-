@@ -68,6 +68,8 @@ class Reaping:
     refusal: str = ""
     #: What settled since the last run, handed to each lane's breakers before it reaped.
     applications: tuple[Any, ...] = field(default_factory=tuple)
+    #: Who is placing for each lane — the machine, or the owner.
+    modes: tuple[Any, ...] = field(default_factory=tuple)
 
     @property
     def ready(self) -> tuple[str, ...]:
@@ -91,6 +93,12 @@ class Reaping:
         lines = ["LANES"]
         lines += [f"  {a.describe()}" for a in self.assemblies]
         lines.append("")
+
+        if self.modes:
+            from lib.operating import describe_modes
+
+            lines.append(describe_modes(self.modes))
+            lines.append("")
 
         if self.applications:
             lines.append("OUTCOMES APPLIED BEFORE REAPING")
@@ -351,6 +359,7 @@ def reap(
     the failure the breakers exist to prevent and the reason `lib/outcomes` was written.
     """
 
+    from lib.operating import modes_for
     from lib.outcomes import OutcomeLedger
 
     config, unreadable = load_config(config_path)
@@ -363,14 +372,25 @@ def reap(
     assemblies = assemble(config, directory=directory, kill_switch=kill_switch,
                           theses_path=theses_path)
 
-    applications = apply_outcomes(assemblies, OutcomeLedger(ledger_path))
+    ledger = OutcomeLedger(ledger_path)
+    applications = apply_outcomes(assemblies, ledger)
+    modes = {m.lane: m for m in modes_for(LANES, config, directory=directory,
+                                          ledger=ledger)}
 
     harvests: list[Any] = []
     for assembly in assemblies:
         if assembly.status != CONFIGURED:
             continue
+        if not modes[assembly.lane].may_reap:
+            # HALTED, and that is the one mode which stops the research as well as the
+            # placing. The lane is not silently absent — its mode is printed above with
+            # the reason, which is the distinction between "did not run" and "found
+            # nothing". Owner-operating deliberately does NOT come here: taking the wheel
+            # must not also mean going blind.
+            continue
         # A lane whose breaker just tripped during application still runs. Its own breaker
         # check refuses it, and reading the refusal with its reason beats the lane silently
         # vanishing from the report.
         harvests.extend(assembly.reaper.reap())
-    return Reaping(assemblies, tuple(harvests), applications=applications)
+    return Reaping(assemblies, tuple(harvests), applications=applications,
+                   modes=tuple(modes[lane] for lane in LANES))

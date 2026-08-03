@@ -3,7 +3,9 @@
     python run.py                 what would run, and why the rest would not
     python run.py --go            actually run them
     python run.py --queue         just the human queue
-    python run.py --reap          all three reaper lanes, to READY and no further
+    python run.py --reap          all three reaper lanes
+    python run.py --manual "reason"          take the wheel: lanes keep running, you place
+    python run.py --resume "Your Name" "reason"   hand placing back to the machine
     python run.py --resolve DEC-0001 "confirmed and placed"
 
 The orchestration layer. Lanes run on their own cadences, some feed others, and everything
@@ -165,6 +167,49 @@ def reap() -> int:
     return 1 if any(h.status == "READY" for h in reaping.harvests) else 0
 
 
+def take_over(reason: str, lane: str = "") -> int:
+    """Drop to owner-operating. The lanes keep looking; nothing places itself.
+
+    Deliberately not the same as `data/HALT`. A stopped system tells you nothing, so taking
+    the wheel must not also mean going blind — every lane still looks, screens, gates,
+    authorises and sizes, and each instruction waits for you.
+    """
+
+    from lib.operating import take_the_wheel
+
+    path = take_the_wheel(Path("data"), reason, lane=lane)
+    scope = f"the {lane} lane" if lane else "every lane"
+    print(f"OWNER OPERATING MANUALLY  {scope}")
+    print(f"  {path} written.")
+    print("  The lanes keep running and keep producing sized instructions. Nothing is "
+          "placed automatically.")
+    print("  This beats the config: a switch a setting could override would not be a "
+          "switch.")
+    print()
+    print('  Hand it back with:  python run.py --resume "Your Name" "what you checked"')
+    return 0
+
+
+def hand_back(by: str, reason: str, lane: str = "") -> int:
+    """Resume autonomous placement. A named person, with a stated reason."""
+
+    from lib.operating import resume
+
+    try:
+        switched = resume(Path("data"), by, reason, lane=lane)
+    except ValueError as error:
+        print(f"REFUSED  {error}")
+        return 2
+
+    if not switched:
+        print("Nothing was switched to manual, so there is nothing to hand back. The mode "
+              "is whatever the config says.")
+        return 0
+    print(f"Autonomous placement resumed by {by}: {reason}")
+    print("  Check what it will actually do before walking away:  python run.py --reap")
+    return 0
+
+
 def resolve(decision_id: str, resolution: str) -> int:
     orchestrator = Orchestrator(LANES, STATE)
     if not orchestrator.resolve(decision_id, resolution):
@@ -188,6 +233,18 @@ if __name__ == "__main__":
             print("Usage: python run.py --resolve DEC-0001 'what you did'")
             raise SystemExit(2)
         raise SystemExit(resolve(rest[0], " ".join(rest[1:])))
+    if "--manual" in argv:
+        rest = [a for a in argv[argv.index("--manual") + 1:] if not a.startswith("--")]
+        if not rest:
+            print('Usage: python run.py --manual "why you are taking the wheel" [lane]')
+            raise SystemExit(2)
+        raise SystemExit(take_over(rest[0], rest[1] if len(rest) > 1 else ""))
+    if "--resume" in argv:
+        rest = [a for a in argv[argv.index("--resume") + 1:] if not a.startswith("--")]
+        if len(rest) < 2:
+            print('Usage: python run.py --resume "Your Name" "what you checked" [lane]')
+            raise SystemExit(2)
+        raise SystemExit(hand_back(rest[0], rest[1], rest[2] if len(rest) > 2 else ""))
     if "--reap" in argv:
         raise SystemExit(reap())
     if "--queue" in argv:
