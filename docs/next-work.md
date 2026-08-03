@@ -323,3 +323,117 @@ Remaining after that: app making, faceless YouTube, Etsy/Craigslist.
   lanes (stocks, crypto, flipper, app development) since the system is deployed in-house
   rather than sold. `autonomous_execution` still defaults to `False` and the chain lane
   refuses it outright.
+
+
+---
+
+# HANDOFF — read this first if you are picking up cold
+
+Written 2026-08-03 against `main` at `47045c5`. **1187 tests, 2 skipped.** Working tree
+clean, nothing unpushed. Every gap listed above is closed; what follows is what has not
+been started.
+
+## If you are Codex (or anything whose sandbox cannot reach GitHub)
+
+The last run here hit `CONNECT tunnel failed, response 403` on `git push`. Raw pushes from
+that environment do not work. **Open a pull request through the GitHub integration
+instead** — that path worked, and the branch `codex/request-for-feedback` reached the remote
+that way and was merged at `c6c02ce`.
+
+Branch from `main`, never rebase a stranded branch onto a moved `main` on your own: the
+conflicts land in `lib/reaping.py`, `run.py` and `lib/outcomes.py`, and those files carry
+orderings that look wrong and are load-bearing (see below). Push the branch as it stands and
+let whoever holds the context resolve it.
+
+## Three orderings that look backwards and must not be "fixed"
+
+A reviewer or a rebase will be tempted by each of these. All three are deliberate and each
+has a test asserting the property.
+
+1. **`lib/placing.py` records the position BEFORE sending the order.** Placing first leaves
+   a window where a crash produces a real position nothing in the system knows about.
+   Recording first can leave a phantom on rejection, which is visible and fixed in one
+   command. Over-reporting exposure is the direction to fail in.
+2. **`lib/reaping.apply_outcomes` runs BEFORE any lane looks at anything**, and applies to
+   the reaper's OWN `Breakers` object rather than a freshly loaded one. A second instance
+   would write the trip to disk and leave the reaper checking the armed in-memory copy —
+   tripping and permitting in the same run.
+3. **The breakers are the LAST gate, after sizing**, because a breaker needs a number. A
+   reaper with no breakers attached cannot reach READY at all.
+
+## What is next: the flipper (function 4 of 7)
+
+Facebook Marketplace / DoneDeal / eBay / Amazon — underpriced items bought and resold.
+
+**It needs a different architecture from the three built lanes, and this is the whole
+point.** Arb, stocks and crypto are arithmetic on structured data, and a model in the
+decision path there adds nondeterminism where it is least affordable. The flipper's input is
+freeform text and photographs, which is the opposite problem.
+
+The pattern that survives contact with money: **a model reads listings and emits STRUCTURED
+OUTPUT; deterministic code then decides.** Not agents talking to agents — errors compound
+with nothing checking them.
+
+Everything downstream is already built and lane-agnostic: `lib/reaper.py` holds the
+sequence, `lib/breakers.py` the limits, `lib/outcomes.py` the return leg, `lib/operating.py`
+the mode. A flipper lane supplies five callables (`look`, `screen`, `gates`, `thesis_for`,
+`size`) and gets the rest. Read `lib/stocks_reaper.py` as the worked example.
+
+Note: eBay and Amazon have APIs. **Facebook Marketplace and DoneDeal do not.** That is a
+real constraint on `look`, not an oversight to engineer around.
+
+Remaining after that: app making, faceless YouTube, Etsy/Craigslist.
+
+## Two function ideas raised and not yet accepted
+
+**Website creation / graphics design** and **copywriting**. Both are a different category
+from the seven: they are services sold to clients, so production is the easy half and
+finding a customer is the hard half. Both are also the most commoditised AI services that
+exist — output quality is not a differentiator.
+
+The version worth building, if either is: **claim-substantiated copy**, where every factual
+assertion carries an evidence record and the deliverable includes the audit chain. That aims
+at regulated sectors — finance, health, supplements — where an unsubstantiated advertising
+claim is a regulator problem rather than a taste problem. It is the one thing the review
+board machinery uniquely serves, and `INSUFFICIENT_EVIDENCE` is the selling point: most
+tools have no way to say "we looked and this claim is not supported".
+
+Not started. Recorded so the reasoning is not re-derived.
+
+## Open questions — decisions, not tasks
+
+- **No sizing ramp.** A lane with zero settled outcomes sizes identically to one with two
+  hundred. Standard practice scales stake with evidence. Ian has been asked for the shape
+  and has not specified one; do not invent it.
+- **The Obsidian vault.** One-directional, system → markdown files with YAML frontmatter so
+  the Dataview plugin renders a live table. Roughly two hours. Writing BACK from Obsidian
+  stays out of scope: the ledger needs validation and atomic writes, and a hand-edited
+  markdown file has neither.
+
+## Blocked on Ian — not on code
+
+| | what | state |
+|---|---|---|
+| 1 | **The Odds API key** → `~/.oddsapi/key` | a key was pasted into chat and is burned; must be rotated and placed by hand. The arb lane reports COULD_NOT_LOOK until it exists. Free tier is 500 credits and `reap-arb` runs every 30 min — cut the sports list or lengthen the cadence first. |
+| 2 | **Alpaca paper** → `~/.alpaca/{key_id,secret_key,paper}` | the entire stocks lane, including the placing path, has never met a real broker |
+| 3 | **A settlement declaration** for the two bookmakers actually used | an evening with their abandonment and non-runner rules. Until then the arb lane correctly stops at INDETERMINATE and prints the exact key it wants. |
+| 4 | **QuickNode** | auth token embedded in the URL path, present in several transcripts, **still unrotated** across many sessions. QuickNode's Console API is plan-gated so the connector cannot rotate it. |
+| 5 | ~~CourtListener~~ | **not needed.** No connector, no client, no preflight entry — the only references are a docstring and a retry comment. Revoke the token; do not replace it. |
+
+Never accept a credential pasted into chat, and never write one into this repository.
+
+## Where things are
+
+```
+README.md               current state, the pipeline diagram, how to run it
+CLAUDE.md               the doctrine — read before writing a line
+docs/next-work.md       this file
+lib/reaper.py           the sequence every lane runs
+lib/{arb,stocks,crypto}_reaper.py    the three lanes
+lib/breakers.py         ring-fence, position cap, deployed cap, concurrency, kill switch
+lib/outcomes.py         what was placed and what came back
+lib/operating.py        who is placing — the machine or the owner
+lib/placing.py          the only step that cannot be undone
+positions.py            record outcomes; --apply feeds the breakers
+run.py --reap [lane]    the whole thing
+```
