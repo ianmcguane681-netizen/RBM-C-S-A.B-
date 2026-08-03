@@ -3,7 +3,8 @@
     python run.py                 what would run, and why the rest would not
     python run.py --go            actually run them
     python run.py --queue         just the human queue
-    python run.py --reap          all three reaper lanes; places where the mode allows
+    python run.py --reap [lane]   every lane, or one of arb/crypto/stocks; places where
+                                  the mode allows
     python run.py --reap --dry    the same, and sends nothing whatever the mode says
     python run.py --manual "reason"          take the wheel: lanes keep running, you place
     python run.py --resume "Your Name" "reason"   hand placing back to the machine
@@ -85,6 +86,32 @@ LANES = (
         # 1 = a lane is DEGRADED, 2 = a lane is BLOCKED. Both are the report doing its job.
         unconfigured_exit_codes=(1, 2),
     ),
+    Lane(
+        name="reap-arb",
+        command=("python", "run.py", "--reap", "arb"),
+        cadence_seconds=30 * 60,
+        produces_decisions=True,
+        findings_exit_codes=(1,),
+        # 2 means NOTHING WAS LOOKED AT. A scheduler must not turn a blind lane into a
+        # quiet market by treating that as a successful run.
+        unconfigured_exit_codes=(2,),
+    ),
+    Lane(
+        name="reap-crypto",
+        command=("python", "run.py", "--reap", "crypto"),
+        cadence_seconds=6 * 3600,
+        produces_decisions=True,
+        findings_exit_codes=(1,),
+        unconfigured_exit_codes=(2,),
+    ),
+    Lane(
+        name="reap-stocks",
+        command=("python", "run.py", "--reap", "stocks"),
+        cadence_seconds=24 * 3600,
+        produces_decisions=True,
+        findings_exit_codes=(1,),
+        unconfigured_exit_codes=(2,),
+    ),
 )
 
 
@@ -151,8 +178,8 @@ def main(go: bool) -> int:
     return 1 if orchestrator.open_decisions else 0
 
 
-def reap(dry: bool = False) -> int:
-    """Every configured lane, to a sized instruction — and placed where the mode allows.
+def reap(lane: str = "", dry: bool = False) -> int:
+    """Every configured lane, or one named lane, sized — and placed where the mode allows.
 
     A lane places only when its mode is AUTONOMOUS, which requires an explicit
     `autonomous_execution: true` with no `data/MANUAL` or `data/HALT` overriding it. The
@@ -174,9 +201,15 @@ def reap(dry: bool = False) -> int:
             pipeline as a quiet morning, every morning.
     """
 
+    from lib.reaping import LANES as REAPER_LANES
     from lib.reaping import reap as run_reapers
 
-    reaping = run_reapers(place=not dry)
+    if lane and lane not in REAPER_LANES:
+        choices = ", ".join(REAPER_LANES[:-1]) + f" or {REAPER_LANES[-1]}"
+        print(f"Unknown reaper lane {lane!r}. Choose {choices}.")
+        return 2
+
+    reaping = run_reapers(lanes=(lane,) if lane else None, place=not dry)
     print(reaping.describe())
 
     if reaping.refusal or not reaping.ready or not reaping.looked:
@@ -265,7 +298,9 @@ if __name__ == "__main__":
             raise SystemExit(2)
         raise SystemExit(hand_back(rest[0], rest[1], rest[2] if len(rest) > 2 else ""))
     if "--reap" in argv:
-        raise SystemExit(reap(dry="--dry" in argv))
+        # Flags filtered out: `--reap --dry` otherwise reads --dry as a lane name.
+        rest = [a for a in argv[argv.index("--reap") + 1:] if not a.startswith("--")]
+        raise SystemExit(reap(rest[0] if rest else "", dry="--dry" in argv))
     if "--queue" in argv:
         raise SystemExit(0 if not print(Orchestrator(LANES, STATE).describe_queue()) else 0)
     raise SystemExit(main("--go" in argv))

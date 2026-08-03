@@ -365,6 +365,7 @@ def apply_outcomes(assemblies: Sequence[Assembly], ledger: Any) -> tuple[Any, ..
 
 def reap(
     *,
+    lanes: Sequence[str] | None = None,
     config_path: Path = CONFIG,
     ledger_path: Path = LEDGER,
     directory: Path = BREAKER_DIR,
@@ -373,7 +374,7 @@ def reap(
     place: bool = True,
     brokers: Any = None,
 ) -> Reaping:
-    """Assemble, apply what settled, then run every lane. Keep the ones that could not look.
+    """Assemble, apply outcomes, then run every selected lane.
 
     Applying comes FIRST and that ordering is the point. A breaker that has not been told
     about yesterday's four losses will permit a fifth position perfectly happily, which is
@@ -390,12 +391,23 @@ def reap(
             f"every lane as unconfigured, which is a confident answer assembled out of a "
             f"parse error."))
 
-    assemblies = assemble(config, directory=directory, kill_switch=kill_switch,
-                          theses_path=theses_path)
+    selected = tuple(lanes) if lanes is not None else LANES
+    unknown = set(selected) - set(LANES)
+    if unknown:
+        return Reaping(refusal=(
+            f"unknown reaper lane(s): {', '.join(sorted(unknown))}. Choose from "
+            f"{', '.join(LANES)}."))
+
+    assemblies = tuple(
+        assembly for assembly in assemble(
+            config, directory=directory, kill_switch=kill_switch,
+            theses_path=theses_path
+        ) if assembly.lane in selected
+    )
 
     ledger = OutcomeLedger(ledger_path)
     applications = apply_outcomes(assemblies, ledger)
-    modes = {m.lane: m for m in modes_for(LANES, config, directory=directory,
+    modes = {m.lane: m for m in modes_for(selected, config, directory=directory,
                                           ledger=ledger)}
 
     harvests: list[Any] = []
@@ -415,7 +427,7 @@ def reap(
         harvests.extend(assembly.reaper.reap())
     placements = _place(harvests, modes, ledger, brokers) if place else ()
     return Reaping(assemblies, tuple(harvests), applications=applications,
-                   modes=tuple(modes[lane] for lane in LANES),
+                   modes=tuple(modes[lane] for lane in selected),
                    placements=placements)
 
 
