@@ -394,7 +394,8 @@ def apply_to_breakers(ledger: OutcomeLedger, breakers: Any,
     )
 
 
-def describe_ledger(ledger: OutcomeLedger, *, now: datetime | None = None) -> str:
+def describe_ledger(ledger: OutcomeLedger, *, lane: str = "",
+                    now: datetime | None = None) -> str:
     """The money view: what is out, what is stuck, and what the breakers cannot see."""
 
     if not ledger.readable:
@@ -407,15 +408,17 @@ def describe_ledger(ledger: OutcomeLedger, *, now: datetime | None = None) -> st
         lines.append(status.describe())
         lines.append("")
 
-    live = ledger.live()
+    live = ledger.live(lane)
     if not live:
         lines.append("No position is open. Every placement recorded here has settled.")
     else:
-        lines.append(f"{len(live)} position(s) live, {ledger.unsettled_exposure():,.2f} "
+        lines.append(f"{len(live)} position(s) live, "
+                     f"{ledger.unsettled_exposure(lane):,.2f} "
                      f"at risk and invisible to the daily loss limit:")
         lines += [f"  {p.describe()}" for p in live]
 
-    stale = ledger.stale_open(now=now)
+    stale = tuple(position for position in ledger.stale_open(now=now)
+                  if not lane or position.lane == lane)
     if stale:
         lines.append("")
         lines.append(
@@ -423,7 +426,8 @@ def describe_ledger(ledger: OutcomeLedger, *, now: datetime | None = None) -> st
             f"that old is usually an UNKNOWN nobody chased, and it is holding the breakers "
             f"short of the full picture.")
 
-    pending = ledger.pending_application()
+    pending = tuple(position for position in ledger.pending_application()
+                    if not lane or position.lane == lane)
     if pending:
         lines.append("")
         lines.append(f"  {len(pending)} settled outcome(s) have not reached the breakers "

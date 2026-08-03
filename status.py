@@ -44,6 +44,9 @@ def _now() -> str:
 BOOK = Path("data/portfolio.json")
 LEDGER = Path("data/monitor-ledger.json")
 REGISTER = Path("data/seen-register.json")
+REAPER_CONFIG = Path("data/reapers.json")
+OUTCOMES = Path("data/outcomes.json")
+MONEY_LANES = ("arb", "stocks", "crypto")
 
 
 def capital_panel() -> list[str]:
@@ -122,6 +125,187 @@ def evidence_panel() -> list[str]:
     lines.append("  A lane that can read its evidence has not thereby concluded anything.")
     lines.append("")
     return lines
+
+
+def money_panel(
+    *,
+    config_path: Path = REAPER_CONFIG,
+    directory: Path = Path("data"),
+    ledger_path: Path = OUTCOMES,
+) -> list[str]:
+    """Authority, controls and exposure for every lane that can move money."""
+
+    from lib.breakers import Breakers, Ringfence
+    from lib.operating import modes_for
+    from lib.outcomes import OutcomeLedger, describe_ledger
+    from lib.reaping import load_config
+
+    lines = ["MONEY LANES"]
+    config, config_error = load_config(config_path)
+    ledger = OutcomeLedger(ledger_path)
+    modes = modes_for(MONEY_LANES, config, directory=directory, ledger=ledger)
+
+    for lane, mode in zip(MONEY_LANES, modes):
+        lines.append(f"  {lane.upper()}")
+        lines += [f"    {line}" for line in mode.describe().splitlines()]
+
+        settings = config.get(lane) or {}
+        if config_error:
+            lines.append(
+                f"    UNREADABLE  {config_path} would not parse ({config_error}). The "
+                f"ring-fence and authority are unknown, so this lane must not operate."
+            )
+        elif not settings or not settings.get("enabled", True):
+            lines.append(
+                "    NOT_CONFIGURED  No ring-fence is configured. This is not a zero "
+                "balance or zero exposure. Configure the lane before allowing it to run."
+            )
+        else:
+            try:
+                ring = Ringfence(
+                    lane,
+                    float(settings["balance"]),
+                    currency=str(settings.get("currency", "EUR")),
+                    per_position_pct=float(settings.get("per_position_pct", 5.0)),
+                    daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
+                )
+            except (KeyError, TypeError, ValueError) as error:
+                lines.append(
+                    f"    UNREADABLE  ring-fence configuration is invalid "
+                    f"({type(error).__name__}: {error}). Correct {config_path}; an "
+                    f"unknown limit is not a satisfied limit."
+                )
+            else:
+                lines.append(
+                    f"    RING-FENCE  {ring.starting_balance:,.2f} {ring.currency}"
+                )
+                breaker_path = directory / f"breakers-{lane}.json"
+                if not breaker_path.is_file():
+                    lines.append(
+                        f"    BREAKER  NOT_CONFIGURED  {breaker_path} does not exist. "
+                        f"This is not an armed breaker with no losses; configure and "
+                        f"initialise it before the lane operates."
+                    )
+                else:
+                    breakers = Breakers(ring, breaker_path,
+                                        kill_switch=directory / "HALT")
+                    if not breakers.readable:
+                        lines.append(
+                            f"    BREAKER  UNREADABLE  {breakers.reason}. Repair or "
+                            f"restore {breaker_path}; an unknown loss history must stop "
+                            f"the lane."
+                        )
+                    elif breakers.state.is_armed:
+                        lines.append("    BREAKER  ARMED")
+                    else:
+                        lines.append(
+                            f"    BREAKER  {breakers.state.status}  "
+                            f"{breakers.state.tripped_by} at {breakers.state.tripped_at}"
+                        )
+                        lines.append(
+                            "      It does not self-clear. A named person must "
+                            "investigate and reset it with a recorded reason."
+                        )
+
+        if not ledger_path.is_file():
+            lines.append(
+                f"    POSITIONS  NOT_CONFIGURED  {ledger_path} does not exist. This is "
+                f"not 0.00 at risk; initialise the outcome ledger before placing."
+            )
+        else:
+            lines += [f"    {line}" for line in
+                      describe_ledger(ledger, lane=lane).splitlines()]
+        lines.append("")
+
+    return lines
+
+
+def money_state(
+    *,
+    config_path: Path = REAPER_CONFIG,
+    directory: Path = Path("data"),
+    ledger_path: Path = OUTCOMES,
+) -> list[dict]:
+    """The money panel's third states in fields a front end cannot flatten to zero."""
+
+    from lib.breakers import Breakers, Ringfence
+    from lib.operating import modes_for
+    from lib.outcomes import OutcomeLedger
+    from lib.reaping import load_config
+
+    config, config_error = load_config(config_path)
+    ledger = OutcomeLedger(ledger_path)
+    modes = modes_for(MONEY_LANES, config, directory=directory, ledger=ledger)
+    states = []
+
+    for lane, mode in zip(MONEY_LANES, modes):
+        settings = config.get(lane) or {}
+        item = {
+            "lane": lane,
+            "mode": mode.mode,
+            "mode_source": mode.source,
+            "places_without_asking": mode.may_place,
+            "balance": None,
+            "currency": None,
+            "breaker": {"status": "NOT_CONFIGURED"},
+            "positions": {"status": "NOT_CONFIGURED", "open": None,
+                          "unsettled_exposure": None, "stale_open": None},
+        }
+
+        if config_error:
+            item["breaker"] = {"status": "UNREADABLE", "reason": config_error}
+        elif settings and settings.get("enabled", True):
+            try:
+                ring = Ringfence(
+                    lane,
+                    float(settings["balance"]),
+                    currency=str(settings.get("currency", "EUR")),
+                    per_position_pct=float(settings.get("per_position_pct", 5.0)),
+                    daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
+                )
+            except (KeyError, TypeError, ValueError) as error:
+                item["breaker"] = {
+                    "status": "UNREADABLE",
+                    "reason": f"{type(error).__name__}: {error}",
+                }
+            else:
+                item["balance"] = ring.starting_balance
+                item["currency"] = ring.currency
+                path = directory / f"breakers-{lane}.json"
+                if path.is_file():
+                    breakers = Breakers(ring, path, kill_switch=directory / "HALT")
+                    if breakers.readable:
+                        item["breaker"] = {
+                            "status": breakers.state.status,
+                            "tripped_by": breakers.state.tripped_by or None,
+                            "tripped_at": breakers.state.tripped_at or None,
+                            "self_clears": False,
+                        }
+                    else:
+                        item["breaker"] = {
+                            "status": "UNREADABLE", "reason": breakers.reason,
+                        }
+
+        if ledger_path.is_file():
+            if ledger.readable:
+                live = ledger.live(lane)
+                stale = tuple(position for position in ledger.stale_open()
+                              if position.lane == lane)
+                item["positions"] = {
+                    "status": "READABLE",
+                    "open": len(live),
+                    "unsettled_exposure": ledger.unsettled_exposure(lane),
+                    "stale_open": len(stale),
+                    "daily_loss_limit_can_see_exposure": False,
+                }
+            else:
+                item["positions"] = {
+                    "status": "UNREADABLE", "reason": ledger.reason,
+                    "open": None, "unsettled_exposure": None, "stale_open": None,
+                }
+        states.append(item)
+
+    return states
 
 
 def boards_panel() -> list[str]:
@@ -239,6 +423,7 @@ def as_json() -> dict:
              "summary": lane.summary}
             for lane in lanes
         ],
+        "money_lanes": money_state(),
         "boards": boards,
         "recent_runs": [
             {"lane": r.lane, "at": r.started_at, "status": r.status, "exit": r.exit_code}
@@ -258,7 +443,8 @@ def as_json() -> dict:
 
 
 def main() -> int:
-    panels = capital_panel() + obligations_panel() + evidence_panel() + boards_panel()
+    panels = (capital_panel() + money_panel() + obligations_panel() + evidence_panel()
+              + boards_panel())
     print("\n".join(panels))
     print("=" * 74)
     print("No figure above is a forecast. Nothing here predicts a price, a sale or a")
