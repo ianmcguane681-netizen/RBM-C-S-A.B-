@@ -58,6 +58,7 @@ def test_liveness_needs_no_secret_but_the_money_view_does(monkeypatch):
     """
 
     monkeypatch.delenv("PROVENA_COMMAND_KEY", raising=False)
+    monkeypatch.delenv("PROVENA_VIEW_KEY", raising=False)
     app = create_app()
 
     health_status, health = request(app, "GET", "/health")
@@ -79,11 +80,63 @@ def test_an_unset_key_withholds_the_money_view_rather_than_publishing_it(monkeyp
     """
 
     monkeypatch.delenv("PROVENA_COMMAND_KEY", raising=False)
+    monkeypatch.delenv("PROVENA_VIEW_KEY", raising=False)
 
     response_status, body = request(create_app(), "GET", "/api/v1/overview")
 
     assert response_status == 503
     assert "not a public server" in json.dumps(body)
+
+
+def test_the_view_key_opens_the_money_view_and_not_the_lanes(monkeypatch):
+    """The whole reason there are two secrets: the browser only ever needs the weaker one.
+
+    A dashboard is a static page with nowhere safe to keep a key, so live state in a
+    browser means a key in browser storage. This test pins which key that can be — one
+    whose entire power is seeing what the CLI already prints. A single key for both would
+    make the convenient thing also the thing that puts a lane-running credential one
+    cross-site script away.
+    """
+
+    monkeypatch.setenv("PROVENA_VIEW_KEY", "view-key")
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "command-key")
+    app = create_app()
+    headers = {"X-Provena-View-Key": "view-key"}
+
+    read_status, overview = request(app, "GET", "/api/v1/overview", headers=headers)
+    command_status, _ = request(
+        app, "POST", "/api/v1/reapers/run", payload={"dry_run": True}, headers=headers)
+
+    assert read_status == 200
+    assert {"capital", "money_lanes"} <= set(overview)
+    assert command_status == 401
+
+
+def test_the_command_key_also_reads_because_it_already_outranks_the_view_key(monkeypatch):
+    monkeypatch.setenv("PROVENA_VIEW_KEY", "view-key")
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "command-key")
+
+    response_status, _ = request(
+        create_app(), "GET", "/api/v1/overview",
+        headers={"X-Provena-Command-Key": "command-key"})
+
+    assert response_status == 200
+
+
+def test_a_view_key_alone_still_refuses_every_command(monkeypatch):
+    """No view key configuration turns into a command surface, even with no command key.
+
+    With only a view key set the commands are unconfigured, and unconfigured refuses.
+    """
+
+    monkeypatch.setenv("PROVENA_VIEW_KEY", "view-key")
+    monkeypatch.delenv("PROVENA_COMMAND_KEY", raising=False)
+
+    response_status, _ = request(
+        create_app(), "POST", "/api/v1/reapers/run", payload={"dry_run": True},
+        headers={"X-Provena-View-Key": "view-key"})
+
+    assert response_status == 503
 
 
 def test_the_money_view_is_served_to_a_caller_holding_the_key(monkeypatch):

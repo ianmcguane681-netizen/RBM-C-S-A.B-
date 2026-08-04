@@ -60,24 +60,29 @@ The UI backend projects the same status and reaper domain objects used by the CL
 not reconstruct operating truth in a web controller.
 
 ```bash
-export PROVENA_COMMAND_KEY=...   # without it the API serves no lane data at all
+export PROVENA_VIEW_KEY=...      # read-only: the dashboard and the two GETs
+export PROVENA_COMMAND_KEY=...   # runs lanes; keep this one out of the browser
 python -m backend
-# Open http://127.0.0.1:8000/ for the operator dashboard
-# GET http://127.0.0.1:8000/api/v1/overview     -H "X-Provena-Command-Key: ..."
-# GET http://127.0.0.1:8000/api/v1/connectors   -H "X-Provena-Command-Key: ..."
+# Open http://127.0.0.1:8000/ and paste the VIEW key when the dashboard asks
+# GET http://127.0.0.1:8000/api/v1/overview     -H "X-Provena-View-Key: ..."
+# GET http://127.0.0.1:8000/api/v1/connectors   -H "X-Provena-View-Key: ..."
 ```
 
-**Reads are behind the key, not only commands.** `overview` returns the portfolio, every
+**Reads are behind a key, not only commands.** `overview` returns the portfolio, every
 open decision's subject, each lane's ring-fence and its unsettled exposure — the set this
-repository gitignores precisely because it is public. An unset key withholds that data and
-answers `503`; it never means the server is open. Only `/health` and the static dashboard
-are unauthenticated.
+repository gitignores precisely because it is public. With neither key set that data is
+withheld and the answer is `503`; unset never means open. Only `/health` and the static
+dashboard itself are unauthenticated.
 
-The dashboard is a static page and holds no key, so it renders its labelled offline layout
-and says which of the two applies — key not set on the server, or not presented by the
-browser. Putting a money-moving key in browser storage would be a worse trade than the
-missing convenience; to see live state in a browser, front it with a proxy that injects
-the header.
+**Two keys, because a dashboard has nowhere safe to keep one.** Showing live state in a
+browser means a key in browser storage, so `PROVENA_VIEW_KEY` exists to make that the key
+whose entire power is *seeing what the CLI already prints*. `PROVENA_COMMAND_KEY` runs
+lanes and never has to leave your shell; it is accepted on reads too, since it already
+outranks the view key. The dashboard keeps the view key in `sessionStorage`, so it dies
+with the tab, and asks for it by name rather than reporting a running server as offline.
+
+A single key for both would have made the convenient thing — paste it into the dashboard —
+also the thing that puts a lane-running credential one cross-site script away.
 
 The server binds to `0.0.0.0` so container and IDE previews can reach it, and reads the
 platform-provided `PORT` (default `8000`). `HOST` may override the bind address when a local

@@ -76,26 +76,63 @@ def _execution_enabled(command: ReaperCommand) -> bool:
     )
 
 
-def _require_command_key(provided: str | None) -> None:
-    """The one gate in front of both the money data and the money commands.
+def _matches(provided: str | None, expected: str) -> bool:
+    """`compare_digest` rather than `==`.
 
-    `compare_digest` rather than `==`: the key is a fixed secret compared on every
-    request, which is the shape a timing oracle needs, and the constant-time compare costs
-    nothing to use.
+    The key is a fixed secret compared on every request, which is the shape a timing
+    oracle needs, and a constant-time compare costs nothing to use.
+    """
+
+    return bool(expected) and provided is not None and compare_digest(provided, expected)
+
+
+def _require_command_key(provided: str | None) -> None:
+    """The gate in front of running a lane, which is the gate in front of moving money.
 
     An absent key is 503 rather than an open door. There is no configuration of this
-    server in which not having set a secret means everyone may read the stakes.
+    server in which not having set a secret means anyone may run a lane.
     """
 
     expected = os.environ.get("PROVENA_COMMAND_KEY", "")
     if not expected:
         raise HTTPException(
             503,
-            "PROVENA_COMMAND_KEY is not set, so this API serves no lane data and accepts "
-            "no commands. Set it on the server; an unset key is not a public server.",
+            "PROVENA_COMMAND_KEY is not set, so this API accepts no commands. Set it on "
+            "the server; an unset key is not a public server.",
         )
-    if provided is None or not compare_digest(provided, expected):
+    if not _matches(provided, expected):
         raise HTTPException(401, "A valid command key is required")
+
+
+def _require_view_key(view: str | None, command: str | None) -> None:
+    """Reads take EITHER key, and that split is the point rather than a convenience.
+
+    The dashboard is a static page with nowhere safe to keep a secret, so showing live
+    state in a browser means a key ends up in browser storage. `PROVENA_VIEW_KEY` exists
+    so the key that ends up there is the one whose entire power is *seeing what the CLI
+    already prints*. The key that can run a lane never has to leave the operator's shell.
+
+    A single key for both would have made the convenient thing — paste it into the
+    dashboard — also the thing that puts a money-moving credential one cross-site script
+    away from an attacker. Two secrets, two powers, and the dangerous one stays out of the
+    browser.
+
+    Holding `PROVENA_COMMAND_KEY` implies the lesser power, so it is accepted here too.
+    Neither configured is 503: unset still never means public.
+    """
+
+    view_key = os.environ.get("PROVENA_VIEW_KEY", "")
+    command_key = os.environ.get("PROVENA_COMMAND_KEY", "")
+    if not view_key and not command_key:
+        raise HTTPException(
+            503,
+            "Neither PROVENA_VIEW_KEY nor PROVENA_COMMAND_KEY is set, so this API serves "
+            "no lane data. Set PROVENA_VIEW_KEY for a read-only dashboard; an unset key "
+            "is not a public server.",
+        )
+    if _matches(view, view_key) or _matches(command, command_key):
+        return
+    raise HTTPException(401, "A valid view key is required")
 
 
 def create_app() -> FastAPI:
@@ -113,7 +150,7 @@ def create_app() -> FastAPI:
         # combination that lets any page in the browser read this API as the operator.
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-Provena-Command-Key"],
+        allow_headers=["Content-Type", "X-Provena-View-Key", "X-Provena-Command-Key"],
     )
     app.mount("/assets", StaticFiles(directory=_static), name="assets")
 
@@ -135,20 +172,22 @@ def create_app() -> FastAPI:
 
     @app.get("/api/v1/overview")
     def overview(
+        view_key: str | None = Header(default=None, alias="X-Provena-View-Key"),
         command_key: str | None = Header(default=None, alias="X-Provena-Command-Key"),
     ) -> dict[str, Any]:
-        _require_command_key(command_key)
+        _require_view_key(view_key, command_key)
         return status.as_json()
 
     @app.get("/api/v1/connectors")
     def connectors(
         probe: bool = False,
+        view_key: str | None = Header(default=None, alias="X-Provena-View-Key"),
         command_key: str | None = Header(default=None, alias="X-Provena-Command-Key"),
     ) -> dict[str, Any]:
-        # Behind the key as well: this names which credentials exist and which lanes are
+        # Behind a key as well: this names which credentials exist and which lanes are
         # blocked without them, which is a map of the operator's setup even though it
         # never returns a secret. `probe=true` also spends real API quota on request.
-        _require_command_key(command_key)
+        _require_view_key(view_key, command_key)
         lanes = all_lanes(probe=probe)
         return {
             "probed": probe,

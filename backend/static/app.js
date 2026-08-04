@@ -45,6 +45,30 @@ function renderConnectors(data) {
   $("connectors").innerHTML = data.lanes.map(l=>`<div class="connector-row"><span>${laneNames[l.lane]}<small>${safe(l.missing?.join(", ") || "All requirements present")}</small></span><b class="${l.status.toLowerCase()}">${safe(l.status)}</b></div>`).join("");
 }
 
+// The VIEW key only, never the command key. sessionStorage rather than localStorage so it
+// dies with the tab, and read-only so that what an XSS could steal is the ability to see
+// what the CLI already prints rather than the ability to run a lane.
+const VIEW_KEY = "provena-view-key";
+const viewKey = () => sessionStorage.getItem(VIEW_KEY) || "";
+const authed = () => viewKey() ? {"X-Provena-View-Key": viewKey()} : {};
+
+function askForViewKey() {
+  const entered = window.prompt(
+    "This dashboard needs the read-only view key (PROVENA_VIEW_KEY on the server).\n\n" +
+    "Do NOT paste the command key here — that one runs lanes, and nothing that can move " +
+    "money belongs in a browser."
+  );
+  if (entered === null) return false;
+  sessionStorage.setItem(VIEW_KEY, entered.trim());
+  return true;
+}
+
+function keyPrompt(message) {
+  $("connection").className = "connection error";
+  $("connection").innerHTML = `<span></span> ${safe(message)} · <a href="#" id="enter-key">enter view key</a>`;
+  $("enter-key").onclick = (event) => { event.preventDefault(); if (askForViewKey()) boot(); };
+}
+
 async function boot() {
   if (location.protocol === "file:") {
     renderOverview(offlineOverview); renderConnectors(offlineConnectors);
@@ -53,12 +77,23 @@ async function boot() {
     return;
   }
   try {
-    const [overview, connectors] = await Promise.all([fetch("/api/v1/overview"),fetch("/api/v1/connectors")]);
-    // 503 and 401 are not "no API". The lane data is behind the command key, and a page
-    // reporting a running server as offline sends its reader to restart a service that is
-    // already up. Name the actual cause; the refusal has a thing a person can go and do.
-    if (overview.status === 503 || connectors.status === 503) throw new Error("API is running · PROVENA_COMMAND_KEY is not set on the server, so no lane data is served");
-    if (overview.status === 401 || connectors.status === 401) throw new Error("API is running · this view needs the X-Provena-Command-Key header; the browser does not hold it");
+    const options = {headers: authed()};
+    const [overview, connectors] = await Promise.all([fetch("/api/v1/overview",options),fetch("/api/v1/connectors",options)]);
+    // 503 and 401 are not "no API". The lane data is behind a key, and a page reporting a
+    // running server as offline sends its reader to restart a service that is already up.
+    // Name the actual cause; the refusal has a thing a person can go and do.
+    if (overview.status === 503 || connectors.status === 503) {
+      renderOverview(offlineOverview); renderConnectors(offlineConnectors);
+      $("connection").className = "connection error";
+      $("connection").innerHTML = "<span></span> API is running · no key is set on the server, so no lane data is served. Set PROVENA_VIEW_KEY";
+      return;
+    }
+    if (overview.status === 401 || connectors.status === 401) {
+      sessionStorage.removeItem(VIEW_KEY);
+      renderOverview(offlineOverview); renderConnectors(offlineConnectors);
+      keyPrompt("API is running · this view needs the read-only key");
+      return;
+    }
     if (!overview.ok || !connectors.ok) throw new Error(`API returned ${overview.status}/${connectors.status}`);
     renderOverview(await overview.json()); renderConnectors(await connectors.json());
     $("connection").className = "connection online"; $("connection").innerHTML = "<span></span> Operator API connected";

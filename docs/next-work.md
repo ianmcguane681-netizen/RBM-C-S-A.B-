@@ -397,6 +397,20 @@ Checked and sound, for the record: the API cannot route around the operating mod
 `anon`/`authenticated`, and the `public.operator_*` views are `security_invoker`, so the
 `GRANT ... TO anon` on them cannot actually read the underlying tables.
 
+**The dashboard question that fix opened, and the answer taken.** Putting reads behind the
+key left the static dashboard permanently showing its offline layout, since it holds no
+key. Resolved with a second secret rather than by reopening the reads: `PROVENA_VIEW_KEY`
+grants the two GETs and nothing else, `PROVENA_COMMAND_KEY` runs lanes and is accepted on
+reads because it already outranks the view key. The dashboard asks for the view key by
+name and keeps it in `sessionStorage`, so it dies with the tab.
+
+The reasoning, because a future session will be tempted to collapse them back into one: a
+dashboard has nowhere safe to keep a secret, so live state in a browser means a key in
+browser storage. The only question is which key. One key for both would make the
+convenient act — paste it into the dashboard — also the act that puts a lane-running
+credential one cross-site script away. Two secrets means what an XSS can steal is the
+ability to see what `status.py` already prints.
+
 Noted, not changed:
 
 - `index.html` exists at the repo root and again at `backend/static/index.html`, identical
