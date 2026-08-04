@@ -286,11 +286,36 @@ class TestTheJsonLayerDoesNotReintroduceTheZero:
         monkeypatch.setattr(status, "BOOK", tmp_path / "portfolio.json")
         return status.as_json()
 
-    def test_an_empty_book_emits_null_rather_than_zero(self, monkeypatch, tmp_path):
+    def test_a_book_nobody_has_started_emits_null_rather_than_zero(
+        self, monkeypatch, tmp_path
+    ):
+        """This fixture points at a file that does not exist, so it is NOT_CONFIGURED.
+
+        The status was `EMPTY_BOOK` while absent and empty were one case. They are now
+        told apart, because a book nobody has started and a book somebody started and
+        emptied are different facts — and `cost_basis` is null for both, where it used to
+        be the 0.0 this whole class exists to argue against.
+        """
+
         payload = self._payload(monkeypatch, tmp_path)
 
         assert payload["capital"]["priced_value"] is None
+        assert payload["capital"]["cost_basis"] is None
+        assert payload["capital"]["value_status"] == "NOT_CONFIGURED"
+
+    def test_a_book_that_exists_and_holds_nothing_is_an_empty_book(
+        self, monkeypatch, tmp_path
+    ):
+        book = tmp_path / "portfolio.json"
+        book.write_text("[]", encoding="utf-8")
+
+        import status
+
+        monkeypatch.setattr(status, "BOOK", book)
+        payload = status.as_json()
+
         assert payload["capital"]["value_status"] == "EMPTY_BOOK"
+        assert payload["capital"]["cost_basis"] is None
 
     def test_an_empty_book_is_not_reported_as_complete(self, monkeypatch, tmp_path):
         assert self._payload(monkeypatch, tmp_path)["capital"]["is_complete"] is False

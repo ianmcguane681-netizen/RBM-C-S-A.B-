@@ -33,7 +33,7 @@ from pathlib import Path
 
 from lib.portfolio import LANES, Portfolio
 from lib.preflight import BLOCKED, DEGRADED, all_lanes
-from lib.store import LOST
+from lib.store import LOST, UNREADABLE
 
 def _now() -> str:
     from datetime import datetime, timezone
@@ -127,6 +127,110 @@ def evidence_panel() -> list[str]:
     return lines
 
 
+def _capital_state(book, positions, exposure) -> dict:
+    """The capital block, keeping a book that vanished apart from a book that is empty.
+
+    **Three different nothings were rendering as one zero.** A portfolio file that never
+    existed, one that existed and is now unreadable or gone, and one that is genuinely
+    empty all produce nought positions, and every figure derived from them came out `0.0`.
+    The dashboard put that in the largest type on the page as `CAPITAL AT COST €0.00`
+    beside the word EMPTY_BOOK — a measured balance, assembled from a missing file.
+
+    The text panel never made this mistake: `capital_panel` returns early on LOST and says
+    in as many words that an empty book is "not a zero balance: nothing has been entered,
+    so nothing is known about what is held". `as_json` did not check the store state at
+    all, so a vanished portfolio reported an empty one. That is this repository's founding
+    defect and its most consequential form — the vanished ledger reporting FIRST_SEEN.
+
+    So `cost_basis` is `None` in every one of the three cases rather than `0.0`. An empty
+    book gets a null too, deliberately: the panel's wording is that nothing is KNOWN, not
+    that nothing is held, and the JSON has no business being more confident than the prose
+    it mirrors. A real total is emitted only when there are real positions behind it.
+
+    **And `cost_basis` is now summed from the positions rather than taken from
+    `Exposure`.** `Exposure.cost_basis` is the cost of the PRICED subset — it accumulates
+    only where a valuation came back — so with no price source wired for any lane, which
+    is the current state of every lane, it is `0.0` however much is held. The dashboard
+    labels that figure CAPITAL AT COST. A fully stocked book was therefore rendering as
+    €0.00 too, and the empty-book case was only the most obvious instance of it.
+
+    What was paid is knowable without any price source, which is exactly why it is the
+    figure worth showing while pricing is unwired. The priced subset keeps its own name in
+    `priced_value`, null until the valuation is complete.
+    """
+
+    unknown = {
+        "priced_value": None,
+        "cost_basis": None,
+        "priced_cost_basis": None,
+        "is_complete": False,
+        "unpriced_assets": [],
+        "by_lane_cost": {},
+        "positions": [],
+        "currency": exposure.currency,
+        "store_state": book.status.state,
+    }
+
+    if book.status.state in {LOST, UNREADABLE}:
+        # Reported apart from an empty book, and the reason carried, because these are the
+        # cases where a zero is not merely unfounded but actively wrong: there WAS a book.
+        return {**unknown, "value_status": book.status.state,
+                "reason": book.status.describe()}
+
+    if not positions:
+        return {**unknown, "reason": None,
+                "value_status": "EMPTY_BOOK" if BOOK.is_file() else "NOT_CONFIGURED"}
+
+    return {
+        "priced_value": exposure.priced_value if exposure.is_complete else None,
+        "value_status": "PRICED" if exposure.is_complete else "PARTIALLY_UNPRICED",
+        "currency": exposure.currency,
+        "cost_basis": sum(p.cost_basis for p in positions),
+        "priced_cost_basis": exposure.cost_basis,
+        "is_complete": exposure.is_complete,
+        "unpriced_assets": list(exposure.unpriced_assets),
+        "by_lane_cost": {
+            lane: sum(p.cost_basis for p in positions if p.lane == lane)
+            for lane in {p.lane for p in positions}
+        },
+        "positions": [
+            {"asset": p.asset, "lane": p.lane, "quantity": p.quantity,
+             "cost_basis": p.cost_basis, "currency": p.currency,
+             "value": None, "value_status": "UNPRICED"}
+            for p in positions
+        ],
+        "store_state": book.status.state,
+        "reason": None,
+    }
+
+
+def _controls_for(lane: str, settings: dict, *, directory: Path):
+    """One lane's ring-fence and breakers, built by the code that actually runs the lane.
+
+    Returns `(breakers, invalid_reason)`; exactly one is set.
+
+    **This delegates to `lib.reaping.breakers_for` rather than constructing a `Ringfence`
+    here, and the reason is a defect this panel had.** It built its own, and dropped
+    `max_deployed_pct` and `max_concurrent_positions` on the way, so a lane configured to
+    keep 20% deployed was described against the dataclass default of 40. It also omitted
+    the outcome ledger, which `Breakers` documents as the thing without which the
+    deployed-capital control cannot be evaluated at all.
+
+    Nothing visible was wrong yet, because this panel only reads the breaker state off
+    disk. That is what makes it worth removing: two notions of what a lane's limits are,
+    agreeing today, with nothing to make the disagreement visible on the day it starts.
+    `positions.py --apply` states the same rule in its own docstring.
+    """
+
+    from lib.reaping import breakers_for
+
+    try:
+        return breakers_for(lane, settings, directory=directory,
+                            kill_switch=directory / "HALT"), ""
+    except (KeyError, TypeError, ValueError) as error:
+        return None, f"{type(error).__name__}: {error}"
+
+
 def money_panel(
     *,
     config_path: Path = REAPER_CONFIG,
@@ -135,7 +239,6 @@ def money_panel(
 ) -> list[str]:
     """Authority, controls and exposure for every lane that can move money."""
 
-    from lib.breakers import Breakers, Ringfence
     from lib.operating import modes_for
     from lib.outcomes import OutcomeLedger, describe_ledger
     from lib.reaping import load_config
@@ -161,21 +264,15 @@ def money_panel(
                 "balance or zero exposure. Configure the lane before allowing it to run."
             )
         else:
-            try:
-                ring = Ringfence(
-                    lane,
-                    float(settings["balance"]),
-                    currency=str(settings.get("currency", "EUR")),
-                    per_position_pct=float(settings.get("per_position_pct", 5.0)),
-                    daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
-                )
-            except (KeyError, TypeError, ValueError) as error:
+            breakers, invalid = _controls_for(lane, settings, directory=directory)
+            if invalid:
                 lines.append(
                     f"    UNREADABLE  ring-fence configuration is invalid "
-                    f"({type(error).__name__}: {error}). Correct {config_path}; an "
+                    f"({invalid}). Correct {config_path}; an "
                     f"unknown limit is not a satisfied limit."
                 )
             else:
+                ring = breakers.ringfence
                 lines.append(
                     f"    RING-FENCE  {ring.starting_balance:,.2f} {ring.currency}"
                 )
@@ -186,26 +283,23 @@ def money_panel(
                         f"This is not an armed breaker with no losses; configure and "
                         f"initialise it before the lane operates."
                     )
+                elif not breakers.readable:
+                    lines.append(
+                        f"    BREAKER  UNREADABLE  {breakers.reason}. Repair or "
+                        f"restore {breaker_path}; an unknown loss history must stop "
+                        f"the lane."
+                    )
+                elif breakers.state.is_armed:
+                    lines.append("    BREAKER  ARMED")
                 else:
-                    breakers = Breakers(ring, breaker_path,
-                                        kill_switch=directory / "HALT")
-                    if not breakers.readable:
-                        lines.append(
-                            f"    BREAKER  UNREADABLE  {breakers.reason}. Repair or "
-                            f"restore {breaker_path}; an unknown loss history must stop "
-                            f"the lane."
-                        )
-                    elif breakers.state.is_armed:
-                        lines.append("    BREAKER  ARMED")
-                    else:
-                        lines.append(
-                            f"    BREAKER  {breakers.state.status}  "
-                            f"{breakers.state.tripped_by} at {breakers.state.tripped_at}"
-                        )
-                        lines.append(
-                            "      It does not self-clear. A named person must "
-                            "investigate and reset it with a recorded reason."
-                        )
+                    lines.append(
+                        f"    BREAKER  {breakers.state.status}  "
+                        f"{breakers.state.tripped_by} at {breakers.state.tripped_at}"
+                    )
+                    lines.append(
+                        "      It does not self-clear. A named person must "
+                        "investigate and reset it with a recorded reason."
+                    )
 
         if not ledger_path.is_file():
             lines.append(
@@ -228,7 +322,6 @@ def money_state(
 ) -> list[dict]:
     """The money panel's third states in fields a front end cannot flatten to zero."""
 
-    from lib.breakers import Breakers, Ringfence
     from lib.operating import modes_for
     from lib.outcomes import OutcomeLedger
     from lib.reaping import load_config
@@ -255,25 +348,13 @@ def money_state(
         if config_error:
             item["breaker"] = {"status": "UNREADABLE", "reason": config_error}
         elif settings and settings.get("enabled", True):
-            try:
-                ring = Ringfence(
-                    lane,
-                    float(settings["balance"]),
-                    currency=str(settings.get("currency", "EUR")),
-                    per_position_pct=float(settings.get("per_position_pct", 5.0)),
-                    daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
-                )
-            except (KeyError, TypeError, ValueError) as error:
-                item["breaker"] = {
-                    "status": "UNREADABLE",
-                    "reason": f"{type(error).__name__}: {error}",
-                }
+            breakers, invalid = _controls_for(lane, settings, directory=directory)
+            if invalid:
+                item["breaker"] = {"status": "UNREADABLE", "reason": invalid}
             else:
-                item["balance"] = ring.starting_balance
-                item["currency"] = ring.currency
-                path = directory / f"breakers-{lane}.json"
-                if path.is_file():
-                    breakers = Breakers(ring, path, kill_switch=directory / "HALT")
+                item["balance"] = breakers.ringfence.starting_balance
+                item["currency"] = breakers.ringfence.currency
+                if (directory / f"breakers-{lane}.json").is_file():
                     if breakers.readable:
                         item["breaker"] = {
                             "status": breakers.state.status,
@@ -289,8 +370,7 @@ def money_state(
         if ledger_path.is_file():
             if ledger.readable:
                 live = ledger.live(lane)
-                stale = tuple(position for position in ledger.stale_open()
-                              if position.lane == lane)
+                stale = ledger.stale_open(lane=lane)
                 item["positions"] = {
                     "status": "READABLE",
                     "open": len(live),
@@ -375,38 +455,14 @@ def as_json() -> dict:
         except sqlite3.Error:
             boards = []
 
+    from lib.ui_contract import SCHEMA_VERSION
+
     return {
+        "schema_version": SCHEMA_VERSION,
         "generated_at": _now(),
-        "capital": {
-            # None, not 0.0, in BOTH failure cases -- and the second was found by running
-            # this. An empty book has no unpriced assets, so `is_complete` reads true and
-            # the total emitted 0.0, which a front end renders as a known balance of zero.
-            # The text panel already said "an empty book, not a zero balance"; the JSON
-            # layer had quietly reintroduced the very defect this file argues against.
-            "priced_value": (
-                exposure.priced_value
-                if positions and exposure.is_complete else None
-            ),
-            "value_status": (
-                "EMPTY_BOOK" if not positions
-                else "PRICED" if exposure.is_complete else "PARTIALLY_UNPRICED"
-            ),
-            "currency": exposure.currency,
-            "cost_basis": exposure.cost_basis,
-            "is_complete": bool(positions) and exposure.is_complete,
-            "unpriced_assets": list(exposure.unpriced_assets),
-            "by_lane_cost": {
-                lane: sum(p.cost_basis for p in positions if p.lane == lane)
-                for lane in {p.lane for p in positions}
-            },
-            "positions": [
-                {"asset": p.asset, "lane": p.lane, "quantity": p.quantity,
-                 "cost_basis": p.cost_basis, "currency": p.currency,
-                 "value": None, "value_status": "UNPRICED"}
-                for p in positions
-            ],
-            "store_state": book.status.state,
-        },
+        # Every figure null unless there are real positions behind it, and a book that
+        # vanished reported apart from one that is empty. See `_capital_state`.
+        "capital": _capital_state(book, positions, exposure),
         "decisions": {
             "open": len(orchestrator.open_decisions),
             "limit": orchestrator.queue_limit,

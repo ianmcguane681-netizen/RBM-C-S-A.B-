@@ -436,6 +436,9 @@ def build_arb_reaper(
     authority: StandingAuthority,
     breakers: Any,
     sports: Sequence[str] = (),
+    #: Provider keys to ask for instead of a whole region. Empty asks for the region, and
+    #: the connector's docstring argues why that is the default rather than a book list.
+    bookmakers: Sequence[str] = (),
     declarations: Mapping[str, Any] | None = None,
     source: Any = None,
     register: Any = None,
@@ -458,7 +461,8 @@ def build_arb_reaper(
     def look():
         from connectors.oddsapi import H2H, OddsApiSource
 
-        feed = source if source is not None else OddsApiSource.from_directory()
+        feed = (source if source is not None
+                else OddsApiSource.from_directory(bookmakers=bookmakers))
         if not getattr(feed, "is_configured", False):
             # Raising is correct: this is COULD_NOT_LOOK, and reporting it as an empty
             # scan is the exact confusion the reaper's status set exists to prevent.

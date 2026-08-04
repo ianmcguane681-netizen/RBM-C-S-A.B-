@@ -119,6 +119,34 @@ class TestConfigurationIsRefusedRatherThanPatched:
 
         assert assemble(broken, **paths(tmp_path))[0].status == REFUSED
 
+    def test_a_bookmaker_list_written_as_one_string_is_refused(self, tmp_path):
+        """`"bookmakers": "skybet"` iterates into six one-letter books, and the API is fine
+        with that.
+
+        It answers 200 with none of them present, the lane finds no arb, and nothing
+        anywhere reports an error. A typo that produces a quiet market rather than a
+        failure is the shape of defect this repository refuses at the config boundary.
+        """
+
+        broken = config(arb={"enabled": True, "balance": 500.0, "bookmakers": "skybet",
+                             "authority": dict(AUTHORITY)})
+
+        arb = assemble(broken, **paths(tmp_path))[0]
+
+        assert arb.status == REFUSED
+        assert "JSON list" in arb.reason
+
+    def test_a_configured_bookmaker_list_reaches_the_lane(self, tmp_path):
+        """Narrowing the scan is an operator's written choice, so it comes from the file."""
+
+        narrowed = config(arb={"enabled": True, "balance": 500.0,
+                               "bookmakers": ["skybet", "paddypower"],
+                               "authority": dict(AUTHORITY)})
+
+        arb = assemble(narrowed, **paths(tmp_path))[0]
+
+        assert arb.status == CONFIGURED
+
     def test_a_zero_balance_ringfence_is_refused(self, tmp_path):
         broken = config(arb={"enabled": True, "balance": 0.0, "authority": dict(AUTHORITY)})
 

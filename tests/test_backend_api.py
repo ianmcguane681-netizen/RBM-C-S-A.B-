@@ -48,16 +48,116 @@ def request(app, method: str, path: str, *, payload=None, headers=None):
     return start["status"], parsed
 
 
-def test_health_and_overview_are_available_without_a_command_key():
+def test_liveness_needs_no_secret_but_the_money_view_does(monkeypatch):
+    """A probe that needs a key is a probe nobody wires up. The stakes are another matter.
+
+    `/api/v1/overview` carries the portfolio's assets, every open decision's subject, and
+    each lane's ring-fence and unsettled exposure — the same set this repository
+    gitignores because it is public. The server binds every interface by default so
+    container previews can reach it, so an open read is open to the network.
+    """
+
+    monkeypatch.delenv("PROVENA_COMMAND_KEY", raising=False)
+    monkeypatch.delenv("PROVENA_VIEW_KEY", raising=False)
     app = create_app()
 
     health_status, health = request(app, "GET", "/health")
-    overview_status, overview = request(app, "GET", "/api/v1/overview")
+    overview_status, _ = request(app, "GET", "/api/v1/overview")
+    connectors_status, _ = request(app, "GET", "/api/v1/connectors")
 
     assert health_status == 200
     assert health == {"status": "ok"}
-    assert overview_status == 200
+    assert overview_status == 503
+    assert connectors_status == 503
+
+
+def test_an_unset_key_withholds_the_money_view_rather_than_publishing_it(monkeypatch):
+    """The absent-key case fails toward stopping, exactly as an absent autonomy key does.
+
+    "Nobody configured a secret" must not resolve to "everybody may read the stakes". It
+    is the same defect as an absent config key resolving to placing freely, arriving at
+    the transport layer instead of the operating one.
+    """
+
+    monkeypatch.delenv("PROVENA_COMMAND_KEY", raising=False)
+    monkeypatch.delenv("PROVENA_VIEW_KEY", raising=False)
+
+    response_status, body = request(create_app(), "GET", "/api/v1/overview")
+
+    assert response_status == 503
+    assert "not a public server" in json.dumps(body)
+
+
+def test_the_view_key_opens_the_money_view_and_not_the_lanes(monkeypatch):
+    """The whole reason there are two secrets: the browser only ever needs the weaker one.
+
+    A dashboard is a static page with nowhere safe to keep a key, so live state in a
+    browser means a key in browser storage. This test pins which key that can be — one
+    whose entire power is seeing what the CLI already prints. A single key for both would
+    make the convenient thing also the thing that puts a lane-running credential one
+    cross-site script away.
+    """
+
+    monkeypatch.setenv("PROVENA_VIEW_KEY", "view-key")
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "command-key")
+    app = create_app()
+    headers = {"X-Provena-View-Key": "view-key"}
+
+    read_status, overview = request(app, "GET", "/api/v1/overview", headers=headers)
+    command_status, _ = request(
+        app, "POST", "/api/v1/reapers/run", payload={"dry_run": True}, headers=headers)
+
+    assert read_status == 200
+    assert {"capital", "money_lanes"} <= set(overview)
+    assert command_status == 401
+
+
+def test_the_command_key_also_reads_because_it_already_outranks_the_view_key(monkeypatch):
+    monkeypatch.setenv("PROVENA_VIEW_KEY", "view-key")
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "command-key")
+
+    response_status, _ = request(
+        create_app(), "GET", "/api/v1/overview",
+        headers={"X-Provena-Command-Key": "command-key"})
+
+    assert response_status == 200
+
+
+def test_a_view_key_alone_still_refuses_every_command(monkeypatch):
+    """No view key configuration turns into a command surface, even with no command key.
+
+    With only a view key set the commands are unconfigured, and unconfigured refuses.
+    """
+
+    monkeypatch.setenv("PROVENA_VIEW_KEY", "view-key")
+    monkeypatch.delenv("PROVENA_COMMAND_KEY", raising=False)
+
+    response_status, _ = request(
+        create_app(), "POST", "/api/v1/reapers/run", payload={"dry_run": True},
+        headers={"X-Provena-View-Key": "view-key"})
+
+    assert response_status == 503
+
+
+def test_the_money_view_is_served_to_a_caller_holding_the_key(monkeypatch):
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "test-key")
+
+    response_status, overview = request(
+        create_app(), "GET", "/api/v1/overview",
+        headers={"X-Provena-Command-Key": "test-key"})
+
+    assert response_status == 200
     assert {"capital", "decisions", "engines", "money_lanes"} <= set(overview)
+
+
+def test_a_wrong_key_is_refused_rather_than_downgraded_to_a_read(monkeypatch):
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "test-key")
+
+    response_status, _ = request(
+        create_app(), "GET", "/api/v1/overview",
+        headers={"X-Provena-Command-Key": "not-the-key"})
+
+    assert response_status == 401
 
 
 def test_browser_root_serves_the_operator_dashboard():
@@ -79,8 +179,12 @@ def test_standalone_asset_routes_support_the_same_dashboard_document():
     assert "offlineOverview" in script
 
 
-def test_connector_projection_preserves_missing_as_missing():
-    response_status, response = request(create_app(), "GET", "/api/v1/connectors")
+def test_connector_projection_preserves_missing_as_missing(monkeypatch):
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "test-key")
+
+    response_status, response = request(
+        create_app(), "GET", "/api/v1/connectors",
+        headers={"X-Provena-Command-Key": "test-key"})
 
     assert response_status == 200
     crypto = next(row for row in response["lanes"] if row["lane"] == "crypto")

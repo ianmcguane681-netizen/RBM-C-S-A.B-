@@ -5,6 +5,7 @@
     python scan_arb.py --live                what is on at Betfair in the next 24h
     python scan_arb.py --market 1.234567     scan named exchange markets directly
     python scan_arb.py soccer_epl --json     machine-readable, for a scheduler
+    python scan_arb.py soccer_epl --books skybet,paddypower   only these, at half the cost
 
 **Aggregator and exchange results are NOT merged, and that is a known gap rather than an
 oversight.** An aggregator names a market by its teams and time; Betfair names it
@@ -47,6 +48,7 @@ from connectors.oddsapi import H2H, OddsApiSource
 from lib.arbfind import ARB_CANDIDATE, quotes_from_legs, scan_markets
 from lib.seen import SeenRegister, arb_identity
 from lib.store import LOST
+from lib.ui_contract import SCHEMA_VERSION
 
 REGISTER = Path("data/seen-register.json")
 
@@ -137,8 +139,16 @@ def scan_exchanges(market_ids: Sequence[str]) -> int:
     return 1 if result.arbs else 0
 
 
-def main(sport: str, *, as_json: bool) -> int:
-    source = OddsApiSource.from_directory()
+def main(sport: str, *, as_json: bool, books: Sequence[str] = ()) -> int:
+    """One sport, optionally narrowed to named books.
+
+    `--books` exists so a book list can be TRIED before it is written into
+    `data/reapers.json`, where a misspelled or uncarried provider key would quietly
+    narrow the arb lane's universe for good. Compare `books_requested` against `books` in
+    the JSON: a name in the first and not the second was asked for and never answered.
+    """
+
+    source = OddsApiSource.from_directory(bookmakers=books)
     if not source.is_configured:
         print(source.quote("any").describe())
         print("\nNo source is configured, so NOTHING was scanned. This is not a finding "
@@ -188,8 +198,14 @@ def main(sport: str, *, as_json: bool) -> int:
 
     if as_json:
         print(json.dumps({
+            "schema_version": SCHEMA_VERSION,
             "sport": sport,
-            "quota_remaining": source.usage.remaining,
+            "quota": source.usage.to_dict(),
+            # Requested beside seen, because those two differing is the only warning that
+            # a filtered scan reported a quiet market from a narrower look than intended.
+            # `null` says the scan was not narrowed at all, which is not the same as a
+            # filter that happened to match everything.
+            "books_requested": list(source.bookmakers) or None,
             "books": list(result.books_seen),
             "markets_examined": result.markets_examined,
             "incomplete_markets": len(result.incomplete),
@@ -229,5 +245,17 @@ if __name__ == "__main__":
     if "--market" in argv:
         ids = argv[argv.index("--market") + 1:]
         raise SystemExit(scan_exchanges([i for i in ids if not i.startswith("--")]))
+    requested: tuple[str, ...] = ()
+    if "--books" in argv:
+        following = argv[argv.index("--books") + 1:]
+        named = following[0] if following and not following[0].startswith("--") else ""
+        requested = tuple(book for book in named.split(",") if book.strip())
+        if not requested:
+            print("--books needs a comma-separated list, such as "
+                  "--books skybet,paddypower. An empty list would scan the whole region "
+                  "at full price while looking like a narrowed scan.")
+            raise SystemExit(2)
+        argv = [a for a in argv if a != named]
     args = [a for a in argv if not a.startswith("--")]
-    raise SystemExit(main(args[0] if args else "", as_json="--json" in argv))
+    raise SystemExit(main(args[0] if args else "", as_json="--json" in argv,
+                          books=requested))

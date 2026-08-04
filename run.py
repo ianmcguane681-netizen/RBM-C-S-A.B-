@@ -6,6 +6,7 @@
     python run.py --reap [lane]   every lane, or one of arb/crypto/stocks; places where
                                   the mode allows
     python run.py --reap --dry    the same, and sends nothing whatever the mode says
+    python run.py --reap --json   the same run, as the UI contract instead of prose
     python run.py --manual "reason"          take the wheel: lanes keep running, you place
     python run.py --resume "Your Name" "reason"   hand placing back to the machine
     python run.py --resolve DEC-0001 "confirmed and placed"
@@ -37,6 +38,7 @@ lane cannot sign; both report that rather than looking unfinished.
 """
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -178,7 +180,7 @@ def main(go: bool) -> int:
     return 1 if orchestrator.open_decisions else 0
 
 
-def reap(lane: str = "", dry: bool = False) -> int:
+def reap(lane: str = "", dry: bool = False, *, as_json: bool = False) -> int:
     """Every configured lane, or one named lane, sized — and placed where the mode allows.
 
     A lane places only when its mode is AUTONOMOUS, which requires an explicit
@@ -190,8 +192,14 @@ def reap(lane: str = "", dry: bool = False) -> int:
     it would do" is a question people ask about live systems, and the answer should not
     require editing config.
 
+    `--json` changes the rendering and nothing else. It is the same run, placing under the
+    same modes — reading a live lane through a UI must not be a quieter way of running it,
+    and pairing it with `--dry` is how you look without sending.
+
     Exit codes match the rest of the repository's convention: 1 means something wants a
-    person, 2 means nothing was looked at.
+    person, 2 means nothing was looked at. They are identical in both renderings, because
+    a caller that switched to JSON and started reading 0 where it read 2 would be told a
+    broken pipeline was a quiet morning by the act of asking for machine-readable output.
 
         0   every configured lane looked, and nothing reached READY
         1   at least one instruction is waiting for a person
@@ -203,14 +211,20 @@ def reap(lane: str = "", dry: bool = False) -> int:
 
     from lib.reaping import LANES as REAPER_LANES
     from lib.reaping import reap as run_reapers
+    from lib.ui_contract import SCHEMA_VERSION
 
     if lane and lane not in REAPER_LANES:
         choices = ", ".join(REAPER_LANES[:-1]) + f" or {REAPER_LANES[-1]}"
-        print(f"Unknown reaper lane {lane!r}. Choose {choices}.")
+        refusal = f"unknown reaper lane {lane!r}; choose {choices}"
+        if as_json:
+            print(json.dumps({"schema_version": SCHEMA_VERSION, "status": "REFUSED",
+                              "reason": refusal}, indent=2))
+        else:
+            print(f"Unknown reaper lane {lane!r}. Choose {choices}.")
         return 2
 
     reaping = run_reapers(lanes=(lane,) if lane else None, place=not dry)
-    print(reaping.describe())
+    print(json.dumps(reaping.to_dict(), indent=2) if as_json else reaping.describe())
 
     if reaping.refusal or not reaping.ready or not reaping.looked:
         return 2
@@ -300,7 +314,8 @@ if __name__ == "__main__":
     if "--reap" in argv:
         # Flags filtered out: `--reap --dry` otherwise reads --dry as a lane name.
         rest = [a for a in argv[argv.index("--reap") + 1:] if not a.startswith("--")]
-        raise SystemExit(reap(rest[0] if rest else "", dry="--dry" in argv))
+        raise SystemExit(reap(rest[0] if rest else "", dry="--dry" in argv,
+                              as_json="--json" in argv))
     if "--queue" in argv:
         raise SystemExit(0 if not print(Orchestrator(LANES, STATE).describe_queue()) else 0)
     raise SystemExit(main("--go" in argv))

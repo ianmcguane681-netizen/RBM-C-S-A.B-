@@ -60,11 +60,29 @@ The UI backend projects the same status and reaper domain objects used by the CL
 not reconstruct operating truth in a web controller.
 
 ```bash
+export PROVENA_VIEW_KEY=...      # read-only: the dashboard and the two GETs
+export PROVENA_COMMAND_KEY=...   # runs lanes; keep this one out of the browser
 python -m backend
-# Open http://127.0.0.1:8000/ for the operator dashboard
-# GET http://127.0.0.1:8000/api/v1/overview
-# GET http://127.0.0.1:8000/api/v1/connectors
+# Open http://127.0.0.1:8000/ and paste the VIEW key when the dashboard asks
+# GET http://127.0.0.1:8000/api/v1/overview     -H "X-Provena-View-Key: ..."
+# GET http://127.0.0.1:8000/api/v1/connectors   -H "X-Provena-View-Key: ..."
 ```
+
+**Reads are behind a key, not only commands.** `overview` returns the portfolio, every
+open decision's subject, each lane's ring-fence and its unsettled exposure — the set this
+repository gitignores precisely because it is public. With neither key set that data is
+withheld and the answer is `503`; unset never means open. Only `/health` and the static
+dashboard itself are unauthenticated.
+
+**Two keys, because a dashboard has nowhere safe to keep one.** Showing live state in a
+browser means a key in browser storage, so `PROVENA_VIEW_KEY` exists to make that the key
+whose entire power is *seeing what the CLI already prints*. `PROVENA_COMMAND_KEY` runs
+lanes and never has to leave your shell; it is accepted on reads too, since it already
+outranks the view key. The dashboard keeps the view key in `sessionStorage`, so it dies
+with the tab, and asks for it by name rather than reporting a running server as offline.
+
+A single key for both would have made the convenient thing — paste it into the dashboard —
+also the thing that puts a lane-running credential one cross-site script away.
 
 The server binds to `0.0.0.0` so container and IDE previews can reach it, and reads the
 platform-provided `PORT` (default `8000`). `HOST` may override the bind address when a local
@@ -75,11 +93,18 @@ dashboard entry point. Without the Python API it renders an explicitly labelled 
 layout with unknown values; it never turns an unavailable backend into zero capital or an
 empty operational history.
 
-Reaper commands require `PROVENA_COMMAND_KEY` and the matching
-`X-Provena-Command-Key` header. They are dry-run by default. Moving money additionally
+Reaper commands take the same key. They are dry-run by default. Moving money additionally
 requires `PROVENA_EXECUTION_ENABLED=true` on the server and the exact request confirmation
 `MONEY MAY MOVE`; neither setting alone grants execution. Allowed browser origins are a
-comma-separated `PROVENA_UI_ORIGINS` value and default to `http://localhost:3000`.
+comma-separated `PROVENA_UI_ORIGINS` value and default to `http://localhost:3000`;
+credentialed CORS is off, because the key is a header the caller sets rather than a cookie
+a browser attaches.
+
+**The API permits placing; it does not decide it.** `place=true` on a command only lets a
+lane place if its own mode is already `AUTONOMOUS`, which is asserted in `data/reapers.json`
+with no `data/MANUAL` or `data/HALT` overriding it. There is no request that makes an
+owner-operating lane place, and adding one would put the switch somewhere a setting could
+override.
 
 Supabase/Postgres migrations live in `migrations/`. `0001_review_store.sql` carries the
 governed review record; `0002_operational_backend.sql` adds reaper runs, harvests,

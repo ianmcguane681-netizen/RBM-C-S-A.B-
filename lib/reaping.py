@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
 
+from lib.ui_contract import SCHEMA_VERSION, serialise
+
 CONFIGURED = "CONFIGURED"
 NOT_CONFIGURED = "NOT_CONFIGURED"
 UNREADABLE = "UNREADABLE"
@@ -144,6 +146,48 @@ class Reaping:
             lines.append("Nothing reached READY. Every lane's reason is stated above.")
         return "\n".join(lines)
 
+    def to_dict(self) -> dict[str, Any]:
+        """The whole run for a reader, keeping the four different kinds of nothing apart.
+
+        `describe()` distinguishes them in prose and a summarised JSON view would put them
+        back together, so the top-level status names which one this was:
+
+            REFUSED           the config would not parse; no lane was even assembled
+            NOT_CONFIGURED    nothing was asked of any lane, so nothing looked
+            COULD_NOT_LOOK    lanes were configured and every one failed to reach a source
+            LOOKED            at least one lane actually reached its sources
+
+        The last two are the pair that matters. A scheduler that reads COULD_NOT_LOOK as a
+        quiet market reads a broken pipeline as a quiet market every morning, indefinitely.
+
+        `placements` is carried whether or not anything went in. It is the only field here
+        behind which money has already moved, and a UI rendering harvests without it would
+        show READY beside "nothing has been placed" on a run that placed.
+        """
+
+        if self.refusal:
+            status = "REFUSED"
+        elif not self.ready:
+            status = NOT_CONFIGURED
+        elif not self.looked:
+            status = "COULD_NOT_LOOK"
+        else:
+            status = "LOOKED"
+
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "status": status,
+            "reason": self.refusal or None,
+            "assemblies": [
+                {"lane": item.lane, "status": item.status, "reason": item.reason or None}
+                for item in self.assemblies
+            ],
+            "modes": [serialise(item) for item in self.modes],
+            "applications": [serialise(item) for item in self.applications],
+            "harvests": [serialise(item) for item in self.harvests],
+            "placements": [serialise(item) for item in self.placements],
+        }
+
 
 def load_config(path: Path = CONFIG) -> tuple[dict, str]:
     """The config, or the reason there isn't one. An absent file is not a broken one."""
@@ -190,6 +234,16 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
             "is one nobody authorised."))
 
     try:
+        # A bare string here would iterate into single characters and request eleven
+        # bookmakers named "b", "e", "t"... The API would answer 200 with nothing in it,
+        # so this refuses the lane rather than letting a typo become a quiet market.
+        listed = settings.get("bookmakers") or ()
+        if isinstance(listed, str):
+            raise ValueError(
+                'bookmakers must be a JSON list such as ["skybet", "paddypower"], not '
+                'one string'
+            )
+        bookmakers = tuple(str(book) for book in listed)
         authority = StandingAuthority(
             declared_by=str(grant["declared_by"]),
             reasoning=str(grant["reasoning"]),
@@ -220,6 +274,7 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
         register=SeenRegister.load(directory / SEEN.name),
         authority=authority, breakers=breakers,
         sports=tuple(settings.get("sports", ())), declarations=declarations,
+        bookmakers=bookmakers,
         prefer_distinct_books=bool(settings.get("prefer_distinct_books", True)),
     ))
 

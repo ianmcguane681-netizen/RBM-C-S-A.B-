@@ -327,6 +327,123 @@ Remaining after that: app making, faceless YouTube, Etsy/Craigslist.
 
 ---
 
+# The UI contract, and what was declined with it
+
+Added 2026-08-04 from a review of `codex/request-for-feedback-73js4m` (PR #3). That branch
+was cut before `lib/placing.py` existed and merging it would have deleted the placing path
+and its 424 tests, so it was taken apart rather than merged. What was taken:
+
+- `--json` on `run.py --reap`, `positions.py` and `status.py`, plus `to_dict()` on the
+  types behind them. `docs/ui-integration.md` states the contract; `lib/ui_contract.py`
+  holds the one version number.
+- `Usage.to_dict()` on the odds feed. `scan_arb --json` was publishing the `-1` sentinel
+  as `quota_remaining`, which is this repository's own defect at the last layer.
+- The bookmaker filter, **opt-in** rather than the branch's default of five hard-coded
+  provider keys. Naming books halves what a scan costs and also narrows what was looked
+  at, and a key that is wrong or not carried in this region returns 200 with the book
+  absent — a quiet market from a narrower look than anybody chose.
+
+**Three things were declined, and the reasons matter more than the code.**
+
+1. **`DeclarationCoverage`** — composing per-book declarations into one covering a set of
+   books. Equivalence is a claim about a *pair*: that two differently worded rules settle
+   the same way. Two people each reading one book's rules have not made it, so the type
+   manufactured a human judgement nobody made, and did it by duck-typing past
+   `EquivalenceDeclaration.__post_init__` — the guard that refuses automation prefixes.
+   The arb lane stopping at INDETERMINATE and naming the key it wants is the feature.
+2. **`lib/functions.py`** — a hard-coded UI registry asserting `ALPACA_ADAPTER_UNWIRED`
+   and "READY StockOrder is not yet converted to an Alpaca Instruction". Both were true
+   before Gap 2 closed and false when written. A registry that tells a front end
+   placement is unwired while it is wired is the same defect pointing the other way; if
+   one is wanted it has to be derived from real state.
+3. **An `sre` "Security Research Engine" slot**, which appears in none of the seven
+   functions and arrived with a scanner roadmap attached.
+
+Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
+with no stated reason, and deleting `OutcomeLedger.amend_stake`.
+
+## Review of the two merged PRs, 2026-08-04
+
+PR #1 (cadence + money status) and PR #2 (operator API, dashboard, operational migrations)
+were already on `main`. Reviewed against the doctrine above; four things fixed.
+
+**The API published the money view to anyone who could reach it.** `/api/v1/overview`
+needed no key and returns the portfolio, every open decision's subject, and each lane's
+ring-fence and unsettled exposure — the exact set that is gitignored because this
+repository is public — and `backend/__main__` binds every interface by default so
+container previews work. A test asserted the open read, so it was deliberate rather than
+an oversight. Reads now take the same key as commands, an unset key answers 503 instead of
+serving the data, and the key compare is `compare_digest`. `allow_credentials` is off: the
+key is a header the caller sets, not a cookie, so it bought nothing and would have been
+dangerous beside a wildcard origin. The dashboard names which of the two applies rather
+than reporting a running server as offline.
+
+**`status.py` had built its own ring-fence, twice.** `money_panel` and `money_state` each
+constructed a `Ringfence` directly and dropped `max_deployed_pct` and
+`max_concurrent_positions`, so a lane configured to keep 20% deployed was described
+against the default 40, and each built `Breakers` without the outcome ledger that the
+deployed-capital control needs to evaluate at all. Nothing visible was wrong yet, because
+the panel only reads breaker state off disk — which is what made it worth removing. Both
+now go through `lib.reaping.breakers_for`, the same code the lane runs under, which is the
+rule `positions.py --apply` already states in its own docstring.
+
+**`OutcomeLedger.stale_open` was the one of four filters that took no lane**, so both
+callers wrote the filter themselves and the two copies had already diverged on whether an
+empty lane means all or none. It takes `lane` now and the copies are gone.
+
+Checked and sound, for the record: the API cannot route around the operating modes —
+`place=true` only permits, and `place_harvest` still refuses anything whose mode is not
+`AUTONOMOUS`. `migrations/0002` is fail-closed: RLS on, `operations` revoked from
+`anon`/`authenticated`, and the `public.operator_*` views are `security_invoker`, so the
+`GRANT ... TO anon` on them cannot actually read the underlying tables.
+
+**The dashboard question that fix opened, and the answer taken.** Putting reads behind the
+key left the static dashboard permanently showing its offline layout, since it holds no
+key. Resolved with a second secret rather than by reopening the reads: `PROVENA_VIEW_KEY`
+grants the two GETs and nothing else, `PROVENA_COMMAND_KEY` runs lanes and is accepted on
+reads because it already outranks the view key. The dashboard asks for the view key by
+name and keeps it in `sessionStorage`, so it dies with the tab.
+
+The reasoning, because a future session will be tempted to collapse them back into one: a
+dashboard has nowhere safe to keep a secret, so live state in a browser means a key in
+browser storage. The only question is which key. One key for both would make the
+convenient act — paste it into the dashboard — also the act that puts a lane-running
+credential one cross-site script away. Two secrets means what an XSS can steal is the
+ability to see what `status.py` already prints.
+
+**Two capital defects found by running the dashboard, not by reading it.** Both were
+visible the moment the operator API was served against a demo data directory, and both are
+the founding defect at the presentation layer.
+
+`as_json` never consulted the portfolio's store state, so a book that had VANISHED —
+receipt claiming entries, file holding none — reported `EMPTY_BOOK` with a cost basis of
+`0.0`. `capital_panel` returns early on LOST and has always been right about this; the JSON
+mirror was not. A vanished ledger reporting FIRST_SEEN is on the list at the top of
+`CLAUDE.md`, and this was that, about the portfolio.
+
+The larger one: `capital.cost_basis` was taken from `Exposure.cost_basis`, which sums only
+the PRICED subset. No price source is wired for any lane, so it was `0.0` however much was
+held — and the dashboard labels that figure CAPITAL AT COST, in the largest type on the
+page. A fully stocked book rendered as €0.00 for the same reason an empty one did. What
+was paid needs no price source, which is exactly why it is the figure worth showing while
+pricing is unwired; the priced subset keeps its own name in `priced_cost_basis`.
+
+`value_status` now separates `NOT_CONFIGURED` (no book has been started) from `EMPTY_BOOK`
+(a book exists and holds nothing) from `LOST` / `UNREADABLE`, and `cost_basis` is null for
+all four rather than `0.0`.
+
+Noted, not changed:
+
+- `index.html` exists at the repo root and again at `backend/static/index.html`, identical
+  but for two asset paths. Two copies of a dashboard will drift; left alone because the
+  README documents publishing the root directly to a static host.
+- The API's `_run_lock` is per-process, so it serialises reaper runs under one uvicorn
+  worker and not across several.
+- The bind default stays `0.0.0.0` for the preview case, which is defensible now the
+  money data behind it needs a key.
+
+---
+
 # HANDOFF — read this first if you are picking up cold
 
 Written 2026-08-03 against `main` at `47045c5`. **1187 tests, 2 skipped.** Working tree
