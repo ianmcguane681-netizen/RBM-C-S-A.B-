@@ -33,7 +33,7 @@ from pathlib import Path
 
 from lib.portfolio import LANES, Portfolio
 from lib.preflight import BLOCKED, DEGRADED, all_lanes
-from lib.store import LOST
+from lib.store import LOST, UNREADABLE
 
 def _now() -> str:
     from datetime import datetime, timezone
@@ -125,6 +125,83 @@ def evidence_panel() -> list[str]:
     lines.append("  A lane that can read its evidence has not thereby concluded anything.")
     lines.append("")
     return lines
+
+
+def _capital_state(book, positions, exposure) -> dict:
+    """The capital block, keeping a book that vanished apart from a book that is empty.
+
+    **Three different nothings were rendering as one zero.** A portfolio file that never
+    existed, one that existed and is now unreadable or gone, and one that is genuinely
+    empty all produce nought positions, and every figure derived from them came out `0.0`.
+    The dashboard put that in the largest type on the page as `CAPITAL AT COST €0.00`
+    beside the word EMPTY_BOOK — a measured balance, assembled from a missing file.
+
+    The text panel never made this mistake: `capital_panel` returns early on LOST and says
+    in as many words that an empty book is "not a zero balance: nothing has been entered,
+    so nothing is known about what is held". `as_json` did not check the store state at
+    all, so a vanished portfolio reported an empty one. That is this repository's founding
+    defect and its most consequential form — the vanished ledger reporting FIRST_SEEN.
+
+    So `cost_basis` is `None` in every one of the three cases rather than `0.0`. An empty
+    book gets a null too, deliberately: the panel's wording is that nothing is KNOWN, not
+    that nothing is held, and the JSON has no business being more confident than the prose
+    it mirrors. A real total is emitted only when there are real positions behind it.
+
+    **And `cost_basis` is now summed from the positions rather than taken from
+    `Exposure`.** `Exposure.cost_basis` is the cost of the PRICED subset — it accumulates
+    only where a valuation came back — so with no price source wired for any lane, which
+    is the current state of every lane, it is `0.0` however much is held. The dashboard
+    labels that figure CAPITAL AT COST. A fully stocked book was therefore rendering as
+    €0.00 too, and the empty-book case was only the most obvious instance of it.
+
+    What was paid is knowable without any price source, which is exactly why it is the
+    figure worth showing while pricing is unwired. The priced subset keeps its own name in
+    `priced_value`, null until the valuation is complete.
+    """
+
+    unknown = {
+        "priced_value": None,
+        "cost_basis": None,
+        "priced_cost_basis": None,
+        "is_complete": False,
+        "unpriced_assets": [],
+        "by_lane_cost": {},
+        "positions": [],
+        "currency": exposure.currency,
+        "store_state": book.status.state,
+    }
+
+    if book.status.state in {LOST, UNREADABLE}:
+        # Reported apart from an empty book, and the reason carried, because these are the
+        # cases where a zero is not merely unfounded but actively wrong: there WAS a book.
+        return {**unknown, "value_status": book.status.state,
+                "reason": book.status.describe()}
+
+    if not positions:
+        return {**unknown, "reason": None,
+                "value_status": "EMPTY_BOOK" if BOOK.is_file() else "NOT_CONFIGURED"}
+
+    return {
+        "priced_value": exposure.priced_value if exposure.is_complete else None,
+        "value_status": "PRICED" if exposure.is_complete else "PARTIALLY_UNPRICED",
+        "currency": exposure.currency,
+        "cost_basis": sum(p.cost_basis for p in positions),
+        "priced_cost_basis": exposure.cost_basis,
+        "is_complete": exposure.is_complete,
+        "unpriced_assets": list(exposure.unpriced_assets),
+        "by_lane_cost": {
+            lane: sum(p.cost_basis for p in positions if p.lane == lane)
+            for lane in {p.lane for p in positions}
+        },
+        "positions": [
+            {"asset": p.asset, "lane": p.lane, "quantity": p.quantity,
+             "cost_basis": p.cost_basis, "currency": p.currency,
+             "value": None, "value_status": "UNPRICED"}
+            for p in positions
+        ],
+        "store_state": book.status.state,
+        "reason": None,
+    }
 
 
 def _controls_for(lane: str, settings: dict, *, directory: Path):
@@ -383,36 +460,9 @@ def as_json() -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at": _now(),
-        "capital": {
-            # None, not 0.0, in BOTH failure cases -- and the second was found by running
-            # this. An empty book has no unpriced assets, so `is_complete` reads true and
-            # the total emitted 0.0, which a front end renders as a known balance of zero.
-            # The text panel already said "an empty book, not a zero balance"; the JSON
-            # layer had quietly reintroduced the very defect this file argues against.
-            "priced_value": (
-                exposure.priced_value
-                if positions and exposure.is_complete else None
-            ),
-            "value_status": (
-                "EMPTY_BOOK" if not positions
-                else "PRICED" if exposure.is_complete else "PARTIALLY_UNPRICED"
-            ),
-            "currency": exposure.currency,
-            "cost_basis": exposure.cost_basis,
-            "is_complete": bool(positions) and exposure.is_complete,
-            "unpriced_assets": list(exposure.unpriced_assets),
-            "by_lane_cost": {
-                lane: sum(p.cost_basis for p in positions if p.lane == lane)
-                for lane in {p.lane for p in positions}
-            },
-            "positions": [
-                {"asset": p.asset, "lane": p.lane, "quantity": p.quantity,
-                 "cost_basis": p.cost_basis, "currency": p.currency,
-                 "value": None, "value_status": "UNPRICED"}
-                for p in positions
-            ],
-            "store_state": book.status.state,
-        },
+        # Every figure null unless there are real positions behind it, and a book that
+        # vanished reported apart from one that is empty. See `_capital_state`.
+        "capital": _capital_state(book, positions, exposure),
         "decisions": {
             "open": len(orchestrator.open_decisions),
             "limit": orchestrator.queue_limit,

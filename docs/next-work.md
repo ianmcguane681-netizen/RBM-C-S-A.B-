@@ -411,6 +411,27 @@ convenient act — paste it into the dashboard — also the act that puts a lane
 credential one cross-site script away. Two secrets means what an XSS can steal is the
 ability to see what `status.py` already prints.
 
+**Two capital defects found by running the dashboard, not by reading it.** Both were
+visible the moment the operator API was served against a demo data directory, and both are
+the founding defect at the presentation layer.
+
+`as_json` never consulted the portfolio's store state, so a book that had VANISHED —
+receipt claiming entries, file holding none — reported `EMPTY_BOOK` with a cost basis of
+`0.0`. `capital_panel` returns early on LOST and has always been right about this; the JSON
+mirror was not. A vanished ledger reporting FIRST_SEEN is on the list at the top of
+`CLAUDE.md`, and this was that, about the portfolio.
+
+The larger one: `capital.cost_basis` was taken from `Exposure.cost_basis`, which sums only
+the PRICED subset. No price source is wired for any lane, so it was `0.0` however much was
+held — and the dashboard labels that figure CAPITAL AT COST, in the largest type on the
+page. A fully stocked book rendered as €0.00 for the same reason an empty one did. What
+was paid needs no price source, which is exactly why it is the figure worth showing while
+pricing is unwired; the priced subset keeps its own name in `priced_cost_basis`.
+
+`value_status` now separates `NOT_CONFIGURED` (no book has been started) from `EMPTY_BOOK`
+(a book exists and holds nothing) from `LOST` / `UNREADABLE`, and `cost_basis` is null for
+all four rather than `0.0`.
+
 Noted, not changed:
 
 - `index.html` exists at the repo root and again at `backend/static/index.html`, identical
