@@ -122,3 +122,94 @@ def test_the_three_lanes_that_exist_still_assemble_unchanged(tmp_path):
 
     assert [item.lane for item in assembled] == list(LANES)
     assert all(item.status != REFUSED for item in assembled)
+
+
+class TestANewLaneCannotBorrowAnotherLanesExecutionPath:
+    """`place_harvest` used to END with `return _place_stock(...)`.
+
+    Every refusal above it named a lane — arb and crypto have no adapter, the mode is not
+    AUTONOMOUS, the ledger is unreadable — and anything that survived them was handed to
+    the stock placer. Not because it was stocks; because it was not one of the two lanes
+    that had been thought about.
+
+    A flipper instruction with a broker attached would therefore have been submitted as an
+    equity order. And since this module records the position BEFORE it sends, the first
+    evidence would have been a phantom position on file beside a broker error. That is the
+    exact direction the rest of the repository refuses to fail in, sitting in the one
+    module that cannot undo what it does.
+    """
+
+    def _ready(self, lane: str):
+        from lib.reaper import Harvest
+
+        return Harvest(lane=lane, status="READY", subject="a thing",
+                       instruction=object(), permission=None)
+
+    def _autonomous(self):
+        from lib.operating import AUTONOMOUS, Mode
+
+        return Mode("flipper", AUTONOMOUS, "config", "autonomous_execution is true")
+
+    class _Ledger:
+        readable = True
+        reason = ""
+
+    def test_a_lane_with_no_execution_path_is_refused_by_name(self):
+        from lib.placing import REFUSED, place_harvest
+
+        placement = place_harvest(
+            self._ready("flipper"), mode=self._autonomous(), ledger=self._Ledger(),
+            broker=object(),
+        )
+
+        assert placement.status == REFUSED
+        assert "no execution path is written for 'flipper'" in placement.reason
+        # And it says which of the two registries the answer belongs in.
+        assert "PLACERS" in placement.reason and "NO_ADAPTER" in placement.reason
+
+    def test_the_refusal_lands_before_anything_is_recorded(self):
+        """Cheap refusals come first, and this one has to be among them.
+
+        An unknown lane refused AFTER the position is written leaves the phantom the
+        ordering exists to avoid, for an order that was never sendable in the first place.
+        """
+
+        from lib.placing import place_harvest
+
+        wrote: list = []
+
+        class Recording(self.__class__._Ledger):
+            def open_position(self, *a, **kw):
+                wrote.append(a)
+                raise AssertionError("recorded a position for a lane that cannot place")
+
+        placement = place_harvest(
+            self._ready("flipper"), mode=self._autonomous(), ledger=Recording(),
+            broker=object(),
+        )
+
+        assert wrote == []
+        assert placement.position_id == ""
+
+    def test_a_lane_that_deliberately_cannot_place_still_says_why(self):
+        """NO_ADAPTER outranks the unknown-lane refusal: arb is not an oversight."""
+
+        from lib.placing import NOT_PLACED, place_harvest
+
+        placement = place_harvest(
+            self._ready("arb"), mode=self._autonomous(), ledger=self._Ledger(),
+            broker=object(),
+        )
+
+        assert placement.status == NOT_PLACED
+        assert "no betting API" in placement.reason
+
+    def test_the_lane_that_does_place_still_places(self):
+        from lib.placing import PLACERS
+
+        assert set(PLACERS) == {"stocks"}
+
+    def test_a_lane_with_no_broker_factory_gets_none_rather_than_an_import_error(self):
+        from lib.placing import broker_for
+
+        assert broker_for("flipper") is None

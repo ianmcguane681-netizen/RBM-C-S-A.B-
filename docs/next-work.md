@@ -362,6 +362,31 @@ and its 424 tests, so it was taken apart rather than merged. What was taken:
 Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
 with no stated reason, and deleting `OutcomeLedger.amend_stake`.
 
+## The execution path could be borrowed by a lane it was never written for
+
+Found while extending the lane registry into the reapers. `place_harvest` ENDED with
+`return _place_stock(...)`. Every refusal above it named a lane — arb and crypto have no
+adapter, the mode is not AUTONOMOUS, the ledger is unreadable — and anything surviving them
+went to the stock placer. Not because it was stocks; because it was not one of the two
+lanes that had been thought about.
+
+A flipper instruction with a broker attached would have been submitted as an equity order.
+This module records the position BEFORE it sends, so the first evidence would have been a
+phantom position beside a broker error — the direction the whole repository refuses to fail
+in, in the one module that cannot undo what it does.
+
+`PLACERS` now maps a lane to the single function permitted to submit for it, and a lane in
+neither `PLACERS` nor `NO_ADAPTER` is REFUSED by name, before anything is recorded, saying
+which of the two registries its answer belongs in. `BROKER_FACTORIES` does the same for the
+`if lane == "stocks"` branch that used to sit in `lib.reaping._place`.
+
+**Two things restated in the code while there.** `lib/reaper.py`'s "Autonomy stops before
+money" section still said placing was never automatic — true before `lib/placing.py`
+existed, and understating what the system does with money is the wrong direction to be
+wrong in. It now says autonomy is the target, asserted via `autonomous_execution` and
+overridden by `data/MANUAL`, `data/HALT` and `NEVER_AUTONOMOUS`. The board being optional
+was already argued there and needed nothing.
+
 ## Adding a fourth lane is one decision now, 2026-08-04
 
 The focus stays the core three. But more lanes have always been planned — flipper, an app

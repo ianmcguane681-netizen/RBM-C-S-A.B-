@@ -515,18 +515,17 @@ def _place(harvests, modes, ledger, brokers) -> tuple[Any, ...]:
     different facts and only one of them needs you.
     """
 
-    from lib.placing import place_harvest
+    from lib.placing import broker_for, place_harvest
 
     supplied = brokers or {}
     out = []
     for harvest in harvests:
         if harvest.status != "READY":
             continue
-        broker = supplied.get(harvest.lane)
-        if broker is None and harvest.lane == "stocks":
-            from connectors.alpaca import AlpacaBroker
-
-            broker = AlpacaBroker.from_directory()
+        # `broker_for` rather than an `if lane == "stocks"` branch here: which lanes have a
+        # venue is one fact, and it belongs beside the placer that uses it rather than in
+        # the loop that iterates them.
+        broker = supplied.get(harvest.lane) or broker_for(harvest.lane)
         thesis = getattr(harvest.permission, "subject", "")
         out.append(place_harvest(
             harvest, mode=modes[harvest.lane], ledger=ledger, broker=broker,
