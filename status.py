@@ -375,7 +375,10 @@ def as_json() -> dict:
         except sqlite3.Error:
             boards = []
 
+    from lib.ui_contract import SCHEMA_VERSION
+
     return {
+        "schema_version": SCHEMA_VERSION,
         "generated_at": _now(),
         "capital": {
             # None, not 0.0, in BOTH failure cases -- and the second was found by running

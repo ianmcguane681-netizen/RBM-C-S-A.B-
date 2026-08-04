@@ -327,6 +327,43 @@ Remaining after that: app making, faceless YouTube, Etsy/Craigslist.
 
 ---
 
+# The UI contract, and what was declined with it
+
+Added 2026-08-04 from a review of `codex/request-for-feedback-73js4m` (PR #3). That branch
+was cut before `lib/placing.py` existed and merging it would have deleted the placing path
+and its 424 tests, so it was taken apart rather than merged. What was taken:
+
+- `--json` on `run.py --reap`, `positions.py` and `status.py`, plus `to_dict()` on the
+  types behind them. `docs/ui-integration.md` states the contract; `lib/ui_contract.py`
+  holds the one version number.
+- `Usage.to_dict()` on the odds feed. `scan_arb --json` was publishing the `-1` sentinel
+  as `quota_remaining`, which is this repository's own defect at the last layer.
+- The bookmaker filter, **opt-in** rather than the branch's default of five hard-coded
+  provider keys. Naming books halves what a scan costs and also narrows what was looked
+  at, and a key that is wrong or not carried in this region returns 200 with the book
+  absent — a quiet market from a narrower look than anybody chose.
+
+**Three things were declined, and the reasons matter more than the code.**
+
+1. **`DeclarationCoverage`** — composing per-book declarations into one covering a set of
+   books. Equivalence is a claim about a *pair*: that two differently worded rules settle
+   the same way. Two people each reading one book's rules have not made it, so the type
+   manufactured a human judgement nobody made, and did it by duck-typing past
+   `EquivalenceDeclaration.__post_init__` — the guard that refuses automation prefixes.
+   The arb lane stopping at INDETERMINATE and naming the key it wants is the feature.
+2. **`lib/functions.py`** — a hard-coded UI registry asserting `ALPACA_ADAPTER_UNWIRED`
+   and "READY StockOrder is not yet converted to an Alpaca Instruction". Both were true
+   before Gap 2 closed and false when written. A registry that tells a front end
+   placement is unwired while it is wired is the same defect pointing the other way; if
+   one is wanted it has to be derived from real state.
+3. **An `sre` "Security Research Engine" slot**, which appears in none of the seven
+   functions and arrived with a scanner roadmap attached.
+
+Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
+with no stated reason, and deleting `OutcomeLedger.amend_stake`.
+
+---
+
 # HANDOFF — read this first if you are picking up cold
 
 Written 2026-08-03 against `main` at `47045c5`. **1187 tests, 2 skipped.** Working tree

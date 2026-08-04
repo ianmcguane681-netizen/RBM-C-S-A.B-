@@ -157,6 +157,29 @@ class Position:
         return (f"{head}\n  OPEN  {self.staked:,.2f} at risk since {self.opened_at}. No "
                 f"profit exists yet, so none is reported and none is applied.")
 
+    def to_dict(self) -> dict[str, Any]:
+        """The same position a reader gets, without a return or profit invented for it.
+
+        `returned` is null on an OPEN or UNKNOWN position rather than the stored 0.0,
+        because a front end reading 0.0 beside a stake shows a total loss that has not
+        happened. `profit` is already `None` until SETTLED and is passed straight through.
+        """
+
+        return {
+            "position_id": self.position_id,
+            "lane": self.lane,
+            "subject": self.subject,
+            "status": self.status,
+            "staked": self.staked,
+            "returned": self.returned if self.status in {SETTLED, VOID} else None,
+            "profit": self.profit,
+            "opened_at": self.opened_at or None,
+            "settled_at": self.settled_at or None,
+            "source": self.source or None,
+            "note": self.note or None,
+            "applied_to_breakers": self.applied_to_breakers,
+        }
+
 
 @dataclass(frozen=True, slots=True)
 class Application:
@@ -188,6 +211,26 @@ class Application:
                 f"  BREAKER TRIPPED: {self.tripped_by}. It does not reset itself — "
                 f"clearing it is a human act and is recorded with a reason.")
         return "\n".join(lines)
+
+    def to_dict(self) -> dict[str, Any]:
+        """What reached the breakers, and what was deliberately withheld from them.
+
+        The two skip lists are carried rather than summed into a count, because "three
+        outcomes did not reach the breakers" is the fact a reader has to act on and a
+        total of applied outcomes hides it.
+        """
+
+        return {
+            "lane": self.lane,
+            "status": "REFUSED" if self.refusal else "APPLIED",
+            "applied": list(self.applied),
+            "skipped_unsettled": list(self.skipped_unsettled),
+            "skipped_void": list(self.skipped_void),
+            "already_applied": list(self.already_applied),
+            "tripped_by": self.tripped_by or None,
+            "self_clears": False,
+            "reason": self.refusal or None,
+        }
 
 
 class OutcomeLedger:

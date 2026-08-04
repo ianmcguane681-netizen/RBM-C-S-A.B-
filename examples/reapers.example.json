@@ -40,6 +40,24 @@
     "currency": "EUR",
     "sports": ["soccer_epl", "soccer_efl_champ"],
 
+    "_quota": [
+      "The odds API charges per region and per market, and up to ten NAMED books cost",
+      "what one region costs. So \"bookmakers\" below halves the price of every scan",
+      "against the default uk,eu — which matters on a free tier of 500 credits with the",
+      "arb lane running every thirty minutes.",
+      "",
+      "It is commented out rather than set, and that is deliberate. Naming books narrows",
+      "what you looked at, and a book that is misspelled, retired, or not carried in this",
+      "region comes back as a 200 with that book simply absent. The lane then reports a",
+      "quiet market from a narrower look than you chose, with no error anywhere. Set it",
+      "when you know which books you can actually place at, and check \"books_requested\"",
+      "against \"books\" in scan_arb --json the first time.",
+      "",
+      "  \"bookmakers\": [\"skybet\", \"paddypower\", \"williamhill\"]",
+      "",
+      "Omit it and the whole uk,eu region is scanned, which costs more and hides nothing."
+    ],
+
     "_limits": [
       "The ring-fence is all this lane may lose. Everything below is derived from it:",
       "    per_position_pct 5      one position may be 25.00 of the 500 balance",

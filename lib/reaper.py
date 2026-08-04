@@ -57,6 +57,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Sequence
 
+from lib.ui_contract import serialise
+
 READY = "READY"
 REFUSED = "REFUSED"
 INDETERMINATE = "INDETERMINATE"
@@ -228,6 +230,39 @@ class Harvest:
                 "reviewed one."
             )
         return "\n".join(lines)
+
+    def to_dict(self) -> dict[str, Any]:
+        """The harvest as a reader gets it, with every absence kept as an absence.
+
+        Three fields exist only to stop a reader inferring a fact that was never
+        established. `sources.status` is NOT_DECLARED rather than nought asked, because a
+        lane that declared no sources did not ask and get silence. `seen.status` is
+        NO_REGISTER when none was attached, a third fact beside `SeenVerdict`'s own NEW
+        and UNCHECKED: a standing opportunity re-offered every half hour is not new, and
+        "nothing looked it up" is a different claim from "the register would not parse".
+        And `board_convened` false is stated, not omitted, so a working decision is never
+        rendered as a reviewed one.
+        """
+
+        return {
+            "lane": self.lane,
+            "status": self.status,
+            "at": self.at or None,
+            "subject": self.subject or None,
+            "reason": self.reason or None,
+            "instruction": serialise(self.instruction),
+            "permission": serialise(self.permission),
+            "sources": {
+                "status": "DECLARED" if self.sources_asked else "NOT_DECLARED",
+                "asked": self.sources_asked or None,
+                "answered": self.sources_answered if self.sources_asked else None,
+            },
+            "seen": ({"status": "NO_REGISTER", "reason":
+                      "no seen register is attached, so whether this was surfaced before "
+                      "was never looked up"}
+                     if self.seen is None else serialise(self.seen)),
+            "board_convened": self.board_convened,
+        }
 
 
 @dataclass(frozen=True, slots=True)

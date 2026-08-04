@@ -98,6 +98,30 @@ class Placement:
                     f"more. Settling or voiding the position clears it.")
         return f"{head}\n  {self.reason}"
 
+    def to_dict(self) -> dict[str, Any]:
+        """A placement a reader cannot mistake for a resolved one.
+
+        `needs_a_person` is carried as a field rather than left for the reader to derive
+        from the status, because UNRESOLVED is the one that costs money to misread: an
+        order that MAY exist, which a caller treating "not PLACED" as "not placed" will
+        happily submit a second time.
+
+        `filled_quantity` is null unless something filled. Zero filled and unknown filled
+        are the same number and different facts, and the second is UNRESOLVED.
+        """
+
+        return {
+            "lane": self.lane,
+            "status": self.status,
+            "subject": self.subject or None,
+            "position_id": self.position_id or None,
+            "client_order_id": self.client_order_id or None,
+            "filled_quantity": (self.filled_quantity if self.status == PLACED else None),
+            "requested_quantity": self.requested_quantity or None,
+            "reason": self.reason or None,
+            "needs_a_person": self.needs_a_person,
+        }
+
 
 def place_harvest(
     harvest: Any,

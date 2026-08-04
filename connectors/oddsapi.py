@@ -79,6 +79,10 @@ class Usage:
 
     remaining: int = -1
     used: int = -1
+    #: What the last call actually cost. The price is per region and per market rather
+    #: than per request, so a widened scan spends faster than it looks and this is the
+    #: only figure that says by how much.
+    last: int = -1
 
     @property
     def is_known(self) -> bool:
@@ -88,6 +92,23 @@ class Usage:
         if not self.is_known:
             return "quota unknown (the response carried no usage headers)"
         return f"{self.remaining} request(s) remaining, {self.used} used"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Quota with the unknown kept as null rather than the sentinel.
+
+        `-1` was going straight into `scan_arb.py --json` as `quota_remaining`, where a
+        reader renders it as a number and a dashboard shows minus one request remaining.
+        The sentinel is fine inside a comparison and is not a value to publish: an
+        unmeasured quota is UNKNOWN, and a lane that stopped because it ran out must not
+        be told apart from one that found nothing by guessing at this field.
+        """
+
+        return {
+            "status": "KNOWN" if self.is_known else "UNKNOWN",
+            "remaining": self.remaining if self.is_known else None,
+            "used": self.used if self.used >= 0 else None,
+            "last_request_cost": self.last if self.last >= 0 else None,
+        }
 
 
 class OddsApiSource:
@@ -101,10 +122,38 @@ class OddsApiSource:
         credentials: OddsApiCredentials | None,
         *,
         regions: str = UK_IE_EU,
+        bookmakers: Sequence[str] = (),
         opener: Callable[..., Any] = retrying_urlopen,
     ) -> None:
+        """`bookmakers` narrows the request itself; empty keeps the whole region.
+
+        Quota is charged per region, and up to ten named books cost what one region does.
+        So asking for five books instead of `uk,eu` halves the price of every scan, which
+        matters on a free tier of 500 against a lane on a thirty-minute cadence.
+
+        **It defaults to empty deliberately, and that is the whole design of this
+        argument.** A filter is the operator narrowing what they looked at, and a narrowed
+        scan that finds no arb looks exactly like a wide scan that found no arb. If a
+        provider key is wrong, retired, or simply not carried in this region, the feed
+        answers 200 with those books absent — no error anywhere — and the lane reports a
+        quiet market. Defaulting to a hard-coded list would apply that risk to every
+        caller who never asked for it, so the narrowing is a written choice in
+        `data/reapers.json` and `scan_arb --json` reports the books requested beside the
+        books seen so the two can be compared.
+        """
+
         self.credentials = credentials
         self.regions = regions
+        self.bookmakers = tuple(dict.fromkeys(
+            str(book).strip() for book in bookmakers if str(book).strip()
+        ))
+        if len(self.bookmakers) > 10:
+            raise ValueError(
+                f"{len(self.bookmakers)} bookmakers requested; the API prices each ten as "
+                f"one region, so an eleventh silently doubles the cost of every scan. "
+                f"Split a wider universe into a second deliberate request, or drop to a "
+                f"region and pay for it knowingly"
+            )
         self._opener = opener
         self.usage = Usage()
 
@@ -130,6 +179,7 @@ class OddsApiSource:
                     self.usage = Usage(
                         int(headers.get("x-requests-remaining", -1)),
                         int(headers.get("x-requests-used", -1)),
+                        int(headers.get("x-requests-last", -1)),
                     )
                 except (TypeError, ValueError):
                     self.usage = Usage()
@@ -156,9 +206,14 @@ class OddsApiSource:
         if not self.is_configured:
             return ()
 
+        # `bookmakers` REPLACES `regions` rather than filtering within it; sending both
+        # is what the API rejects. Filtering afterwards would be free of this risk and
+        # would also be free of the saving: the quota is spent when the request is made.
+        scope = ({"bookmakers": ",".join(self.bookmakers)} if self.bookmakers
+                 else {"regions": self.regions})
         payload = self._get(
             f"/sports/{sport}/odds",
-            {"regions": self.regions, "markets": market, "oddsFormat": "decimal"},
+            {**scope, "markets": market, "oddsFormat": "decimal"},
         )
 
         out: list[Quote] = []
