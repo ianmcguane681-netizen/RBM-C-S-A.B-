@@ -288,13 +288,20 @@ class OutcomeLedger:
         return sum(p.staked for p in self.live(lane))
 
     def stale_open(self, hours: float = STALE_HOURS,
-                   now: datetime | None = None) -> tuple[Position, ...]:
-        """OPEN positions old enough that they are probably UNKNOWN nobody chased."""
+                   now: datetime | None = None, lane: str = "") -> tuple[Position, ...]:
+        """OPEN positions old enough that they are probably UNKNOWN nobody chased.
+
+        `lane` filters the same way `live`, `unsettled_exposure` and
+        `pending_application` do. It was the one of the four that did not, so both callers
+        wanting a per-lane view wrote the filter themselves — and the two copies had
+        already diverged on whether an empty lane means "all" or "none". One of them is
+        the answer; neither of them belongs at a call site.
+        """
 
         moment = now or datetime.now(timezone.utc)
         out = []
         for position in self.positions:
-            if position.status != OPEN:
+            if position.status != OPEN or (lane and position.lane != lane):
                 continue
             age = position.age_hours(moment)
             if age is None or age >= hours:
@@ -486,8 +493,7 @@ def describe_ledger(ledger: OutcomeLedger, *, lane: str = "",
                      f"at risk and invisible to the daily loss limit:")
         lines += [f"  {p.describe()}" for p in live]
 
-    stale = tuple(position for position in ledger.stale_open(now=now)
-                  if not lane or position.lane == lane)
+    stale = ledger.stale_open(now=now, lane=lane)
     if stale:
         lines.append("")
         lines.append(
@@ -495,8 +501,7 @@ def describe_ledger(ledger: OutcomeLedger, *, lane: str = "",
             f"that old is usually an UNKNOWN nobody chased, and it is holding the breakers "
             f"short of the full picture.")
 
-    pending = tuple(position for position in ledger.pending_application()
-                    if not lane or position.lane == lane)
+    pending = ledger.pending_application(lane)
     if pending:
         lines.append("")
         lines.append(f"  {len(pending)} settled outcome(s) have not reached the breakers "

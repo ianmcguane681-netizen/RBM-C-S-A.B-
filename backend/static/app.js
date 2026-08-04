@@ -54,6 +54,11 @@ async function boot() {
   }
   try {
     const [overview, connectors] = await Promise.all([fetch("/api/v1/overview"),fetch("/api/v1/connectors")]);
+    // 503 and 401 are not "no API". The lane data is behind the command key, and a page
+    // reporting a running server as offline sends its reader to restart a service that is
+    // already up. Name the actual cause; the refusal has a thing a person can go and do.
+    if (overview.status === 503 || connectors.status === 503) throw new Error("API is running · PROVENA_COMMAND_KEY is not set on the server, so no lane data is served");
+    if (overview.status === 401 || connectors.status === 401) throw new Error("API is running · this view needs the X-Provena-Command-Key header; the browser does not hold it");
     if (!overview.ok || !connectors.ok) throw new Error(`API returned ${overview.status}/${connectors.status}`);
     renderOverview(await overview.json()); renderConnectors(await connectors.json());
     $("connection").className = "connection online"; $("connection").innerHTML = "<span></span> Operator API connected";

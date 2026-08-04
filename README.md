@@ -60,11 +60,24 @@ The UI backend projects the same status and reaper domain objects used by the CL
 not reconstruct operating truth in a web controller.
 
 ```bash
+export PROVENA_COMMAND_KEY=...   # without it the API serves no lane data at all
 python -m backend
 # Open http://127.0.0.1:8000/ for the operator dashboard
-# GET http://127.0.0.1:8000/api/v1/overview
-# GET http://127.0.0.1:8000/api/v1/connectors
+# GET http://127.0.0.1:8000/api/v1/overview     -H "X-Provena-Command-Key: ..."
+# GET http://127.0.0.1:8000/api/v1/connectors   -H "X-Provena-Command-Key: ..."
 ```
+
+**Reads are behind the key, not only commands.** `overview` returns the portfolio, every
+open decision's subject, each lane's ring-fence and its unsettled exposure — the set this
+repository gitignores precisely because it is public. An unset key withholds that data and
+answers `503`; it never means the server is open. Only `/health` and the static dashboard
+are unauthenticated.
+
+The dashboard is a static page and holds no key, so it renders its labelled offline layout
+and says which of the two applies — key not set on the server, or not presented by the
+browser. Putting a money-moving key in browser storage would be a worse trade than the
+missing convenience; to see live state in a browser, front it with a proxy that injects
+the header.
 
 The server binds to `0.0.0.0` so container and IDE previews can reach it, and reads the
 platform-provided `PORT` (default `8000`). `HOST` may override the bind address when a local
@@ -75,11 +88,18 @@ dashboard entry point. Without the Python API it renders an explicitly labelled 
 layout with unknown values; it never turns an unavailable backend into zero capital or an
 empty operational history.
 
-Reaper commands require `PROVENA_COMMAND_KEY` and the matching
-`X-Provena-Command-Key` header. They are dry-run by default. Moving money additionally
+Reaper commands take the same key. They are dry-run by default. Moving money additionally
 requires `PROVENA_EXECUTION_ENABLED=true` on the server and the exact request confirmation
 `MONEY MAY MOVE`; neither setting alone grants execution. Allowed browser origins are a
-comma-separated `PROVENA_UI_ORIGINS` value and default to `http://localhost:3000`.
+comma-separated `PROVENA_UI_ORIGINS` value and default to `http://localhost:3000`;
+credentialed CORS is off, because the key is a header the caller sets rather than a cookie
+a browser attaches.
+
+**The API permits placing; it does not decide it.** `place=true` on a command only lets a
+lane place if its own mode is already `AUTONOMOUS`, which is asserted in `data/reapers.json`
+with no `data/MANUAL` or `data/HALT` overriding it. There is no request that makes an
+owner-operating lane place, and adding one would put the switch somewhere a setting could
+override.
 
 Supabase/Postgres migrations live in `migrations/`. `0001_review_store.sql` carries the
 governed review record; `0002_operational_backend.sql` adds reaper runs, harvests,

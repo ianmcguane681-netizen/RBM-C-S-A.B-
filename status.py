@@ -127,6 +127,33 @@ def evidence_panel() -> list[str]:
     return lines
 
 
+def _controls_for(lane: str, settings: dict, *, directory: Path):
+    """One lane's ring-fence and breakers, built by the code that actually runs the lane.
+
+    Returns `(breakers, invalid_reason)`; exactly one is set.
+
+    **This delegates to `lib.reaping.breakers_for` rather than constructing a `Ringfence`
+    here, and the reason is a defect this panel had.** It built its own, and dropped
+    `max_deployed_pct` and `max_concurrent_positions` on the way, so a lane configured to
+    keep 20% deployed was described against the dataclass default of 40. It also omitted
+    the outcome ledger, which `Breakers` documents as the thing without which the
+    deployed-capital control cannot be evaluated at all.
+
+    Nothing visible was wrong yet, because this panel only reads the breaker state off
+    disk. That is what makes it worth removing: two notions of what a lane's limits are,
+    agreeing today, with nothing to make the disagreement visible on the day it starts.
+    `positions.py --apply` states the same rule in its own docstring.
+    """
+
+    from lib.reaping import breakers_for
+
+    try:
+        return breakers_for(lane, settings, directory=directory,
+                            kill_switch=directory / "HALT"), ""
+    except (KeyError, TypeError, ValueError) as error:
+        return None, f"{type(error).__name__}: {error}"
+
+
 def money_panel(
     *,
     config_path: Path = REAPER_CONFIG,
@@ -135,7 +162,6 @@ def money_panel(
 ) -> list[str]:
     """Authority, controls and exposure for every lane that can move money."""
 
-    from lib.breakers import Breakers, Ringfence
     from lib.operating import modes_for
     from lib.outcomes import OutcomeLedger, describe_ledger
     from lib.reaping import load_config
@@ -161,21 +187,15 @@ def money_panel(
                 "balance or zero exposure. Configure the lane before allowing it to run."
             )
         else:
-            try:
-                ring = Ringfence(
-                    lane,
-                    float(settings["balance"]),
-                    currency=str(settings.get("currency", "EUR")),
-                    per_position_pct=float(settings.get("per_position_pct", 5.0)),
-                    daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
-                )
-            except (KeyError, TypeError, ValueError) as error:
+            breakers, invalid = _controls_for(lane, settings, directory=directory)
+            if invalid:
                 lines.append(
                     f"    UNREADABLE  ring-fence configuration is invalid "
-                    f"({type(error).__name__}: {error}). Correct {config_path}; an "
+                    f"({invalid}). Correct {config_path}; an "
                     f"unknown limit is not a satisfied limit."
                 )
             else:
+                ring = breakers.ringfence
                 lines.append(
                     f"    RING-FENCE  {ring.starting_balance:,.2f} {ring.currency}"
                 )
@@ -186,26 +206,23 @@ def money_panel(
                         f"This is not an armed breaker with no losses; configure and "
                         f"initialise it before the lane operates."
                     )
+                elif not breakers.readable:
+                    lines.append(
+                        f"    BREAKER  UNREADABLE  {breakers.reason}. Repair or "
+                        f"restore {breaker_path}; an unknown loss history must stop "
+                        f"the lane."
+                    )
+                elif breakers.state.is_armed:
+                    lines.append("    BREAKER  ARMED")
                 else:
-                    breakers = Breakers(ring, breaker_path,
-                                        kill_switch=directory / "HALT")
-                    if not breakers.readable:
-                        lines.append(
-                            f"    BREAKER  UNREADABLE  {breakers.reason}. Repair or "
-                            f"restore {breaker_path}; an unknown loss history must stop "
-                            f"the lane."
-                        )
-                    elif breakers.state.is_armed:
-                        lines.append("    BREAKER  ARMED")
-                    else:
-                        lines.append(
-                            f"    BREAKER  {breakers.state.status}  "
-                            f"{breakers.state.tripped_by} at {breakers.state.tripped_at}"
-                        )
-                        lines.append(
-                            "      It does not self-clear. A named person must "
-                            "investigate and reset it with a recorded reason."
-                        )
+                    lines.append(
+                        f"    BREAKER  {breakers.state.status}  "
+                        f"{breakers.state.tripped_by} at {breakers.state.tripped_at}"
+                    )
+                    lines.append(
+                        "      It does not self-clear. A named person must "
+                        "investigate and reset it with a recorded reason."
+                    )
 
         if not ledger_path.is_file():
             lines.append(
@@ -228,7 +245,6 @@ def money_state(
 ) -> list[dict]:
     """The money panel's third states in fields a front end cannot flatten to zero."""
 
-    from lib.breakers import Breakers, Ringfence
     from lib.operating import modes_for
     from lib.outcomes import OutcomeLedger
     from lib.reaping import load_config
@@ -255,25 +271,13 @@ def money_state(
         if config_error:
             item["breaker"] = {"status": "UNREADABLE", "reason": config_error}
         elif settings and settings.get("enabled", True):
-            try:
-                ring = Ringfence(
-                    lane,
-                    float(settings["balance"]),
-                    currency=str(settings.get("currency", "EUR")),
-                    per_position_pct=float(settings.get("per_position_pct", 5.0)),
-                    daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
-                )
-            except (KeyError, TypeError, ValueError) as error:
-                item["breaker"] = {
-                    "status": "UNREADABLE",
-                    "reason": f"{type(error).__name__}: {error}",
-                }
+            breakers, invalid = _controls_for(lane, settings, directory=directory)
+            if invalid:
+                item["breaker"] = {"status": "UNREADABLE", "reason": invalid}
             else:
-                item["balance"] = ring.starting_balance
-                item["currency"] = ring.currency
-                path = directory / f"breakers-{lane}.json"
-                if path.is_file():
-                    breakers = Breakers(ring, path, kill_switch=directory / "HALT")
+                item["balance"] = breakers.ringfence.starting_balance
+                item["currency"] = breakers.ringfence.currency
+                if (directory / f"breakers-{lane}.json").is_file():
                     if breakers.readable:
                         item["breaker"] = {
                             "status": breakers.state.status,
@@ -289,8 +293,7 @@ def money_state(
         if ledger_path.is_file():
             if ledger.readable:
                 live = ledger.live(lane)
-                stale = tuple(position for position in ledger.stale_open()
-                              if position.lane == lane)
+                stale = ledger.stale_open(lane=lane)
                 item["positions"] = {
                     "status": "READABLE",
                     "open": len(live),

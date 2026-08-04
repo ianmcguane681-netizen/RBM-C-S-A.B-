@@ -362,6 +362,51 @@ and its 424 tests, so it was taken apart rather than merged. What was taken:
 Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
 with no stated reason, and deleting `OutcomeLedger.amend_stake`.
 
+## Review of the two merged PRs, 2026-08-04
+
+PR #1 (cadence + money status) and PR #2 (operator API, dashboard, operational migrations)
+were already on `main`. Reviewed against the doctrine above; four things fixed.
+
+**The API published the money view to anyone who could reach it.** `/api/v1/overview`
+needed no key and returns the portfolio, every open decision's subject, and each lane's
+ring-fence and unsettled exposure — the exact set that is gitignored because this
+repository is public — and `backend/__main__` binds every interface by default so
+container previews work. A test asserted the open read, so it was deliberate rather than
+an oversight. Reads now take the same key as commands, an unset key answers 503 instead of
+serving the data, and the key compare is `compare_digest`. `allow_credentials` is off: the
+key is a header the caller sets, not a cookie, so it bought nothing and would have been
+dangerous beside a wildcard origin. The dashboard names which of the two applies rather
+than reporting a running server as offline.
+
+**`status.py` had built its own ring-fence, twice.** `money_panel` and `money_state` each
+constructed a `Ringfence` directly and dropped `max_deployed_pct` and
+`max_concurrent_positions`, so a lane configured to keep 20% deployed was described
+against the default 40, and each built `Breakers` without the outcome ledger that the
+deployed-capital control needs to evaluate at all. Nothing visible was wrong yet, because
+the panel only reads breaker state off disk — which is what made it worth removing. Both
+now go through `lib.reaping.breakers_for`, the same code the lane runs under, which is the
+rule `positions.py --apply` already states in its own docstring.
+
+**`OutcomeLedger.stale_open` was the one of four filters that took no lane**, so both
+callers wrote the filter themselves and the two copies had already diverged on whether an
+empty lane means all or none. It takes `lane` now and the copies are gone.
+
+Checked and sound, for the record: the API cannot route around the operating modes —
+`place=true` only permits, and `place_harvest` still refuses anything whose mode is not
+`AUTONOMOUS`. `migrations/0002` is fail-closed: RLS on, `operations` revoked from
+`anon`/`authenticated`, and the `public.operator_*` views are `security_invoker`, so the
+`GRANT ... TO anon` on them cannot actually read the underlying tables.
+
+Noted, not changed:
+
+- `index.html` exists at the repo root and again at `backend/static/index.html`, identical
+  but for two asset paths. Two copies of a dashboard will drift; left alone because the
+  README documents publishing the root directly to a static host.
+- The API's `_run_lock` is per-process, so it serialises reaper runs under one uvicorn
+  worker and not across several.
+- The bind default stays `0.0.0.0` for the preview case, which is defensible now the
+  money data behind it needs a key.
+
 ---
 
 # HANDOFF — read this first if you are picking up cold
