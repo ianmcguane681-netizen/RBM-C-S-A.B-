@@ -47,6 +47,44 @@ from lib.orchestrator import HELD, Lane, Orchestrator
 
 STATE = Path("data/orchestrator.json")
 
+#: How often each reaper lane is worth re-running, against how fast its underlying thing
+#: actually moves. Odds move in seconds and a scan is bounded by API quota; chain state and
+#: filings move slowly.
+REAP_CADENCES = {"arb": 30 * 60, "crypto": 6 * 3600, "stocks": 24 * 3600}
+
+#: What a lane nobody has given a cadence gets. Six hours is chosen to be unremarkable —
+#: often enough to be useful, rare enough that a new lane cannot quietly exhaust a free
+#: tier before anybody has decided what its real cadence should be.
+DEFAULT_REAP_CADENCE = 6 * 3600
+
+
+def _reaper_lanes() -> tuple[Lane, ...]:
+    """A scheduler entry per reaper lane, generated from the registry rather than listed.
+
+    These were three hand-written `Lane` entries, which meant a fourth reaper assembled,
+    placed and appeared on the dashboard while never once being RUN — the failure is
+    silence, and silence from a scheduler looks exactly like a quiet market. More lanes are
+    planned, so the list is derived and an unlisted cadence falls back to a stated default
+    instead of the lane going unscheduled.
+    """
+
+    from lib.reaping import LANES as REAPER_LANES
+
+    return tuple(
+        Lane(
+            name=f"reap-{lane}",
+            command=("python", "run.py", "--reap", lane),
+            cadence_seconds=REAP_CADENCES.get(lane, DEFAULT_REAP_CADENCE),
+            produces_decisions=True,
+            findings_exit_codes=(1,),
+            # 2 means NOTHING WAS LOOKED AT. A scheduler must not turn a blind lane into
+            # a quiet market by treating that as a successful run.
+            unconfigured_exit_codes=(2,),
+        )
+        for lane in REAPER_LANES
+    )
+
+
 #: The lanes, their cadences, and what each one costs a person.
 #:
 #: Cadences are chosen against how fast the underlying thing actually moves, not against how
@@ -88,33 +126,7 @@ LANES = (
         # 1 = a lane is DEGRADED, 2 = a lane is BLOCKED. Both are the report doing its job.
         unconfigured_exit_codes=(1, 2),
     ),
-    Lane(
-        name="reap-arb",
-        command=("python", "run.py", "--reap", "arb"),
-        cadence_seconds=30 * 60,
-        produces_decisions=True,
-        findings_exit_codes=(1,),
-        # 2 means NOTHING WAS LOOKED AT. A scheduler must not turn a blind lane into a
-        # quiet market by treating that as a successful run.
-        unconfigured_exit_codes=(2,),
-    ),
-    Lane(
-        name="reap-crypto",
-        command=("python", "run.py", "--reap", "crypto"),
-        cadence_seconds=6 * 3600,
-        produces_decisions=True,
-        findings_exit_codes=(1,),
-        unconfigured_exit_codes=(2,),
-    ),
-    Lane(
-        name="reap-stocks",
-        command=("python", "run.py", "--reap", "stocks"),
-        cadence_seconds=24 * 3600,
-        produces_decisions=True,
-        findings_exit_codes=(1,),
-        unconfigured_exit_codes=(2,),
-    ),
-)
+) + _reaper_lanes()
 
 
 def _run_one(lane: Lane, orchestrator: Orchestrator) -> None:

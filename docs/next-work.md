@@ -362,6 +362,37 @@ and its 424 tests, so it was taken apart rather than merged. What was taken:
 Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
 with no stated reason, and deleting `OutcomeLedger.amend_stake`.
 
+## Adding a fourth lane is one decision now, 2026-08-04
+
+The focus stays the core three. But more lanes have always been planned — flipper, an app
+studio, media, commerce and more — and the code had drifted into needing **five** edits to
+add one, in five files, four of which fail silently:
+
+| Where | What a fourth lane did |
+|---|---|
+| `lib/reaping.assemble` | `builders[lane]` → **KeyError**, losing every other lane's result with it |
+| `status.MONEY_LANES` | a second lane list; absent from the one screen that shows what can spend |
+| `backend.ReaperCommand` | `Literal` three names long → 422 from a file nobody would look in |
+| `run.LANES` | never scheduled, and never running looks exactly like finding nothing |
+| `preflight.all_lanes` | no `engines` row, so **no division card at all** on the dashboard |
+
+All five now derive from `lib.reaping.LANES`. What remains per lane is the real work —
+an `assemble_<lane>()` and a `<lane>_lane()` readiness description — and both are now
+*reported* when missing rather than crashing or vanishing: a declared lane with no builder
+is REFUSED naming the function to write, and one with no readiness description is BLOCKED
+saying nobody has written down what it needs. An undescribed lane must never read as a
+lane with everything it needs.
+
+Verified by adding `flipper` to `LANES`, one line, nothing else edited: it was scheduled at
+the default cadence, accepted by the API, listed in the money panel with its ring-fence,
+and rendered as a complete division card on the dashboard. `tests/test_lane_registry.py`
+holds that property by adding a lane that does not exist.
+
+Two things that surfaced only by looking at the page: the REAPER STATUS badge was the
+literal string `3 LANES` with an id nothing ever set, and only `.profile small` was
+display:block, so connector details ran into their label — "Flippera readiness description
+for flipper".
+
 ## Review of the two merged PRs, 2026-08-04
 
 PR #1 (cadence + money status) and PR #2 (operator API, dashboard, operational migrations)

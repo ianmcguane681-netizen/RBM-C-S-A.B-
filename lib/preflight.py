@@ -289,7 +289,45 @@ def arb_lane(*, probe: bool = False, home: str | Path | None = None) -> LaneRead
 
 
 def all_lanes(*, probe: bool = False) -> tuple[LaneReadiness, ...]:
-    return (crypto_lane(probe=probe), stocks_lane(probe=probe), arb_lane(probe=probe))
+    """One readiness per declared lane, including lanes nobody has described yet.
+
+    This returned three hand-listed calls, so a fourth lane was simply ABSENT here — and
+    `status.as_json` builds its `engines` list from this, which the operator dashboard
+    turns into division cards. A lane could therefore be configured, assembled, scheduled
+    and holding a ring-fence while having no card on the page at all. Absence is the worst
+    of the available failures: there is nothing to notice.
+
+    A lane with no readiness function gets a `LaneReadiness` that says so, carrying an
+    unmet requirement so it reports BLOCKED rather than READY. An undescribed lane has not
+    been established to have everything it needs; it has been established that nobody has
+    said what it needs, and those must not render alike.
+    """
+
+    from lib.reaping import LANES
+
+    described = {
+        "crypto": crypto_lane, "stocks": stocks_lane, "arb": arb_lane,
+    }
+
+    out: list[LaneReadiness] = []
+    for lane in LANES:
+        build = described.get(lane)
+        if build is None:
+            out.append(LaneReadiness(lane, (
+                f"No preflight description exists for {lane!r}. What this lane needs "
+                f"before it can read anything has not been written down, so nothing here "
+                f"has been checked."
+            ), (Requirement(
+                lane=lane,
+                name=f"a readiness description for {lane}",
+                status=NOT_CONFIGURED,
+                detail=f"add {lane}_lane() to lib/preflight and register it in all_lanes",
+                unlocks="an honest answer about what this lane is missing",
+                required=True,
+            ),)))
+            continue
+        out.append(build(probe=probe))
+    return tuple(out)
 
 
 def report(lanes: Sequence[LaneReadiness]) -> str:

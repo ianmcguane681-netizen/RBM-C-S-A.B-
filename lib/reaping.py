@@ -368,7 +368,14 @@ def assemble(
     kill_switch: Path = KILL_SWITCH,
     theses_path: Path = THESES,
 ) -> tuple[Assembly, ...]:
-    """One assembly per lane, always all three, in a stable order."""
+    """One assembly per lane in `LANES`, in a stable order, whatever that list holds.
+
+    More lanes than these three are planned, so the loop is written against `LANES`
+    rather than against the number three, and a lane listed without a builder is
+    REPORTED rather than raised. `builders[lane]` on an unknown key is a `KeyError` out
+    of the middle of an assembly pass — every OTHER lane's result is lost with it, so
+    the run reports nothing at all because one lane was half-added.
+    """
 
     builders = {
         "arb": lambda s: assemble_arb(s, directory=directory, kill_switch=kill_switch),
@@ -386,7 +393,14 @@ def assemble(
         if not settings or not settings.get("enabled", True):
             out.append(Assembly(lane, NOT_CONFIGURED))
             continue
-        out.append(builders[lane](settings))
+        build = builders.get(lane)
+        if build is None:
+            out.append(Assembly(lane, REFUSED, reason=(
+                f"{lane!r} is a declared lane with no builder in lib/reaping.assemble. "
+                f"It is configured and enabled, so this is half an addition rather than "
+                f"a lane nobody asked for: write its assemble_{lane}() before running it.")))
+            continue
+        out.append(build(settings))
     return tuple(out)
 
 

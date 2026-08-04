@@ -30,7 +30,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 import status
 from lib.preflight import all_lanes
@@ -63,9 +63,26 @@ def _allowed_origins() -> list[str]:
 
 
 class ReaperCommand(BaseModel):
-    lane: Literal["arb", "stocks", "crypto"] | None = None
+    """One run request. `lane` is validated against the registry, not a literal.
+
+    It was `Literal["arb", "stocks", "crypto"]`, which turns adding a fourth lane into a
+    422 from a file nobody would think to look in — the lane assembles, schedules and
+    places perfectly well and only the API says it does not exist. More lanes are planned,
+    so the allowed set is read from `lib.reaping.LANES` at validation time.
+    """
+
+    lane: str | None = None
     dry_run: bool = True
     confirmation: str = Field(default="", max_length=80)
+
+    @field_validator("lane")
+    @classmethod
+    def _known_lane(cls, value: str | None) -> str | None:
+        from lib.reaping import LANES
+
+        if value is not None and value not in LANES:
+            raise ValueError(f"unknown lane {value!r}; choose from {', '.join(LANES)}")
+        return value
 
 
 def _execution_enabled(command: ReaperCommand) -> bool:

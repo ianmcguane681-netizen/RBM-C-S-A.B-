@@ -1,8 +1,15 @@
 const $ = (id) => document.getElementById(id);
 const money = (value, currency = "EUR") => value == null ? "—" : new Intl.NumberFormat("en-IE", {style:"currency",currency,maximumFractionDigits:2}).format(value);
 const safe = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const laneNames = {stocks:"Stocks",crypto:"Crypto",arb:"Arbitrage"};
-const laneIcons = {stocks:"S",crypto:"₿",arb:"A"};
+// Presentation only. A lane the UI has no label for still renders, titled from its own id
+// and iconed with its first letter, because more lanes are planned and a dashboard that
+// prints "undefined Division" for a live money lane is worse than one that prints "Flipper".
+// Nothing here decides which lanes exist; that comes from the API.
+const laneLabels = {stocks:"Stocks",crypto:"Crypto",arb:"Arbitrage"};
+const laneGlyphs = {stocks:"S",crypto:"₿",arb:"A"};
+const titleCase = (id) => String(id ?? "").replace(/[-_]/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+const laneName = (id) => laneLabels[id] || titleCase(id) || "UNKNOWN LANE";
+const laneIcon = (id) => laneGlyphs[id] || (String(id ?? "?")[0] || "?").toUpperCase();
 const offlineOverview = {generated_at:"OFFLINE PREVIEW",capital:{cost_basis:null,currency:"EUR",value_status:"NO LIVE API",is_complete:false},decisions:{open:null,limit:12,items:[]},engines:[{lane:"stocks",status:"NOT_CONNECTED"},{lane:"crypto",status:"NOT_CONNECTED"},{lane:"arb",status:"NOT_CONNECTED"}],money_lanes:["stocks","crypto","arb"].map(lane=>({lane,balance:null,currency:"EUR",breaker:{status:"UNKNOWN"},positions:{open:null}})),recent_runs:[]};
 const offlineConnectors = {lanes:["stocks","crypto","arb"].map(lane=>({lane,status:"NOT_CONNECTED",missing:["Start the operator API for live state"]}))};
 
@@ -11,7 +18,7 @@ function divisionCard(engine, moneyLane) {
   const balance = moneyLane?.balance;
   const positions = moneyLane?.positions || {};
   return `<article class="division lane-${safe(engine.lane)}">
-    <div class="division-head"><span class="division-icon">${laneIcons[engine.lane]}</span><div><h2>${laneNames[engine.lane]} Division</h2><div class="subtitle">Research · Controls · Execution</div></div></div>
+    <div class="division-head"><span class="division-icon">${laneIcon(engine.lane)}</span><div><h2>${safe(laneName(engine.lane))} Division</h2><div class="subtitle">Research · Controls · Execution</div></div></div>
     <div class="division-row"><div><label>RING-FENCE</label><b>${money(balance,moneyLane?.currency||"EUR")}</b></div><div><label>OPEN POSITIONS</label><b>${positions.open ?? "UNKNOWN"}</b></div></div>
     <div class="state ${status.toLowerCase()}">${safe(status)}</div>
     <a class="button secondary" href="/api/v1/overview">VIEW DIVISION STATE</a>
@@ -32,9 +39,13 @@ function renderOverview(data) {
   const ready = engines.filter(e => e.status === "READY").length;
   $("engine-count").textContent = `${ready}/${engines.length}`;
   $("engine-state").textContent = ready === engines.length ? "All evidence sources ready" : "Attention required";
+  // The badge was the literal "3 LANES" in the HTML. It had an id and nothing ever
+  // set it, so a fourth lane made the page state a count contradicted by the list
+  // directly beneath it.
+  $("reaper-total").textContent = `${engines.length} LANE${engines.length === 1 ? "" : "S"}`;
   $("division-grid").innerHTML = engines.map(e => divisionCard(e, lanes.find(l=>l.lane===e.lane))).join("");
-  $("reaper-list").innerHTML = engines.map(e => `<div><span>${laneNames[e.lane] || safe(e.lane)}</span><span class="status-pill ${e.status.toLowerCase()}">${safe(e.status)}</span></div>`).join("");
-  $("safety-list").innerHTML = lanes.map(l => `<div><span>${laneNames[l.lane]} breaker</span><b>${safe(l.breaker?.status || "UNKNOWN")}</b></div>`).join("");
+  $("reaper-list").innerHTML = engines.map(e => `<div><span>${safe(laneName(e.lane))}</span><span class="status-pill ${e.status.toLowerCase()}">${safe(e.status)}</span></div>`).join("");
+  $("safety-list").innerHTML = lanes.map(l => `<div><span>${safe(laneName(l.lane))} breaker</span><b>${safe(l.breaker?.status || "UNKNOWN")}</b></div>`).join("");
   $("system-posture").innerHTML = [`${engines.length} evidence engines registered`,`${lanes.length} governed money lanes`,`${decisions.open ?? "Unknown"} decisions awaiting attention`,capital.is_complete ? "Portfolio valuation complete" : "Incomplete valuation disclosed"].map(x=>`<li>${safe(x)}</li>`).join("");
   $("runs").innerHTML = data.recent_runs?.length ? data.recent_runs.map(r=>`<div class="run-row"><span>${safe(r.lane)}<small>${safe(r.status)}</small></span><time>${safe(r.at)}</time></div>`).join("") : `<div class="empty">No runs have been recorded yet.<br><small>This is not the same as a run finding nothing.</small></div>`;
   $("decisions").innerHTML = decisions.items?.length ? decisions.items.map(d=>`<div class="decision-row"><span>${safe(d.subject)}<small>${safe(d.lane)}</small></span><time>${safe(d.raised_at)}</time></div>`).join("") : `<div class="empty">Decision queue is empty.</div>`;
@@ -42,7 +53,7 @@ function renderOverview(data) {
 }
 
 function renderConnectors(data) {
-  $("connectors").innerHTML = data.lanes.map(l=>`<div class="connector-row"><span>${laneNames[l.lane]}<small>${safe(l.missing?.join(", ") || "All requirements present")}</small></span><b class="${l.status.toLowerCase()}">${safe(l.status)}</b></div>`).join("");
+  $("connectors").innerHTML = data.lanes.map(l=>`<div class="connector-row"><span>${safe(laneName(l.lane))}<small>${safe(l.missing?.join(", ") || "All requirements present")}</small></span><b class="${l.status.toLowerCase()}">${safe(l.status)}</b></div>`).join("");
 }
 
 // The VIEW key only, never the command key. sessionStorage rather than localStorage so it

@@ -46,7 +46,11 @@ LEDGER = Path("data/monitor-ledger.json")
 REGISTER = Path("data/seen-register.json")
 REAPER_CONFIG = Path("data/reapers.json")
 OUTCOMES = Path("data/outcomes.json")
-MONEY_LANES = ("arb", "stocks", "crypto")
+#: Imported, never restated. This file held its own copy of the lane list, so a fourth
+#: lane would have been assembled, scheduled and placed while remaining invisible on the
+#: money panel — the one screen whose job is to show every lane that can spend. More lanes
+#: than these three are planned, which makes a second list a defect waiting for a date.
+from lib.reaping import LANES as MONEY_LANES  # noqa: E402
 
 
 def capital_panel() -> list[str]:
