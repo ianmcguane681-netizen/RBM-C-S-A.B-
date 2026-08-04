@@ -14,6 +14,19 @@ about the same contract.
 a value that meant one thing meaning another. Adding a field is a minor bump: a reader
 ignoring it is still correct.
 
+**1.0 is provisional until this reaches `main`, and that is the only reason it is still
+1.0.** The capital block changed inside it and changed in exactly the way the paragraph
+above calls major: `cost_basis` went from the cost of the priced subset to what was
+actually paid, it became nullable, and `value_status` gained `NOT_CONFIGURED`, `LOST` and
+`UNREADABLE`. A reader written against the earlier shape would break on all three.
+
+It was not bumped because no such reader can exist: `1.0` has never been merged, so there
+is nothing in the world to migrate, and announcing a 2.0 would claim a history that did
+not happen. **That exemption expires the moment this merges.** After that the rule above
+applies with no judgement left in it — the next change of this kind is a 2.0 even if
+nothing appears to consume the field, because "nothing consumes it yet" is how a contract
+stops being one.
+
 **What the version does not buy.** It says the shape is stable, not that the numbers are
 present. Every payload keeps the third states the rest of this repository is built on:
 `NOT_CONFIGURED`, `UNREADABLE` and a real zero are different values, and a monetary field
