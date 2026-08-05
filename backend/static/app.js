@@ -25,6 +25,106 @@ function divisionCard(engine, moneyLane) {
   </article>`;
 }
 
+// --- the three sections added when the journal, the quota and realised P&L landed ------
+
+// A realised figure is the honest half of a picture whose other half may be missing, so
+// the badge travels with the number. A lane showing +39.00 with a position still open and
+// an UNKNOWN outstanding has not made 39.00; it has made it on the part that finished.
+function realisedRow(lane) {
+  const r = lane.realised || {};
+  const partial = r.status === "PARTIAL";
+  const label = {COMPLETE:"whole book", PARTIAL:"part only", NOTHING_SETTLED:"nothing settled",
+                 UNREADABLE:"unreadable", NOT_CONFIGURED:"no ledger"}[r.status] || r.status || "UNKNOWN";
+  const figure = r.realised_profit == null ? "—" : money(r.realised_profit, r.currency || lane.currency || "EUR");
+  const tone = r.realised_profit == null ? "" : (r.realised_profit >= 0 ? "up" : "down");
+  const caveat = partial
+    ? `${r.still_open ?? 0} open · ${r.unknown ?? 0} unknown not counted`
+    : (r.void ? `${r.void} void excluded` : label);
+  return `<div class="realised-row"><span>${safe(laneName(lane.lane))}<small>${safe(caveat)}</small></span>` +
+         `<b class="${tone}">${figure}</b></div>`;
+}
+
+function renderRealised(lanes) {
+  $("realised-list").innerHTML = lanes.length
+    ? lanes.map(realisedRow).join("")
+    : `<div class="empty">No money lane is configured.</div>`;
+
+  // The headline tile, and three separate reasons to withhold it.
+  //
+  // The third was found by running mock numbers through this page: the arb lane rings
+  // its fence in EUR and the stocks lane in USD, and the first version added 39.00 to
+  // -77.00 and printed -EUR 38.00. That is not a conversion, it is two different units
+  // added together, and no price source here can convert them. A total across mixed
+  // currencies is not a number — the per-lane rows below are the answer, and the tile
+  // says so rather than inventing a rate.
+  const contributing = lanes.filter(l => typeof l.realised?.realised_profit === "number");
+  const unreadable = lanes.some(l => l.realised?.status === "UNREADABLE");
+  const partial = lanes.some(l => l.realised?.status === "PARTIAL");
+  const currencies = new Set(contributing.map(l => l.realised.currency || l.currency || "EUR"));
+
+  if (unreadable || !contributing.length) {
+    $("realised-total").textContent = "—";
+    $("realised-total").className = "";
+    $("realised-state").textContent = unreadable ? "A ledger could not be read" : "Nothing has settled";
+    return;
+  }
+  if (currencies.size > 1) {
+    $("realised-total").textContent = "—";
+    $("realised-total").className = "";
+    $("realised-state").textContent =
+      `${[...currencies].join(" and ")} cannot be added · see the per-lane figures`;
+    return;
+  }
+  const total = contributing.reduce((a, l) => a + l.realised.realised_profit, 0);
+  $("realised-total").textContent = money(total, [...currencies][0]);
+  $("realised-total").className = total >= 0 ? "up" : "down";
+  $("realised-state").textContent = partial
+    ? "PARTIAL · open and unknown positions are not in this"
+    : "Covers every settled position";
+}
+
+// Running out of quota reads as no arbs, so the count is a safety control and sits with
+// them. UNKNOWN is not nought: it means nothing has measured it yet.
+function renderQuota(lanes) {
+  const arb = lanes.find(l => l.lane === "arb");
+  const q = arb?.quota;
+  if (!q) { $("quota").innerHTML = `<div><span>Odds API</span><b>UNKNOWN</b></div>`; return; }
+  const remaining = q.status === "KNOWN" ? q.remaining : null;
+  const low = remaining != null && remaining <= (q.floor ?? 25);
+  $("quota").innerHTML =
+    `<div><span>Requests remaining</span><b class="${low ? "down" : ""}">${remaining ?? "UNKNOWN"}</b></div>` +
+    `<div><span>Spending floor</span><b>${q.floor ?? "—"}</b></div>` +
+    (q.burn ? `<div><span>At this cadence</span><b class="${q.fits ? "" : "down"}">${safe(q.burn)}</b></div>` : "");
+}
+
+// EMPTY and UNREADABLE are different facts, and the difference matters most here: a system
+// running for weeks must not read as one that has never run.
+function renderHistory(history) {
+  const tag = $("journal-tag");
+  if (!history || history.status === "UNREADABLE") {
+    tag.textContent = "UNREADABLE";
+    $("reap-history").innerHTML =
+      `<div class="empty">The run journal could not be opened.<br>` +
+      `<small>This is not a system that has never run; it is one whose record cannot be read.</small></div>`;
+    return;
+  }
+  const runs = history.runs || [];
+  tag.textContent = `${history.counts?.reaper_runs ?? 0} RUNS`;
+  if (!runs.length) {
+    $("reap-history").innerHTML =
+      `<div class="empty">No run has been recorded yet.<br>` +
+      `<small>This is not the same as a run that found nothing.</small></div>`;
+    return;
+  }
+  $("reap-history").innerHTML = runs.map(r => {
+    const blind = r.status === "COULD_NOT_LOOK";
+    return `<div class="run-row"><span>${safe(laneName(r.lane) || "all lanes")}` +
+           `<small class="${blind ? "down" : ""}">${safe(r.status)}` +
+           `${r.reason ? " · " + safe(r.reason) : ""}</small></span>` +
+           `<time>${safe(r.at)}</time></div>`;
+  }).join("");
+}
+
 function renderOverview(data) {
   const capital = data.capital || {}, decisions = data.decisions || {}, engines = data.engines || [], lanes = data.money_lanes || [];
   $("capital-cost").textContent = money(capital.cost_basis, capital.currency || "EUR");
@@ -49,6 +149,9 @@ function renderOverview(data) {
   $("system-posture").innerHTML = [`${engines.length} evidence engines registered`,`${lanes.length} governed money lanes`,`${decisions.open ?? "Unknown"} decisions awaiting attention`,capital.is_complete ? "Portfolio valuation complete" : "Incomplete valuation disclosed"].map(x=>`<li>${safe(x)}</li>`).join("");
   $("runs").innerHTML = data.recent_runs?.length ? data.recent_runs.map(r=>`<div class="run-row"><span>${safe(r.lane)}<small>${safe(r.status)}</small></span><time>${safe(r.at)}</time></div>`).join("") : `<div class="empty">No runs have been recorded yet.<br><small>This is not the same as a run finding nothing.</small></div>`;
   $("decisions").innerHTML = decisions.items?.length ? decisions.items.map(d=>`<div class="decision-row"><span>${safe(d.subject)}<small>${safe(d.lane)}</small></span><time>${safe(d.raised_at)}</time></div>`).join("") : `<div class="empty">Decision queue is empty.</div>`;
+  renderRealised(lanes);
+  renderQuota(lanes);
+  renderHistory(data.reap_history);
   $("generated").textContent = `STATE ${data.generated_at || "UNKNOWN"}`;
 }
 

@@ -131,6 +131,48 @@ def evidence_panel() -> list[str]:
     return lines
 
 
+def _odds_quota(settings: dict) -> dict:
+    """What the odds key has left, and what the current cadence will do to it.
+
+    Running out reads as no arbs, which makes the remaining count a safety control rather
+    than a statistic — so it belongs on the page beside the breakers. UNKNOWN is carried
+    through as null: nothing has measured it yet is not the same as nothing is left.
+    """
+
+    from connectors.oddsapi import (
+        FREE_TIER_MONTHLY,
+        MINIMUM_REMAINING,
+        USAGE,
+        Usage,
+        credits_per_day,
+        describe_burn,
+    )
+
+    quota = dict(Usage.load(USAGE).to_dict())
+    quota["floor"] = MINIMUM_REMAINING
+    try:
+        from run import REAP_CADENCES
+
+        sports = len(settings.get("sports") or ())
+        if sports:
+            daily = credits_per_day(
+                sports=sports, cadence_seconds=REAP_CADENCES["arb"],
+                bookmakers=tuple(settings.get("bookmakers") or ()),
+            )
+            quota["credits_per_day"] = daily
+            quota["fits"] = daily <= FREE_TIER_MONTHLY / 30.4
+            quota["burn"] = describe_burn(daily).split(" — ")[0]
+        else:
+            quota["credits_per_day"] = None
+            quota["fits"] = None
+            quota["burn"] = None
+    except Exception as error:  # noqa: BLE001 - an estimate that raises is not a status
+        quota["credits_per_day"] = None
+        quota["fits"] = None
+        quota["burn"] = f"not computable ({type(error).__name__})"
+    return quota
+
+
 def _reap_history(limit: int = 10) -> dict:
     """What the lanes reported, kept after the processes that reported it.
 
@@ -418,12 +460,24 @@ def money_state(
                 # Carried with its exclusions, never as a bare number. A lane showing a
                 # realised profit while positions are open and UNKNOWN has reported the
                 # result of the part that finished, not the result of the lane.
-                item["realised"] = ledger.realised(lane).to_dict()
+                # The figure carries its own unit. Rendering it against a currency
+                # fetched from somewhere else is how EUR 39.00 and USD -77.00 were
+                # added together and printed as one total.
+                item["realised"] = {
+                    **ledger.realised(lane).to_dict(),
+                    "currency": item["currency"],
+                }
             else:
                 item["positions"] = {
                     "status": "UNREADABLE", "reason": ledger.reason,
                     "open": None, "unsettled_exposure": None, "stale_open": None,
                 }
+
+        # Only the arb lane buys its evidence by the request, so only it carries a quota.
+        # Absent on the others rather than nulled, because a lane with no metered source
+        # has no quota rather than an unknown one.
+        if lane == "arb":
+            item["quota"] = _odds_quota(config.get("arb") or {})
         states.append(item)
 
     return states

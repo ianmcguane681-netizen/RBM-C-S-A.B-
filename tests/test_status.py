@@ -255,3 +255,35 @@ class TestCapitalNeverReportsAZeroItDidNotMeasure:
         # The priced subset keeps its own name, and is nought because nothing is priced.
         assert capital["priced_cost_basis"] == 0.0
         assert capital["unpriced_assets"] == ["MODN", "NET"]
+
+
+class TestAMonetaryFigureCarriesItsUnit:
+    """EUR 39.00 and USD -77.00 were added together and printed as one total.
+
+    Found by putting mock numbers through the dashboard: the arb lane rings its fence in
+    EUR and the stocks lane in USD, and the headline tile summed the two realised figures
+    because it took the currency from somewhere other than the figure. No price source
+    here converts between them, so that total was not a conversion — it was two different
+    units added.
+
+    The fix is structural rather than a formatting rule: the figure carries its own
+    currency, so a caller cannot render or combine it against a unit fetched separately.
+    """
+
+    def test_each_lanes_realised_figure_states_its_own_currency(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data").mkdir()
+        config_file(tmp_path / "data",
+                    arb={"enabled": True, "balance": 500.0, "currency": "EUR"},
+                    stocks={"enabled": True, "balance": 5000.0, "currency": "USD"})
+        (tmp_path / "data" / "outcomes.json").write_text("[]", encoding="utf-8")
+
+        lanes = {l["lane"]: l for l in status.money_state(
+            config_path=tmp_path / "data" / "reapers.json",
+            directory=tmp_path / "data",
+            ledger_path=tmp_path / "data" / "outcomes.json")}
+
+        assert lanes["arb"]["realised"]["currency"] == "EUR"
+        assert lanes["stocks"]["realised"]["currency"] == "USD"
