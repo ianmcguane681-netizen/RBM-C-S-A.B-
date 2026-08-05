@@ -64,7 +64,7 @@ def serialise(value: Any) -> Any:
         return value.to_dict()
     if is_dataclass(value) and not isinstance(value, type):
         return {key: serialise(item) for key, item in asdict(value).items()}
-    if isinstance(value, (tuple, list)):
+    if isinstance(value, (tuple, list, set, frozenset)):
         return [serialise(item) for item in value]
     if isinstance(value, dict):
         return {str(key): serialise(item) for key, item in value.items()}

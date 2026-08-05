@@ -39,6 +39,33 @@ which is a human act.
 
 Neither is a gap to be filled later. They are reported as `NOT_PLACED` with the reason, so a
 reader never files a deliberate absence as an unfinished feature.
+
+## More lanes are coming, and this module refuses the ones it does not know
+
+Flipper, an app studio, media and commerce lanes are planned, and each will reach `READY`
+through the same `Reaper` sequence. What they will NOT share is an execution path: a
+marketplace listing is not a stock order and does not go to a broker.
+
+So `PLACERS` maps a lane to the one function that may submit for it, and a lane in neither
+`PLACERS` nor `NO_ADAPTER` is `REFUSED`. That registry replaced a fallback — this module
+used to END with `return _place_stock(...)`, so any lane that was not arb or crypto was
+handed to the stock placer on the assumption that it was stocks. A flipper instruction with
+a broker attached would have been submitted as an equity order, and since the position is
+recorded before the order is sent, the first evidence would have been a phantom position
+beside a broker error. Fail toward stopping: a lane whose execution path nobody has written
+does not place, and says so.
+
+## The review board is not in this path, and that is the design
+
+Nothing here convenes, consults or waits for a board. The reapers run the same gates
+without one, reach `READY`, and place when `lib.operating` says the lane's mode is
+`AUTONOMOUS` — the board is available for decisions that want an audit chain, and is
+optional. What is lost by running without one is the chain itself, which every harvest
+states rather than letting a working decision be mistaken for a reviewed one.
+
+The limits on autonomy are the ones written down: `NEVER_AUTONOMOUS` in `lib.reaper` for
+lanes where an irreversible act cannot be delegated at all, `NO_ADAPTER` for lanes with no
+venue to submit to, and the per-lane mode for everything else.
 """
 from __future__ import annotations
 
@@ -134,7 +161,8 @@ def place_harvest(
     """Submit one READY instruction, if everything says it may be submitted.
 
     Ordered so that every cheap refusal happens before anything is written and long before
-    anything is sent.
+    anything is sent. The unknown-lane refusal sits among the cheap ones deliberately: it
+    must land before `_place_stock` records a position for an order it cannot send.
     """
 
     from lib.operating import AUTONOMOUS
@@ -151,6 +179,16 @@ def place_harvest(
 
     if lane in NO_ADAPTER:
         return Placement(status=NOT_PLACED, reason=NO_ADAPTER[lane], **common)
+
+    if lane not in PLACERS:
+        # Before the mode check, and before anything is recorded. This used to be a
+        # fallback to the stock placer, so a lane that was merely NOT arb or crypto was
+        # treated as though it were stocks.
+        return Placement(status=REFUSED, reason=(
+            f"no execution path is written for {lane!r}. It is not in NO_ADAPTER, so this "
+            f"is not a lane that deliberately cannot place — it is one whose venue nobody "
+            f"has built. Add it to PLACERS in lib/placing, or to NO_ADAPTER with the "
+            f"reason it will never have one."), **common)
 
     if getattr(mode, "mode", "") != AUTONOMOUS:
         return Placement(status=NOT_PLACED, reason=(
@@ -172,8 +210,8 @@ def place_harvest(
             "no instruction, or no broker configured for this lane. Nothing was sent."),
             **common)
 
-    return _place_stock(harvest, instruction, mode=mode, ledger=ledger, broker=broker,
-                        thesis_declared_at=thesis_declared_at, common=common)
+    return PLACERS[lane](harvest, instruction, mode=mode, ledger=ledger, broker=broker,
+                         thesis_declared_at=thesis_declared_at, common=common)
 
 
 def _place_stock(harvest, order, *, mode, ledger, broker, thesis_declared_at,
@@ -237,6 +275,38 @@ def _place_stock(harvest, order, *, mode, ledger, broker, thesis_declared_at,
     ledger.save()
     return Placement(status=NOT_PLACED, reason=(
         f"the broker returned {result.status}: {result.reason}"), **shared)
+
+
+#: Lane -> the one function permitted to submit for it. A lane in neither this nor
+#: `NO_ADAPTER` cannot place, and is REFUSED by name rather than assumed to be like stocks.
+#:
+#: Adding a lane here is a deliberate act with a signature to match: every placer takes
+#: `(harvest, instruction, *, mode, ledger, broker, thesis_declared_at, common)` and must
+#: record the position BEFORE it sends, for the reason argued at the top of this file.
+PLACERS = {"stocks": _place_stock}
+
+#: Lane -> how to obtain its broker when a caller supplied none. Kept beside `PLACERS`
+#: because the two are the same decision seen from either end, and a lane whose broker
+#: cannot be constructed refuses on the `broker is None` check rather than here — an
+#: import error at placement time is not a refusal anybody can read.
+def _alpaca():
+    from connectors.alpaca import AlpacaBroker
+
+    return AlpacaBroker.from_directory()
+
+
+BROKER_FACTORIES = {"stocks": _alpaca}
+
+
+def broker_for(lane: str):
+    """The lane's default broker, or None. Absence is normal and is not an error here.
+
+    `None` reaches `place_harvest`'s `broker is None` check and becomes a stated REFUSED,
+    which is where a reader will look for it.
+    """
+
+    factory = BROKER_FACTORIES.get(lane)
+    return factory() if factory is not None else None
 
 
 def describe_placements(placements) -> str:

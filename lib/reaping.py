@@ -35,6 +35,13 @@ LEDGER = Path("data/outcomes.json")
 THESES = Path("data/theses.json")
 BREAKER_DIR = Path("data")
 KILL_SWITCH = Path("data/HALT")
+#: Append-only run history. A record, never a source of truth — `LEDGER` stays the ledger.
+JOURNAL = Path("data/journal.sqlite3")
+
+#: Distinguishes "caller said nothing" from "caller said None", where None means *do not
+#: journal at all*. A plain `= JOURNAL` default binds the path at import, which makes the
+#: constant above unpatchable and sent a full test run's journal into the live `data/`.
+_DEFAULT = object()
 
 LANES = ("arb", "stocks", "crypto")
 
@@ -368,7 +375,14 @@ def assemble(
     kill_switch: Path = KILL_SWITCH,
     theses_path: Path = THESES,
 ) -> tuple[Assembly, ...]:
-    """One assembly per lane, always all three, in a stable order."""
+    """One assembly per lane in `LANES`, in a stable order, whatever that list holds.
+
+    More lanes than these three are planned, so the loop is written against `LANES`
+    rather than against the number three, and a lane listed without a builder is
+    REPORTED rather than raised. `builders[lane]` on an unknown key is a `KeyError` out
+    of the middle of an assembly pass — every OTHER lane's result is lost with it, so
+    the run reports nothing at all because one lane was half-added.
+    """
 
     builders = {
         "arb": lambda s: assemble_arb(s, directory=directory, kill_switch=kill_switch),
@@ -386,7 +400,14 @@ def assemble(
         if not settings or not settings.get("enabled", True):
             out.append(Assembly(lane, NOT_CONFIGURED))
             continue
-        out.append(builders[lane](settings))
+        build = builders.get(lane)
+        if build is None:
+            out.append(Assembly(lane, REFUSED, reason=(
+                f"{lane!r} is a declared lane with no builder in lib/reaping.assemble. "
+                f"It is configured and enabled, so this is half an addition rather than "
+                f"a lane nobody asked for: write its assemble_{lane}() before running it.")))
+            continue
+        out.append(build(settings))
     return tuple(out)
 
 
@@ -435,6 +456,7 @@ def reap(
     theses_path: Path = THESES,
     place: bool = True,
     brokers: Any = None,
+    journal_path: Any = _DEFAULT,
 ) -> Reaping:
     """Assemble, apply outcomes, then run every selected lane.
 
@@ -488,9 +510,26 @@ def reap(
         # vanishing from the report.
         harvests.extend(assembly.reaper.reap())
     placements = _place(harvests, modes, ledger, brokers) if place else ()
-    return Reaping(assemblies, tuple(harvests), applications=applications,
-                   modes=tuple(modes[lane] for lane in selected),
-                   placements=placements)
+    reaping = Reaping(assemblies, tuple(harvests), applications=applications,
+                      modes=tuple(modes[lane] for lane in selected),
+                      placements=placements)
+
+    # Recorded AFTER the run, and unable to affect it. Everything a reap produces was
+    # printed once and lost, so "what did the arb lane find on Tuesday" had no answer and
+    # neither did "has any lane produced anything real" — which is the question the plan
+    # turns on. `Journal.record` never raises: a reap that placed an order and then could
+    # not write its diary has still placed the order, and losing the run over the note
+    # would fail in the expensive direction.
+    # Resolved here rather than in the signature, so JOURNAL is read at call time.
+    destination = JOURNAL if journal_path is _DEFAULT else journal_path
+    if destination is not None:
+        from lib.journal import Journal
+
+        Journal(destination).record(
+            reaping, lane=lanes[0] if lanes and len(lanes) == 1 else "",
+            dry_run=not place,
+        )
+    return reaping
 
 
 def _place(harvests, modes, ledger, brokers) -> tuple[Any, ...]:
@@ -501,18 +540,17 @@ def _place(harvests, modes, ledger, brokers) -> tuple[Any, ...]:
     different facts and only one of them needs you.
     """
 
-    from lib.placing import place_harvest
+    from lib.placing import broker_for, place_harvest
 
     supplied = brokers or {}
     out = []
     for harvest in harvests:
         if harvest.status != "READY":
             continue
-        broker = supplied.get(harvest.lane)
-        if broker is None and harvest.lane == "stocks":
-            from connectors.alpaca import AlpacaBroker
-
-            broker = AlpacaBroker.from_directory()
+        # `broker_for` rather than an `if lane == "stocks"` branch here: which lanes have a
+        # venue is one fact, and it belongs beside the placer that uses it rather than in
+        # the loop that iterates them.
+        broker = supplied.get(harvest.lane) or broker_for(harvest.lane)
         thesis = getattr(harvest.permission, "subject", "")
         out.append(place_harvest(
             harvest, mode=modes[harvest.lane], ledger=ledger, broker=broker,

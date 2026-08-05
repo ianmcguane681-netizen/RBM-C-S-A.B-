@@ -46,7 +46,11 @@ LEDGER = Path("data/monitor-ledger.json")
 REGISTER = Path("data/seen-register.json")
 REAPER_CONFIG = Path("data/reapers.json")
 OUTCOMES = Path("data/outcomes.json")
-MONEY_LANES = ("arb", "stocks", "crypto")
+#: Imported, never restated. This file held its own copy of the lane list, so a fourth
+#: lane would have been assembled, scheduled and placed while remaining invisible on the
+#: money panel — the one screen whose job is to show every lane that can spend. More lanes
+#: than these three are planned, which makes a second list a defect waiting for a date.
+from lib.reaping import LANES as MONEY_LANES  # noqa: E402
 
 
 def capital_panel() -> list[str]:
@@ -125,6 +129,127 @@ def evidence_panel() -> list[str]:
     lines.append("  A lane that can read its evidence has not thereby concluded anything.")
     lines.append("")
     return lines
+
+
+def _odds_quota(settings: dict) -> dict:
+    """What the odds key has left, and what the current cadence will do to it.
+
+    Running out reads as no arbs, which makes the remaining count a safety control rather
+    than a statistic — so it belongs on the page beside the breakers. UNKNOWN is carried
+    through as null: nothing has measured it yet is not the same as nothing is left.
+    """
+
+    from connectors.oddsapi import (
+        FREE_TIER_MONTHLY,
+        MINIMUM_REMAINING,
+        USAGE,
+        Usage,
+        credits_per_day,
+        describe_burn,
+    )
+
+    quota = dict(Usage.load(USAGE).to_dict())
+    quota["floor"] = MINIMUM_REMAINING
+    try:
+        from run import REAP_CADENCES
+
+        sports = len(settings.get("sports") or ())
+        if sports:
+            daily = credits_per_day(
+                sports=sports, cadence_seconds=REAP_CADENCES["arb"],
+                bookmakers=tuple(settings.get("bookmakers") or ()),
+            )
+            quota["credits_per_day"] = daily
+            quota["fits"] = daily <= FREE_TIER_MONTHLY / 30.4
+            quota["burn"] = describe_burn(daily).split(" — ")[0]
+        else:
+            quota["credits_per_day"] = None
+            quota["fits"] = None
+            quota["burn"] = None
+    except Exception as error:  # noqa: BLE001 - an estimate that raises is not a status
+        quota["credits_per_day"] = None
+        quota["fits"] = None
+        quota["burn"] = f"not computable ({type(error).__name__})"
+    return quota
+
+
+def _scheduler_state() -> dict:
+    """Whether anything is actually running the lanes, and when it last did.
+
+    **This is the state whose absence is invisible.** Every lane has a cadence, and until
+    `run.py --serve` existed nothing invoked them: the Procfile declared a web process and
+    no worker, and there was no cron entry or timer anywhere. A system in that condition
+    renders perfectly — the dashboard loads, the ledger is intact, every lane reports the
+    state it was last left in — and nothing runs.
+
+    So a supervisor that has stopped must not read the same as one that has nothing to do.
+    NEVER_STARTED, RUNNING and STALE are three different facts, and STALE is the one that
+    costs: it means the cadences on this page are describing an intention.
+    """
+
+    from run import HEARTBEAT, TICK_SECONDS
+
+    if not HEARTBEAT.is_file():
+        return {"status": "NEVER_STARTED", "last_tick_at": None, "ticks": None,
+                "reason": ("No supervisor has run. Every cadence on this page is an "
+                           "intention until `python run.py --serve` is running.")}
+    try:
+        beat = json.loads(HEARTBEAT.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return {"status": "UNREADABLE", "last_tick_at": None, "ticks": None,
+                "reason": f"{type(error).__name__}: {error}"}
+
+    last = str(beat.get("last_tick_at") or "")
+    tick = int(beat.get("tick_seconds") or TICK_SECONDS)
+    age = _age_seconds(last)
+    # Three missed ticks, so an ordinary slow run does not read as a dead supervisor.
+    stale = age is None or age > tick * 3
+    return {
+        "status": "STALE" if stale else "RUNNING",
+        "last_tick_at": last or None,
+        "ticks": beat.get("ticks"),
+        "age_seconds": age,
+        "tick_seconds": tick,
+        "reason": (("The heartbeat has stopped moving, so no lane is being run whatever "
+                    "its cadence says.") if stale else None),
+    }
+
+
+def _age_seconds(stamp: str) -> float | None:
+    """Seconds since an ISO stamp, or None. An unreadable stamp is never young."""
+
+    from datetime import datetime, timezone
+
+    try:
+        moment = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return (datetime.now(timezone.utc) - moment).total_seconds()
+
+
+def _reap_history(limit: int = 10) -> dict:
+    """What the lanes reported, kept after the processes that reported it.
+
+    UNREADABLE and empty are separate, and the difference matters here more than most:
+    "no run has been recorded" is a fact about this system, while "the journal will not
+    open" is a fact about a file — and rendering the second as the first would say a
+    system that has been running for weeks has never run.
+    """
+
+    from lib.journal import Journal
+    from lib.reaping import JOURNAL
+
+    journal = Journal(JOURNAL)
+    if not journal.readable:
+        return {"status": "UNREADABLE", "reason": journal.reason, "runs": None,
+                "counts": journal.counts()}
+    runs = journal.recent_runs(limit)
+    return {
+        "status": "READABLE" if runs else "EMPTY",
+        "reason": None,
+        "runs": [dict(run) for run in runs],
+        "counts": journal.counts(),
+    }
 
 
 def _capital_state(book, positions, exposure) -> dict:
@@ -309,6 +434,10 @@ def money_panel(
         else:
             lines += [f"    {line}" for line in
                       describe_ledger(ledger, lane=lane).splitlines()]
+            # What actually came back. The only figure on this page that is money rather
+            # than a limit, and the only one that needs no price source to be true.
+            lines += [f"    {line}" for line in
+                      ledger.realised(lane).describe().splitlines()]
         lines.append("")
 
     return lines
@@ -343,6 +472,10 @@ def money_state(
             "breaker": {"status": "NOT_CONFIGURED"},
             "positions": {"status": "NOT_CONFIGURED", "open": None,
                           "unsettled_exposure": None, "stale_open": None},
+            # Present on every lane, so a reader never has to tell a missing key from a
+            # lane that has made nothing. NOT_CONFIGURED here means no ledger was read.
+            "realised": {"status": "NOT_CONFIGURED", "realised_profit": None,
+                         "settled": None, "covers_the_whole_book": False},
         }
 
         if config_error:
@@ -378,11 +511,27 @@ def money_state(
                     "stale_open": len(stale),
                     "daily_loss_limit_can_see_exposure": False,
                 }
+                # Carried with its exclusions, never as a bare number. A lane showing a
+                # realised profit while positions are open and UNKNOWN has reported the
+                # result of the part that finished, not the result of the lane.
+                # The figure carries its own unit. Rendering it against a currency
+                # fetched from somewhere else is how EUR 39.00 and USD -77.00 were
+                # added together and printed as one total.
+                item["realised"] = {
+                    **ledger.realised(lane).to_dict(),
+                    "currency": item["currency"],
+                }
             else:
                 item["positions"] = {
                     "status": "UNREADABLE", "reason": ledger.reason,
                     "open": None, "unsettled_exposure": None, "stale_open": None,
                 }
+
+        # Only the arb lane buys its evidence by the request, so only it carries a quota.
+        # Absent on the others rather than nulled, because a lane with no metered source
+        # has no quota rather than an unknown one.
+        if lane == "arb":
+            item["quota"] = _odds_quota(config.get("arb") or {})
         states.append(item)
 
     return states
@@ -481,10 +630,19 @@ def as_json() -> dict:
         ],
         "money_lanes": money_state(),
         "boards": boards,
+        # The scheduler's view: which lane fired, when, and with what exit code.
         "recent_runs": [
             {"lane": r.lane, "at": r.started_at, "status": r.status, "exit": r.exit_code}
             for r in orchestrator.runs[-10:]
         ],
+        # The journal's view, which is a different question. `recent_runs` above says a
+        # process ran and what it exited with; this says what the lanes actually reported
+        # and whether anything was submitted — the only record that outlives the run, and
+        # the only thing that can answer whether a function has produced anything real.
+        "reap_history": _reap_history(),
+        # Whether anything is running the lanes at all. Every other figure on this page
+        # describes what the lanes found; this one says whether they are being asked.
+        "scheduler": _scheduler_state(),
         "refused_fields": {
             # Named so a front end cannot quietly invent them. Every one is argued
             # against in lib/candidates.py or docs/reference-system.md.

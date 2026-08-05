@@ -1,7 +1,8 @@
 """Fire every lane that is due, hold the ones that are not, and show what awaits you.
 
     python run.py                 what would run, and why the rest would not
-    python run.py --go            actually run them
+    python run.py --go            actually run them, once
+    python run.py --serve         run them on their cadences, forever
     python run.py --queue         just the human queue
     python run.py --reap [lane]   every lane, or one of arb/crypto/stocks; places where
                                   the mode allows
@@ -39,13 +40,76 @@ lane cannot sign; both report that rather than looking unfinished.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from lib.orchestrator import HELD, Lane, Orchestrator
 
 STATE = Path("data/orchestrator.json")
+
+
+def _stamp() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+#: How often each reaper lane is worth re-running, against how fast its underlying thing
+#: actually moves. Odds move in seconds and a scan is bounded by API quota; chain state and
+#: filings move slowly.
+#:
+#: **Arb is set by the quota, not by the odds**, and the arithmetic is worth keeping.
+#:
+#: A free tier is 500 requests a MONTH, which is 16.4 a day. A request costs one credit
+#: per market per region, so the shipped example config — two sports, `uk,eu`, one market
+#: — spends four credits a run. At the old thirty minutes, with `arb-scan` asking on the
+#: same cadence, that was ~288 a day: the whole allowance in under two days, ending in a
+#: lane that reports no arb because the key is spent.
+#:
+#: Eight hours is the longest of the honest options and the one that fits the config this
+#: repository actually ships: 3 runs x 4 credits, plus a daily `arb-scan` at 2, is 14 a
+#: day. Narrow to one sport with the bookmakers filter on and the same budget buys a
+#: three-hour cadence. `connectors.oddsapi.credits_per_day` computes it for the config in
+#: front of you rather than leaving this comment to go stale, and preflight prints it
+#: before a key is ever placed.
+#:
+#: The odds would justify every five minutes. The allowance will not, and the allowance is
+#: the binding constraint until the tier is paid for.
+REAP_CADENCES = {"arb": 8 * 3600, "crypto": 6 * 3600, "stocks": 24 * 3600}
+
+#: What a lane nobody has given a cadence gets. Six hours is chosen to be unremarkable —
+#: often enough to be useful, rare enough that a new lane cannot quietly exhaust a free
+#: tier before anybody has decided what its real cadence should be.
+DEFAULT_REAP_CADENCE = 6 * 3600
+
+
+def _reaper_lanes() -> tuple[Lane, ...]:
+    """A scheduler entry per reaper lane, generated from the registry rather than listed.
+
+    These were three hand-written `Lane` entries, which meant a fourth reaper assembled,
+    placed and appeared on the dashboard while never once being RUN — the failure is
+    silence, and silence from a scheduler looks exactly like a quiet market. More lanes are
+    planned, so the list is derived and an unlisted cadence falls back to a stated default
+    instead of the lane going unscheduled.
+    """
+
+    from lib.reaping import LANES as REAPER_LANES
+
+    return tuple(
+        Lane(
+            name=f"reap-{lane}",
+            command=("python", "run.py", "--reap", lane),
+            cadence_seconds=REAP_CADENCES.get(lane, DEFAULT_REAP_CADENCE),
+            produces_decisions=True,
+            findings_exit_codes=(1,),
+            # 2 means NOTHING WAS LOOKED AT. A scheduler must not turn a blind lane into
+            # a quiet market by treating that as a successful run.
+            unconfigured_exit_codes=(2,),
+        )
+        for lane in REAPER_LANES
+    )
+
 
 #: The lanes, their cadences, and what each one costs a person.
 #:
@@ -65,10 +129,16 @@ LANES = (
     Lane(
         name="arb-scan",
         command=("python", "scan_arb.py", "soccer_epl", "--json"),
-        cadence_seconds=30 * 60,
+        # Daily, and it used to be every 30 minutes alongside `reap-arb` on the same
+        # cadence — two lanes buying the same prices from the same key. This one is the
+        # discovery view a person reads; `reap-arb` is the one that reaches a sized
+        # instruction. Keeping both at half-hourly spent the month's allowance in two days
+        # to answer the same question twice.
+        cadence_seconds=24 * 3600,
         produces_decisions=True,
         findings_exit_codes=(1,),
-        # 2 = no odds source configured. Not a crash, and not "no arb exists".
+        # 2 = no odds source configured, or the quota floor stopped the scan. Not a crash,
+        # and not "no arb exists".
         unconfigured_exit_codes=(2,),
     ),
     Lane(
@@ -88,33 +158,7 @@ LANES = (
         # 1 = a lane is DEGRADED, 2 = a lane is BLOCKED. Both are the report doing its job.
         unconfigured_exit_codes=(1, 2),
     ),
-    Lane(
-        name="reap-arb",
-        command=("python", "run.py", "--reap", "arb"),
-        cadence_seconds=30 * 60,
-        produces_decisions=True,
-        findings_exit_codes=(1,),
-        # 2 means NOTHING WAS LOOKED AT. A scheduler must not turn a blind lane into a
-        # quiet market by treating that as a successful run.
-        unconfigured_exit_codes=(2,),
-    ),
-    Lane(
-        name="reap-crypto",
-        command=("python", "run.py", "--reap", "crypto"),
-        cadence_seconds=6 * 3600,
-        produces_decisions=True,
-        findings_exit_codes=(1,),
-        unconfigured_exit_codes=(2,),
-    ),
-    Lane(
-        name="reap-stocks",
-        command=("python", "run.py", "--reap", "stocks"),
-        cadence_seconds=24 * 3600,
-        produces_decisions=True,
-        findings_exit_codes=(1,),
-        unconfigured_exit_codes=(2,),
-    ),
-)
+) + _reaper_lanes()
 
 
 def _run_one(lane: Lane, orchestrator: Orchestrator) -> None:
@@ -178,6 +222,79 @@ def main(go: bool) -> int:
     orchestrator.save()
     print(orchestrator.describe_queue())
     return 1 if orchestrator.open_decisions else 0
+
+
+#: Where the supervisor records that it is alive. A count and two timestamps; no subject.
+HEARTBEAT = Path("data/heartbeat.json")
+
+#: How often the supervisor wakes. NOT a lane cadence — the orchestrator decides what is
+#: due, and this only decides how finely that question is asked. A minute is short enough
+#: that a thirty-minute lane fires within 2% of its cadence and cheap enough to be free.
+TICK_SECONDS = 60
+
+
+def _beat(path: Path, ticks: int, started: str, last_exit: int | None) -> None:
+    """Write the heartbeat. Best effort: a supervisor must not die of its own bookkeeping."""
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({
+            "pid": os.getpid(),
+            "started_at": started,
+            "last_tick_at": _stamp(),
+            "ticks": ticks,
+            "last_exit_code": last_exit,
+            "tick_seconds": TICK_SECONDS,
+        }, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
+          heartbeat: Path | None = None) -> int:
+    """Run what is due, forever. The heartbeat this repository did not have.
+
+    Every lane carries a cadence and `--go` runs whatever is due — but `--go` is one shot
+    and **nothing invoked it**. The Procfile declared a web process and no worker, there
+    was no cron entry and no timer, so the cadences described an intention rather than a
+    schedule. Placing an API key would not have changed that: the lanes would have been
+    ready to run and still nobody would have asked them to.
+
+    **The failure this must not have is silence.** A supervisor that dies leaves a system
+    that looks entirely normal — the dashboard renders, the ledger is intact, every lane
+    reports the state it was last in — while nothing runs at all. That is this
+    repository's founding defect at the level of the process table, so the loop writes a
+    heartbeat every tick and `status` reports it STALE when it stops moving. A scheduler
+    nobody can see stop is a scheduler that stops without being seen.
+
+    `limit` bounds the number of ticks, which is what makes this testable without waiting.
+    """
+
+    path = HEARTBEAT if heartbeat is None else heartbeat
+    started = _stamp()
+    ticks = 0
+    last_exit: int | None = None
+
+    print(f"SUPERVISING  waking every {interval}s. The orchestrator decides what is due; "
+          f"this only decides how often it is asked.")
+    print(f"  heartbeat -> {path}. If it stops moving, nothing is running.")
+    _beat(path, ticks, started, last_exit)
+
+    while limit is None or ticks < limit:
+        try:
+            last_exit = main(go=True)
+        except Exception as error:  # noqa: BLE001 - one bad tick must not end the schedule
+            # A lane that throws takes its own run down and nothing else. Ending the loop
+            # here would turn one broken tick into a permanently stopped system, and the
+            # stopping would be invisible.
+            last_exit = -1
+            print(f"  TICK FAILED  {type(error).__name__}: {error}")
+        ticks += 1
+        _beat(path, ticks, started, last_exit)
+        if limit is not None and ticks >= limit:
+            break
+        time.sleep(interval)
+    return 0
 
 
 def reap(lane: str = "", dry: bool = False, *, as_json: bool = False) -> int:
@@ -316,6 +433,9 @@ if __name__ == "__main__":
         rest = [a for a in argv[argv.index("--reap") + 1:] if not a.startswith("--")]
         raise SystemExit(reap(rest[0] if rest else "", dry="--dry" in argv,
                               as_json="--json" in argv))
+    if "--serve" in argv:
+        rest = [a for a in argv[argv.index("--serve") + 1:] if a.isdigit()]
+        raise SystemExit(serve(int(rest[0]) if rest else TICK_SECONDS))
     if "--queue" in argv:
         raise SystemExit(0 if not print(Orchestrator(LANES, STATE).describe_queue()) else 0)
     raise SystemExit(main("--go" in argv))

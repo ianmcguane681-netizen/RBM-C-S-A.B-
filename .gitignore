@@ -51,3 +51,19 @@ data/reapers.json
 # subjects and stakes, and this repository is public. The receipt beside it is committed —
 # it carries counts and dates, never subjects.
 data/outcomes.json
+
+# The last odds-API quota reading, kept so the spending floor survives the process that
+# took it. A count and a timestamp — no subject and no credential — but it is operational
+# state that belongs to one machine's key, and it changes on every scan.
+data/oddsapi-usage.json
+
+# The run journal: what ran, what each lane reported, and what was submitted. It names
+# subjects and stakes exactly as the outcome ledger does, and this repository is public.
+# A record rather than a source of truth — data/outcomes.json remains the ledger.
+data/journal.sqlite3
+data/journal.sqlite3-wal
+data/journal.sqlite3-shm
+
+# The supervisor's heartbeat: a pid, two timestamps and a tick count. No subject and no
+# stake, but it belongs to one running machine and changes every minute.
+data/heartbeat.json

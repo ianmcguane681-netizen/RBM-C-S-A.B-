@@ -283,13 +283,88 @@ def arb_lane(*, probe: bool = False, home: str | Path | None = None) -> LaneRead
         f"Arb maths, settlement-rule divergence and stake sizing all run on typed odds "
         f"with no credentials at all. Live scanning currently reaches {covered} of "
         f"{len(requirements)} sources. A feed gives discovery only: available stake and "
-        f"settlement rules are read at the book, never from an aggregator.",
+        f"settlement rules are read at the book, never from an aggregator.\n"
+        f"         Quota at the current settings: {_arb_burn()}",
         tuple(requirements),
     )
 
 
+def _arb_burn() -> str:
+    """What this lane will spend a day, computed from the config actually in front of us.
+
+    Printed BEFORE a key exists, which is the only moment it can change a decision. The
+    alternative is finding out from a lane that stopped finding anything three weeks in,
+    and an exhausted key is indistinguishable from a quiet market — which is the failure
+    this whole file is written to prevent, arriving through the billing system instead of
+    the network.
+    """
+
+    from connectors.oddsapi import credits_per_day, describe_burn
+
+    try:
+        from lib.reaping import CONFIG, load_config
+        from run import REAP_CADENCES
+
+        config, unreadable = load_config(CONFIG)
+        if unreadable:
+            return f"not computable — {CONFIG} would not parse ({unreadable})"
+        settings = config.get("arb") or {}
+        sports = len(settings.get("sports") or ())
+        if not sports:
+            return (f"no sports are configured in {CONFIG}, so nothing would be scanned "
+                    f"and nothing would be spent")
+        daily = credits_per_day(
+            sports=sports,
+            cadence_seconds=REAP_CADENCES["arb"],
+            bookmakers=tuple(settings.get("bookmakers") or ()),
+        )
+        return describe_burn(daily)
+    except Exception as error:  # noqa: BLE001 - an estimate that raises is not a preflight
+        # UNKNOWN, never a reassuring number. A preflight that crashes computing a cost
+        # has failed at the one job it has, and a silent 0.0 would read as free.
+        return f"not computable ({type(error).__name__}: {error})"
+
+
 def all_lanes(*, probe: bool = False) -> tuple[LaneReadiness, ...]:
-    return (crypto_lane(probe=probe), stocks_lane(probe=probe), arb_lane(probe=probe))
+    """One readiness per declared lane, including lanes nobody has described yet.
+
+    This returned three hand-listed calls, so a fourth lane was simply ABSENT here — and
+    `status.as_json` builds its `engines` list from this, which the operator dashboard
+    turns into division cards. A lane could therefore be configured, assembled, scheduled
+    and holding a ring-fence while having no card on the page at all. Absence is the worst
+    of the available failures: there is nothing to notice.
+
+    A lane with no readiness function gets a `LaneReadiness` that says so, carrying an
+    unmet requirement so it reports BLOCKED rather than READY. An undescribed lane has not
+    been established to have everything it needs; it has been established that nobody has
+    said what it needs, and those must not render alike.
+    """
+
+    from lib.reaping import LANES
+
+    described = {
+        "crypto": crypto_lane, "stocks": stocks_lane, "arb": arb_lane,
+    }
+
+    out: list[LaneReadiness] = []
+    for lane in LANES:
+        build = described.get(lane)
+        if build is None:
+            out.append(LaneReadiness(lane, (
+                f"No preflight description exists for {lane!r}. What this lane needs "
+                f"before it can read anything has not been written down, so nothing here "
+                f"has been checked."
+            ), (Requirement(
+                lane=lane,
+                name=f"a readiness description for {lane}",
+                status=NOT_CONFIGURED,
+                detail=f"add {lane}_lane() to lib/preflight and register it in all_lanes",
+                unlocks="an honest answer about what this lane is missing",
+                required=True,
+            ),)))
+            continue
+        out.append(build(probe=probe))
+    return tuple(out)
 
 
 def report(lanes: Sequence[LaneReadiness]) -> str:

@@ -13,6 +13,8 @@ trading.
 """
 from __future__ import annotations
 
+import json
+
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -386,3 +388,124 @@ class TestTheRoundTrip:
         book.settle(placed(book).position_id, 1.0)
 
         assert "or they never will" in describe_ledger(book, now=NOW)
+
+
+class TestRealisedNeverReportsMoreCertaintyThanTheBookHas:
+    """A realised figure is the honest half of a picture whose other half is missing.
+
+    A lane showing `+41.10 realised` with three positions open and one UNKNOWN has not
+    made 41.10. It has made 41.10 on the part that finished, out of a book whose remainder
+    is undecided and part of which may already be lost. Reporting the number without the
+    exclusions is how a losing run reads as a winning one right up until the outstanding
+    positions land — which is the same defect as an unsettled position counting as zero
+    profit, moved from the breakers to the dashboard.
+    """
+
+    def _book(self, tmp_path, rows):
+        path = tmp_path / "outcomes.json"
+        path.write_text(json.dumps(rows), encoding="utf-8")
+        return OutcomeLedger(path)
+
+    def _row(self, **kw):
+        base = {"position_id": "POS-1", "lane": "arb", "subject": "a v b",
+                "status": "SETTLED", "staked": 100.0, "returned": 110.0,
+                "opened_at": "2026-08-01T00:00:00Z", "settled_at": "2026-08-02T00:00:00Z",
+                "source": "MANUAL", "note": "", "applied_to_breakers": False}
+        base.update(kw)
+        return base
+
+    def test_an_open_position_makes_the_figure_partial_rather_than_absent(self, tmp_path):
+        book = self._book(tmp_path, [
+            self._row(),
+            self._row(position_id="POS-2", status="OPEN", returned=0.0, settled_at=""),
+        ])
+
+        realised = book.realised()
+
+        assert realised.profit == 10.0
+        assert realised.open == 1
+        assert realised.is_complete is False
+        assert realised.to_dict()["status"] == "PARTIAL"
+        assert "INCOMPLETE" in realised.describe()
+
+    def test_an_unknown_position_also_makes_it_partial(self, tmp_path):
+        """The one whose money may already be gone, so the total is the flattering half."""
+
+        book = self._book(tmp_path, [
+            self._row(),
+            self._row(position_id="POS-2", status="UNKNOWN", returned=0.0,
+                      note="the book restricted the account"),
+        ])
+
+        realised = book.realised()
+
+        assert realised.unknown == 1
+        assert realised.is_complete is False
+        assert "UNKNOWN" in realised.describe()
+
+    def test_a_void_is_counted_and_kept_out_of_the_profit(self, tmp_path):
+        """A returned stake is neither a win nor a loss.
+
+        Folding it in as a zero drags a real average toward nothing and ends a losing run
+        that never ended — the argument `Position.profit` already makes, held here at the
+        aggregate.
+        """
+
+        book = self._book(tmp_path, [
+            self._row(),
+            self._row(position_id="POS-2", status="VOID", staked=50.0, returned=50.0,
+                      settled_at="2026-08-02T00:00:00Z"),
+        ])
+
+        realised = book.realised()
+
+        assert realised.profit == 10.0        # the void contributed nothing, not 0.0
+        assert realised.settled == 1
+        assert realised.void == 1
+        assert "neither a win nor a loss" in realised.describe()
+
+    def test_a_book_that_has_finished_everything_reports_complete(self, tmp_path):
+        book = self._book(tmp_path, [self._row(), self._row(position_id="POS-2")])
+
+        realised = book.realised()
+
+        assert realised.is_complete is True
+        assert realised.to_dict()["status"] == "COMPLETE"
+        assert realised.profit == 20.0
+
+    def test_a_lane_that_has_never_finished_a_position_is_not_a_complete_nothing(
+        self, tmp_path
+    ):
+        """`is_complete` is satisfied by an empty book — nothing open, nothing unknown.
+
+        Testing it before NOTHING_SETTLED reported COMPLETE beside a null profit, which
+        reads as "the whole picture, and it came to nothing" for a lane that has simply
+        never finished anything.
+        """
+
+        realised = self._book(tmp_path, []).realised("crypto")
+
+        assert realised.to_dict()["status"] == "NOTHING_SETTLED"
+        assert realised.profit is None
+        assert "NOTHING HAS SETTLED" in realised.describe()
+
+    def test_an_unreadable_ledger_reports_no_figure_at_all(self, tmp_path):
+        path = tmp_path / "outcomes.json"
+        path.write_text("{ not json", encoding="utf-8")
+
+        realised = OutcomeLedger(path).realised()
+
+        assert realised.readable is False
+        assert realised.profit is None
+        assert realised.to_dict()["settled"] is None
+        assert realised.is_complete is False
+
+    def test_one_lane_can_be_complete_while_the_book_is_not(self, tmp_path):
+        book = self._book(tmp_path, [
+            self._row(lane="stocks"),
+            self._row(position_id="POS-2", lane="arb", status="OPEN", returned=0.0,
+                      settled_at=""),
+        ])
+
+        assert book.realised("stocks").is_complete is True
+        assert book.realised().is_complete is False

@@ -45,11 +45,33 @@ candidate, and that is the point.
 Refusing to wire them in and remembering to call them separately would work until the
 evening somebody forgot, so a reaper without breakers cannot produce READY at all.
 
-## Autonomy stops before money
+## Autonomy is the target, and it is asserted rather than assumed
 
-`autonomous_execution` exists, defaults to `False`, and is refused outright for the chain
-lane. A reaper may look, screen, gate, authorise and size without being asked. Placing is a
-separate deliberate act, because everything upstream of it is reversible and it is not.
+A reaper looks, screens, gates, authorises and sizes without being asked, and **a lane whose
+mode is `AUTONOMOUS` places too** — `lib.placing` submits, and `lib.operating` decides
+whether it may. This paragraph used to end "placing is a separate deliberate act"; that was
+true before `lib/placing.py` existed and describing the system that way now would understate
+what it does with money, which is the wrong direction to be wrong in.
+
+The deliberate act moved rather than disappeared. It is `autonomous_execution: true` in the
+config, which defaults to `False`, which `data/MANUAL` overrides and `data/HALT` stops
+outright, and which `NEVER_AUTONOMOUS` refuses for the chain lane whatever any of them say.
+An absent key, a `"true"` string and an unreadable ledger all resolve to manual, because
+autonomy is a thing somebody stated, never a thing nobody denied.
+
+## This type knows nothing about arb, stocks or crypto, deliberately
+
+Every stage is a callable the caller supplies, so this file holds the SEQUENCE and the
+refusals and nothing about odds, filings or chains. That is what makes a fourth lane a new
+`build_<lane>_reaper` rather than a change here, and more are planned — flipper, an app
+studio, media, commerce. The sequence is the part worth getting right once.
+
+Two things a new lane inherits without asking: it cannot reach READY without breakers
+attached, and its `COULD_NOT_LOOK` stays distinct from its `NOTHING_FOUND`. Two things it
+must state for itself: an execution path in `lib.placing.PLACERS` or a reason in
+`NO_ADAPTER`, and a readiness description in `lib.preflight`. Both are refused by name when
+missing rather than defaulted, because a lane assumed to be like stocks is a lane whose
+instruction goes to a broker.
 """
 from __future__ import annotations
 

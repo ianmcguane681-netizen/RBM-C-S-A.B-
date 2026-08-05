@@ -33,6 +33,8 @@
       <article><label>OPEN DECISIONS</label><strong id="decision-count">—</strong><small id="decision-limit">Loading</small></article>
       <article><label>ACTIVE POSITIONS</label><strong id="position-count">—</strong><small id="position-state">Loading</small></article>
       <article><label>ENGINE COVERAGE</label><strong id="engine-count">—</strong><small id="engine-state">Loading</small></article>
+      <article><label>SCHEDULER</label><strong id="scheduler-state">—</strong><small id="scheduler-detail">Loading</small></article>
+      <article><label>REALISED P&amp;L</label><strong id="realised-total">—</strong><small id="realised-state">Loading</small></article>
     </section>
 
     <section class="workspace" id="divisions">
@@ -62,12 +64,17 @@
         <div class="divider"></div>
         <h3>Safety controls</h3>
         <div id="safety-list" class="safety-list"></div>
+        <div class="divider"></div>
+        <h3>Odds quota</h3>
+        <div id="quota" class="safety-list"></div>
         <a class="button secondary" href="/docs#/default/run_reapers_api_v1_reapers_run_post">OPEN COMMAND API</a>
       </aside>
     </section>
 
     <section class="bottom-grid" id="activity">
+      <article class="panel wide"><div class="panel-title">REAP HISTORY <span class="tag" id="journal-tag">JOURNAL</span></div><div id="reap-history" class="empty">Retrieving run history…</div></article>
       <article class="panel wide"><div class="panel-title">RECENT RUNS <span class="tag">LAST 10</span></div><div id="runs" class="empty">Retrieving activity…</div></article>
+      <article class="panel"><div class="panel-title">REALISED BY LANE</div><div id="realised-list" class="empty">Retrieving settled outcomes…</div></article>
       <article class="panel"><div class="panel-title">DECISION QUEUE</div><div id="decisions" class="empty">Retrieving decisions…</div></article>
       <article class="panel"><div class="panel-title">CONNECTOR HEALTH</div><div id="connectors" class="empty">Retrieving connectors…</div></article>
     </section>

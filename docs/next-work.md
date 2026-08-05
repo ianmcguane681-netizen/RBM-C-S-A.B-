@@ -362,6 +362,179 @@ and its 424 tests, so it was taken apart rather than merged. What was taken:
 Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
 with no stated reason, and deleting `OutcomeLedger.amend_stake`.
 
+## Nothing was running the lanes, 2026-08-04
+
+The blocker for "the three lanes working autonomously", and it was not the credentials.
+
+Every lane carries a `cadence_seconds`, and `run.py --go` runs whatever is due — but `--go`
+is **one shot and nothing invoked it**. The Procfile declared `web: python -m backend` and
+no worker. There was no cron entry, no systemd timer and no workflow anywhere in the repo.
+Placing the Odds API and Alpaca keys would not have changed that: the lanes would have been
+ready to run and nobody would ever have asked them to. The cadences described an intention.
+
+`run.py --serve` is the loop, `worker: python run.py --serve` is the Procfile line, and the
+orchestrator still decides what is due — the tick only decides how often that question gets
+asked.
+
+**The property that matters is that a stopped supervisor is visible.** A supervisor that
+dies leaves a system that looks entirely normal: the dashboard renders, the ledger is
+intact, every lane reports the state it was last left in, and nothing happens. That is the
+founding defect at the level of the process table. So the loop writes `data/heartbeat.json`
+every tick and `status` reports NEVER_STARTED, RUNNING, STALE and UNREADABLE as four
+different things, with STALE at three missed ticks so an ordinary slow run does not read as
+a death. It is the first tile on the dashboard.
+
+One tick failing never ends the loop, and a heartbeat that cannot be written never stops the
+thing it describes — a supervisor that dies of its own bookkeeping has caused the outage it
+was there to make visible.
+
+## Realised P&L: the one money figure that needs no price source
+
+`OutcomeLedger.realised(lane)` sums what actually came back, from SETTLED positions only.
+It needs no valuation and no broker, which is why it is the figure worth having while
+pricing is unwired — and it is the evidence for *prove one function produces something
+real*, which nothing until now could answer.
+
+**The number never travels alone.** A lane reporting `+41.10 realised` with three positions
+open and one UNKNOWN has not made 41.10; it has made 41.10 on the part that finished, out
+of a book whose remainder is undecided and part of which may already be lost. `Realised`
+carries the counts and `covers_the_whole_book`, and `describe()` says INCOMPLETE in as many
+words. This is the unsettled-position-as-zero defect moved from the breakers to the
+dashboard, and it is refused in the same way.
+
+Voids are counted and excluded from the profit: a returned stake is neither a win nor a
+loss, and averaging it in as a zero would end a losing run that never ended.
+
+One bug in the first version, caught by running it: `is_complete` is satisfied by an empty
+book — nothing open, nothing unknown — so a lane that had never finished a position
+reported `COMPLETE` beside a null profit, which reads as "the whole picture, and it came to
+nothing". NOTHING_SETTLED is now tested first.
+
+## Persistence: a run now leaves a record, 2026-08-04
+
+`migrations/0002` created `reaper_runs`, `harvests`, `executions` and four more tables, and
+**nothing in the codebase wrote to any of them** — a schema with no writer. Everything a
+reap produced was printed once and lost; `data/orchestrator.json` kept a last-run time and
+an exit code, and the harvests, their reasons and the placements existed for the length of
+one stdout. So "what did the arb lane find on Tuesday" had no answer, and neither did the
+question the plan turns on: *prove one function produces something real before starting a
+fourth.* You cannot prove it from a record that does not exist.
+
+`lib/journal.py` is an append-only SQLite journal — same column names as the migration, so
+moving to Postgres is a copy rather than a translation, and SQLite because it needs no
+server and can be verified by running it. `lib.reaping.reap` records every run.
+
+**It is a record, not a source of truth.** `data/outcomes.json` remains the ledger: what
+the breakers read, what `unsettled_exposure` sums. Nothing in the journal answers a money
+question, and a test asserts it exposes no `live` or `unsettled_exposure` — a second answer
+to "what is at risk" is worse than none, because the two eventually disagree and nothing
+says which is right. Writes never raise: a reap that placed an order and then could not
+write its diary has still placed the order.
+
+`migrations/0003` fixes two things in 0002 that would have made the database contradict the
+code. Seven CHECK constraints spelled out the three lanes — the last hardcoded copy, and
+the worst placed, since a lane that assembles, schedules and places would have failed at the
+INSERT *after* the money moved; they are now a foreign key to `operations.lanes`, so adding
+a lane is a row rather than a migration. And `capital_snapshots.cost_basis NUMERIC NOT NULL`
+with a `value_status` CHECK listing only priced outcomes meant the honest capital states
+could not be stored at all: NOT NULL forces a number and the only number available is the
+0.0 that was removed this same day for being a lie.
+
+**One defect found in my own work while doing it.** `reap(journal_path=JOURNAL)` bound the
+path as a default argument, evaluated at import, so a full `pytest` wrote a 40KB journal
+and a quota file straight into the live `data/` — beside the real breaker state and the
+real outcome ledger. Gitignore was never the guard; the risk is a test run writing where
+the money lives. Both defaults are sentinels resolved at call time now, `tests/conftest.py`
+redirects them per test, and a test asserts the signature default is not a Path.
+
+## The free tier was set to empty itself in under two days, 2026-08-04
+
+Found while planning, before a key was placed — which is the only useful moment to find it.
+
+Two scheduler lanes were asking The Odds API every thirty minutes: `arb-scan` at 2 credits
+a run and `reap-arb` at 4, for the same prices from the same key. **288 credits a day
+against a free tier of 500 a month**, which is 16.4 a day. The allowance goes in 1.7 days,
+and what happens next is not an error anybody sees — the request fails, the lane reports no
+arb, and a spent account is indistinguishable from a quiet market for the rest of the month.
+`Usage.remaining` was already recorded on every response and nothing acted on it.
+
+Three things, and the first is the one that matters:
+
+- **A floor**, `MINIMUM_REMAINING = 25`, checked in `_get` where the credit is actually
+  spent rather than a level up where it could be bypassed. It raises `QuotaFloorReached`
+  rather than returning empty, because every caller already turns a raise into
+  COULD_NOT_LOOK and an empty list into "looked, found nothing" — getting that backwards
+  would report a lane that declined to spend as a lane that saw a quiet market. The floor
+  is not nought: the last credits are what let a person run one scan by hand, deliberately,
+  after the cadence has been stopped. The reading persists to `data/oddsapi-usage.json`,
+  because each reap is a fresh process and an in-memory count guards one run of a lane
+  whose whole problem is that it runs on a timer. A quota never measured does NOT block —
+  never having looked is not the same as having looked and found it spent.
+- **Cadences that fit what is shipped.** `reap-arb` 30 min → 8 h, `arb-scan` 30 min → daily.
+  Two sports over `uk,eu` at eight hours plus a daily scan is 14 a day. Narrow to one sport
+  with the bookmakers filter and the same budget buys three hours.
+- **`credits_per_day` and `describe_burn`**, printed by preflight from the config actually
+  in front of you, so the cost is stated before a key exists rather than discovered from a
+  lane that quietly stopped finding things. A test asserts the shipped cadences fit the
+  tier, so a future change that shortens them argues with the arithmetic rather than just
+  passing.
+
+## The execution path could be borrowed by a lane it was never written for
+
+Found while extending the lane registry into the reapers. `place_harvest` ENDED with
+`return _place_stock(...)`. Every refusal above it named a lane — arb and crypto have no
+adapter, the mode is not AUTONOMOUS, the ledger is unreadable — and anything surviving them
+went to the stock placer. Not because it was stocks; because it was not one of the two
+lanes that had been thought about.
+
+A flipper instruction with a broker attached would have been submitted as an equity order.
+This module records the position BEFORE it sends, so the first evidence would have been a
+phantom position beside a broker error — the direction the whole repository refuses to fail
+in, in the one module that cannot undo what it does.
+
+`PLACERS` now maps a lane to the single function permitted to submit for it, and a lane in
+neither `PLACERS` nor `NO_ADAPTER` is REFUSED by name, before anything is recorded, saying
+which of the two registries its answer belongs in. `BROKER_FACTORIES` does the same for the
+`if lane == "stocks"` branch that used to sit in `lib.reaping._place`.
+
+**Two things restated in the code while there.** `lib/reaper.py`'s "Autonomy stops before
+money" section still said placing was never automatic — true before `lib/placing.py`
+existed, and understating what the system does with money is the wrong direction to be
+wrong in. It now says autonomy is the target, asserted via `autonomous_execution` and
+overridden by `data/MANUAL`, `data/HALT` and `NEVER_AUTONOMOUS`. The board being optional
+was already argued there and needed nothing.
+
+## Adding a fourth lane is one decision now, 2026-08-04
+
+The focus stays the core three. But more lanes have always been planned — flipper, an app
+studio, media, commerce and more — and the code had drifted into needing **five** edits to
+add one, in five files, four of which fail silently:
+
+| Where | What a fourth lane did |
+|---|---|
+| `lib/reaping.assemble` | `builders[lane]` → **KeyError**, losing every other lane's result with it |
+| `status.MONEY_LANES` | a second lane list; absent from the one screen that shows what can spend |
+| `backend.ReaperCommand` | `Literal` three names long → 422 from a file nobody would look in |
+| `run.LANES` | never scheduled, and never running looks exactly like finding nothing |
+| `preflight.all_lanes` | no `engines` row, so **no division card at all** on the dashboard |
+
+All five now derive from `lib.reaping.LANES`. What remains per lane is the real work —
+an `assemble_<lane>()` and a `<lane>_lane()` readiness description — and both are now
+*reported* when missing rather than crashing or vanishing: a declared lane with no builder
+is REFUSED naming the function to write, and one with no readiness description is BLOCKED
+saying nobody has written down what it needs. An undescribed lane must never read as a
+lane with everything it needs.
+
+Verified by adding `flipper` to `LANES`, one line, nothing else edited: it was scheduled at
+the default cadence, accepted by the API, listed in the money panel with its ring-fence,
+and rendered as a complete division card on the dashboard. `tests/test_lane_registry.py`
+holds that property by adding a lane that does not exist.
+
+Two things that surfaced only by looking at the page: the REAPER STATUS badge was the
+literal string `3 LANES` with an id nothing ever set, and only `.profile small` was
+display:block, so connector details ran into their label — "Flippera readiness description
+for flipper".
+
 ## Review of the two merged PRs, 2026-08-04
 
 PR #1 (cadence + money status) and PR #2 (operator API, dashboard, operational migrations)

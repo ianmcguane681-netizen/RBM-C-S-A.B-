@@ -20,7 +20,6 @@ nobody wires up, and it discloses nothing but the fact that a process is running
 from __future__ import annotations
 
 import os
-from dataclasses import asdict, is_dataclass
 from hmac import compare_digest
 from pathlib import Path
 from threading import Lock
@@ -30,11 +29,12 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 import status
 from lib.preflight import all_lanes
 from lib.reaping import reap
+from lib.ui_contract import serialise
 
 
 _run_lock = Lock()
@@ -42,19 +42,20 @@ _static = Path(__file__).with_name("static")
 
 
 def _jsonable(value: Any) -> Any:
-    """Turn domain results into a transport projection without changing the domain types."""
+    """The repository's one serialiser, not a second one that happens to agree.
 
-    if is_dataclass(value):
-        return {key: _jsonable(item) for key, item in asdict(value).items()}
-    if isinstance(value, dict):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (tuple, list, set, frozenset)):
-        return [_jsonable(item) for item in value]
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    # Connector responses can contain provider objects. Their repr is diagnostic only and
-    # must not turn a successful run into a serialization failure.
-    return repr(value)
+    This was a private copy, and it did not agree. It checked `is_dataclass` before
+    anything else and had no `to_dict` branch, so every domain type that had spent effort
+    on an honest projection was flattened straight back to its raw fields on the way out
+    of this API: an UNRESOLVED placement reported `filled_quantity: 0.0` for an order that
+    MAY EXIST, dropped `needs_a_person`, and carried no `schema_version`. The CLI's
+    `--reap --json` and this endpoint returned two different shapes for the same run.
+
+    `lib.ui_contract.serialise` prefers `to_dict` and falls back to dataclass fields, so
+    types that curate their own view keep it and types that do not are unchanged.
+    """
+
+    return serialise(value)
 
 
 def _allowed_origins() -> list[str]:
@@ -63,9 +64,26 @@ def _allowed_origins() -> list[str]:
 
 
 class ReaperCommand(BaseModel):
-    lane: Literal["arb", "stocks", "crypto"] | None = None
+    """One run request. `lane` is validated against the registry, not a literal.
+
+    It was `Literal["arb", "stocks", "crypto"]`, which turns adding a fourth lane into a
+    422 from a file nobody would think to look in — the lane assembles, schedules and
+    places perfectly well and only the API says it does not exist. More lanes are planned,
+    so the allowed set is read from `lib.reaping.LANES` at validation time.
+    """
+
+    lane: str | None = None
     dry_run: bool = True
     confirmation: str = Field(default="", max_length=80)
+
+    @field_validator("lane")
+    @classmethod
+    def _known_lane(cls, value: str | None) -> str | None:
+        from lib.reaping import LANES
+
+        if value is not None and value not in LANES:
+            raise ValueError(f"unknown lane {value!r}; choose from {', '.join(LANES)}")
+        return value
 
 
 def _execution_enabled(command: ReaperCommand) -> bool:
@@ -222,10 +240,15 @@ def create_app() -> FastAPI:
             )
         finally:
             _run_lock.release()
+        # `result.to_dict()` explicitly, not a generic projection of it. This is the same
+        # run `run.py --reap --json` reports, so it is the same payload — carrying
+        # schema_version, the four kinds of nothing kept apart, and placements beside the
+        # harvests. Two shapes for one run is how a UI ends up believing something the CLI
+        # would have told it plainly.
         return {
             "dry_run": command.dry_run,
             "execution_enabled": _execution_enabled(command),
-            "result": _jsonable(result),
+            "result": result.to_dict(),
             "description": result.describe(),
         }
 
