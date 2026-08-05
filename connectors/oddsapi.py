@@ -34,6 +34,7 @@ import json
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
@@ -53,6 +54,82 @@ H2H = "h2h"
 #: because a scan of American books that reports no arb is answering a question nobody
 #: asked while looking exactly like an answer to the one they did.
 UK_IE_EU = "uk,eu"
+
+#: Where the last quota reading is kept, so a floor can mean something across processes.
+#: Not a credential and not a subject — a count and a timestamp — but it lives under
+#: `data/` with the rest of the operational state and is gitignored with it.
+USAGE = Path("data/oddsapi-usage.json")
+
+#: Stop spending here rather than at nought.
+#:
+#: The free tier is 500 requests a MONTH, and two scheduler lanes were asking every thirty
+#: minutes at two and four credits a run — 288 a day, the whole allowance in under two
+#: days. The failure that produces is the one this module's own docstring warns about: an
+#: exhausted key errors, the lane reports no arb, and a spent account is indistinguishable
+#: from a quiet market.
+#:
+#: The floor is not nought because the last credits are worth more than the ones before
+#: them. They are what lets a person run one scan deliberately, by hand, on a fixture they
+#: actually care about, after the cadence has been stopped.
+MINIMUM_REMAINING = 25
+
+
+#: A free tier, in requests per month. Named so the burn-rate estimate has something to be
+#: a fraction OF, and so the number appears once rather than in four comments.
+FREE_TIER_MONTHLY = 500
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def credits_per_day(
+    *,
+    sports: int,
+    cadence_seconds: float,
+    bookmakers: Sequence[str] = (),
+    regions: str = UK_IE_EU,
+    markets: int = 1,
+) -> float:
+    """What a lane will spend a day at these settings. Arithmetic, not a forecast.
+
+    The API charges one credit per market per region, and counts up to ten named books as
+    a single region — so the bookmakers filter is a halving, and a second sport is a
+    doubling. Both are easy to change without noticing what they cost, which is how a
+    month's allowance goes in two days.
+
+    This exists so the cost is stated BEFORE a key is placed rather than discovered from a
+    lane that has quietly stopped finding anything. `preflight` prints it, and it reads the
+    config in front of it rather than trusting a comment written when the defaults were
+    different.
+    """
+
+    if cadence_seconds <= 0:
+        raise ValueError("a cadence of nought would spend the allowance immediately")
+    per_request = markets * (1 if bookmakers else len([
+        part for part in regions.split(",") if part.strip()
+    ]))
+    return (86_400 / cadence_seconds) * max(sports, 0) * per_request
+
+
+def describe_burn(daily: float, *, budget_monthly: int = FREE_TIER_MONTHLY) -> str:
+    """The estimate beside the allowance, saying plainly which side of it this falls."""
+
+    budget_daily = budget_monthly / 30.4
+    verdict = "fits" if daily <= budget_daily else "OVERSPENDS"
+    days = f"{budget_monthly / daily:.1f}" if daily > 0 else "unlimited"
+    return (f"{daily:.1f} credit(s)/day against {budget_daily:.1f} on a "
+            f"{budget_monthly}/month tier — {verdict}; the allowance lasts {days} day(s)")
+
+
+class QuotaFloorReached(RuntimeError):
+    """Raised instead of spending the reserve. Becomes COULD_NOT_LOOK, never NOTHING_FOUND.
+
+    A `RuntimeError` rather than a returned empty list, because every caller in this
+    repository already turns an exception from `look()` into COULD_NOT_LOOK, and an empty
+    list into "scanned, found nothing". Getting that backwards here would report a lane
+    that refused to spend as a lane that looked and saw a quiet market.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +170,49 @@ class Usage:
             return "quota unknown (the response carried no usage headers)"
         return f"{self.remaining} request(s) remaining, {self.used} used"
 
+    def save(self, path: Path | None) -> None:
+        """Carry the reading to the next process. Best effort, and never fatal.
+
+        Each `run.py --reap arb` is a fresh process, so an in-memory count protects one
+        run and nothing else — and the lane runs on a cadence, which is precisely the
+        shape that empties a monthly allowance. Persisting is what makes the floor mean
+        anything across the day.
+
+        A write that fails is swallowed: the quota reading is a guard, and a guard that
+        takes the scan down with it when its own bookkeeping file is read-only has done
+        more damage than the thing it was guarding against.
+        """
+
+        if path is None or not self.is_known:
+            return
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({
+                "remaining": self.remaining, "used": self.used, "last": self.last,
+                "recorded_at": _now(),
+            }, indent=2) + "\n", encoding="utf-8")
+        except OSError:
+            pass
+
+    @classmethod
+    def load(cls, path: Path | None) -> "Usage":
+        """The last reading, or UNKNOWN. An absent file has never been measured.
+
+        Unknown deliberately does NOT block: never having looked is not the same as
+        having looked and found the tier spent, and refusing to spend a credit we have no
+        evidence is gone would make a missing file indistinguishable from an empty
+        account. One request then teaches us, and the floor applies from there.
+        """
+
+        if path is None or not path.is_file():
+            return cls()
+        try:
+            row = json.loads(path.read_text(encoding="utf-8"))
+            return cls(int(row.get("remaining", -1)), int(row.get("used", -1)),
+                       int(row.get("last", -1)))
+        except (OSError, ValueError, TypeError):
+            return cls()
+
     def to_dict(self) -> dict[str, Any]:
         """Quota with the unknown kept as null rather than the sentinel.
 
@@ -123,6 +243,8 @@ class OddsApiSource:
         *,
         regions: str = UK_IE_EU,
         bookmakers: Sequence[str] = (),
+        minimum_remaining: int = MINIMUM_REMAINING,
+        usage_path: Path | None = USAGE,
         opener: Callable[..., Any] = retrying_urlopen,
     ) -> None:
         """`bookmakers` narrows the request itself; empty keeps the whole region.
@@ -155,7 +277,9 @@ class OddsApiSource:
                 f"region and pay for it knowingly"
             )
         self._opener = opener
-        self.usage = Usage()
+        self.minimum_remaining = int(minimum_remaining)
+        self.usage_path = Path(usage_path) if usage_path is not None else None
+        self.usage = Usage.load(self.usage_path)
 
     @classmethod
     def from_directory(
@@ -167,8 +291,26 @@ class OddsApiSource:
     def is_configured(self) -> bool:
         return self.credentials is not None
 
+    def _spendable(self) -> None:
+        """Refuse before the request, not after. Raises `QuotaFloorReached`.
+
+        Checked here rather than in the lane because this is the only place a credit is
+        actually spent, and a guard that sits one level up is a guard somebody bypasses by
+        calling the connector directly.
+        """
+
+        if self.usage.is_known and self.usage.remaining <= self.minimum_remaining:
+            raise QuotaFloorReached(
+                f"{self.usage.remaining} request(s) remain on the odds key and the floor "
+                f"is {self.minimum_remaining}. NOTHING WAS SCANNED, and this is not a "
+                f"report that no arb exists. Lengthen the cadence in run.py or cut the "
+                f"sports list, then clear {self.usage_path} to resume; the reserve is "
+                f"there so a scan you run deliberately still works."
+            )
+
     def _get(self, path: str, params: dict[str, str]) -> Any:
         assert self.credentials is not None
+        self._spendable()
         query = urllib.parse.urlencode({**params, "apiKey": self.credentials.key})
         request = urllib.request.Request(f"{BASE}{path}?{query}")
         with self._opener(request) as response:
@@ -183,6 +325,9 @@ class OddsApiSource:
                     )
                 except (TypeError, ValueError):
                     self.usage = Usage()
+                # Recorded even when the reading is the one that will stop the next run.
+                # Especially then.
+                self.usage.save(self.usage_path)
         return payload
 
     def sports(self) -> tuple[str, ...]:

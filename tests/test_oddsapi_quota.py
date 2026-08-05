@@ -20,7 +20,15 @@ import urllib.parse
 
 import pytest
 
-from connectors.oddsapi import UK_IE_EU, OddsApiCredentials, OddsApiSource, Usage
+from connectors.oddsapi import (
+    UK_IE_EU,
+    OddsApiCredentials,
+    OddsApiSource,
+    QuotaFloorReached,
+    Usage,
+    credits_per_day,
+    describe_burn,
+)
 
 
 class _Response:
@@ -167,3 +175,147 @@ def test_repeated_and_blank_book_names_do_not_consume_the_ten_that_are_paid_for(
     )
 
     assert source.bookmakers == ("skybet", "paddypower")
+
+
+class TestTheFloorStopsAScanRatherThanAKeyRunningOut:
+    """An exhausted key reports no arb, and that sentence costs more than the scan did.
+
+    Two scheduler lanes were asking every thirty minutes at two and four credits a run —
+    288 a day against a free tier of 500 A MONTH. The allowance goes in under two days,
+    and what happens on day three is not an error anybody sees: the request fails, the
+    lane reports COULD_NOT_LOOK if it is lucky and an empty scan if it is not, and a
+    spent account looks exactly like a quiet market for the rest of the month.
+
+    The floor is not nought because the last credits are worth more than the earlier ones.
+    They are what lets a person run one scan by hand, on a fixture they care about, after
+    the cadence has been stopped.
+    """
+
+    def _source(self, tmp_path, remaining: int | None, **kw):
+        usage = tmp_path / "usage.json"
+        if remaining is not None:
+            usage.write_text(json.dumps({"remaining": remaining, "used": 500 - remaining,
+                                         "last": 2, "recorded_at": "2026-08-04T00:00:00Z"}))
+        _seen, opener = _recorder({"x-requests-remaining": "400", "x-requests-used": "100"})
+        return OddsApiSource(OddsApiCredentials("test-key"), usage_path=usage,
+                             opener=opener, **kw), usage
+
+    def test_a_scan_below_the_floor_refuses_before_spending_anything(self, tmp_path):
+        source, _ = self._source(tmp_path, remaining=10)
+
+        with pytest.raises(QuotaFloorReached, match="10 request"):
+            source.quotes("soccer_epl")
+
+    def test_the_refusal_names_what_a_person_can_go_and_do(self, tmp_path):
+        source, usage = self._source(tmp_path, remaining=10)
+
+        with pytest.raises(QuotaFloorReached) as stopped:
+            source.quotes("soccer_epl")
+
+        message = str(stopped.value)
+        assert "NOTHING WAS SCANNED" in message
+        assert "not a report that no arb exists" in message
+        assert "cadence" in message and str(usage) in message
+
+    def test_refusing_is_an_exception_so_it_becomes_could_not_look(self, tmp_path):
+        """Every caller turns a raise from `look()` into COULD_NOT_LOOK and an empty list
+        into "scanned, found nothing". Returning `()` here would report a lane that
+        declined to spend as a lane that looked at a quiet market."""
+
+        source, _ = self._source(tmp_path, remaining=0)
+
+        with pytest.raises(RuntimeError):
+            source.quotes("soccer_epl")
+
+    def test_above_the_floor_the_scan_proceeds(self, tmp_path):
+        source, _ = self._source(tmp_path, remaining=400)
+
+        assert source.quotes("soccer_epl") == ()      # the stub returns no events
+        assert source.usage.remaining == 400          # and the response updated the count
+
+    def test_a_quota_never_measured_does_not_block(self, tmp_path):
+        """Never having looked is not the same as having looked and found it spent.
+
+        Refusing to spend a credit we have no evidence is gone would make a missing file
+        indistinguishable from an empty account, and the first run of a fresh key has no
+        file. One request teaches us and the floor applies from there.
+        """
+
+        source, _ = self._source(tmp_path, remaining=None)
+
+        assert source.usage.to_dict()["status"] == "UNKNOWN"
+        source.quotes("soccer_epl")                   # does not raise
+        assert source.usage.remaining == 400
+
+    def test_the_reading_survives_the_process_that_took_it(self, tmp_path):
+        """A per-process count guards one run, and the lane runs on a cadence.
+
+        Each `run.py --reap arb` is a fresh process, so without persistence the floor
+        protects a single invocation and nothing else — which is the exact shape that
+        empties a monthly allowance.
+        """
+
+        source, usage = self._source(tmp_path, remaining=None)
+        source.quotes("soccer_epl")
+
+        _seen, opener = _recorder()
+        reopened = OddsApiSource(OddsApiCredentials("k"), usage_path=usage, opener=opener)
+
+        assert reopened.usage.remaining == 400
+
+    def test_an_unwritable_usage_file_does_not_take_the_scan_down_with_it(self, tmp_path):
+        """The guard's own bookkeeping failing must not become an outage.
+
+        A guard that stops the thing it was guarding, because it could not write its
+        notes, has done more damage than the risk it was covering.
+        """
+
+        _seen, opener = _recorder({"x-requests-remaining": "400", "x-requests-used": "100"})
+        source = OddsApiSource(OddsApiCredentials("k"), opener=opener,
+                               usage_path=tmp_path / "nope" / "deep" / "usage.json")
+        (tmp_path / "nope").write_text("not a directory", encoding="utf-8")
+
+        assert source.quotes("soccer_epl") == ()
+
+
+class TestTheCostIsStatedBeforeAKeyIsPlaced:
+    """The only moment a burn rate can change a decision is before the key exists.
+
+    The alternative is finding out from a lane that stopped finding anything three weeks
+    in — and an exhausted key is indistinguishable from a quiet market, so the discovery
+    arrives late and disguised as an answer about the world.
+    """
+
+    def test_a_second_sport_doubles_the_bill(self):
+        one = credits_per_day(sports=1, cadence_seconds=8 * 3600)
+        two = credits_per_day(sports=2, cadence_seconds=8 * 3600)
+
+        assert two == 2 * one
+
+    def test_naming_books_halves_it_against_two_regions(self):
+        """Up to ten named books cost what one region costs, and uk,eu is two."""
+
+        wide = credits_per_day(sports=1, cadence_seconds=8 * 3600, regions=UK_IE_EU)
+        narrow = credits_per_day(sports=1, cadence_seconds=8 * 3600,
+                                 bookmakers=("skybet", "paddypower"))
+
+        assert narrow == wide / 2
+
+    def test_the_settings_that_emptied_the_tier_are_reported_as_overspending(self):
+        """Two lanes at thirty minutes, which is what this guard was written for."""
+
+        daily = (credits_per_day(sports=2, cadence_seconds=1800)
+                 + credits_per_day(sports=1, cadence_seconds=1800))
+
+        assert daily == 288
+        assert "OVERSPENDS" in describe_burn(daily)
+        assert "1.7 day" in describe_burn(daily)
+
+    def test_the_shipped_cadence_is_reported_as_fitting(self):
+        daily = credits_per_day(sports=2, cadence_seconds=8 * 3600) + 2
+
+        assert "fits" in describe_burn(daily)
+
+    def test_a_cadence_of_nothing_is_refused_rather_than_dividing_by_zero(self):
+        with pytest.raises(ValueError, match="immediately"):
+            credits_per_day(sports=1, cadence_seconds=0)

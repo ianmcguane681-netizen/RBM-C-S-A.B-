@@ -283,9 +283,46 @@ def arb_lane(*, probe: bool = False, home: str | Path | None = None) -> LaneRead
         f"Arb maths, settlement-rule divergence and stake sizing all run on typed odds "
         f"with no credentials at all. Live scanning currently reaches {covered} of "
         f"{len(requirements)} sources. A feed gives discovery only: available stake and "
-        f"settlement rules are read at the book, never from an aggregator.",
+        f"settlement rules are read at the book, never from an aggregator.\n"
+        f"         Quota at the current settings: {_arb_burn()}",
         tuple(requirements),
     )
+
+
+def _arb_burn() -> str:
+    """What this lane will spend a day, computed from the config actually in front of us.
+
+    Printed BEFORE a key exists, which is the only moment it can change a decision. The
+    alternative is finding out from a lane that stopped finding anything three weeks in,
+    and an exhausted key is indistinguishable from a quiet market — which is the failure
+    this whole file is written to prevent, arriving through the billing system instead of
+    the network.
+    """
+
+    from connectors.oddsapi import credits_per_day, describe_burn
+
+    try:
+        from lib.reaping import CONFIG, load_config
+        from run import REAP_CADENCES
+
+        config, unreadable = load_config(CONFIG)
+        if unreadable:
+            return f"not computable — {CONFIG} would not parse ({unreadable})"
+        settings = config.get("arb") or {}
+        sports = len(settings.get("sports") or ())
+        if not sports:
+            return (f"no sports are configured in {CONFIG}, so nothing would be scanned "
+                    f"and nothing would be spent")
+        daily = credits_per_day(
+            sports=sports,
+            cadence_seconds=REAP_CADENCES["arb"],
+            bookmakers=tuple(settings.get("bookmakers") or ()),
+        )
+        return describe_burn(daily)
+    except Exception as error:  # noqa: BLE001 - an estimate that raises is not a preflight
+        # UNKNOWN, never a reassuring number. A preflight that crashes computing a cost
+        # has failed at the one job it has, and a silent 0.0 would read as free.
+        return f"not computable ({type(error).__name__}: {error})"
 
 
 def all_lanes(*, probe: bool = False) -> tuple[LaneReadiness, ...]:

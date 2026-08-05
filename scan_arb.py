@@ -44,7 +44,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
-from connectors.oddsapi import H2H, OddsApiSource
+from connectors.oddsapi import H2H, OddsApiSource, QuotaFloorReached
 from lib.arbfind import ARB_CANDIDATE, quotes_from_legs, scan_markets
 from lib.seen import SeenRegister, arb_identity
 from lib.store import LOST
@@ -163,7 +163,22 @@ def main(sport: str, *, as_json: bool, books: Sequence[str] = ()) -> int:
         print("\nPick one and run: python scan_arb.py <sport>")
         return 0
 
-    quotes = source.quotes(sport, market=H2H)
+    try:
+        quotes = source.quotes(sport, market=H2H)
+    except QuotaFloorReached as stopped:
+        # Exit 2, the code that means NOTHING WAS LOOKED AT. Returning 0 here would tell a
+        # scheduler this scan found no arb, which is the one sentence this file exists to
+        # avoid producing — and it would produce it every half hour until somebody noticed.
+        if as_json:
+            print(json.dumps({
+                "schema_version": SCHEMA_VERSION, "sport": sport,
+                "status": "COULD_NOT_LOOK", "reason": str(stopped),
+                "quota": source.usage.to_dict(), "candidates": None,
+            }, indent=2))
+        else:
+            print(f"NOTHING WAS SCANNED  {stopped}")
+        return 2
+
     if not quotes:
         print(f"{sport}: the feed answered and returned no prices. Quota: "
               f"{source.usage.describe()}")

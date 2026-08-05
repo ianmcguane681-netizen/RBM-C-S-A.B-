@@ -51,3 +51,8 @@ data/reapers.json
 # subjects and stakes, and this repository is public. The receipt beside it is committed —
 # it carries counts and dates, never subjects.
 data/outcomes.json
+
+# The last odds-API quota reading, kept so the spending floor survives the process that
+# took it. A count and a timestamp — no subject and no credential — but it is operational
+# state that belongs to one machine's key, and it changes on every scan.
+data/oddsapi-usage.json

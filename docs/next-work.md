@@ -362,6 +362,38 @@ and its 424 tests, so it was taken apart rather than merged. What was taken:
 Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
 with no stated reason, and deleting `OutcomeLedger.amend_stake`.
 
+## The free tier was set to empty itself in under two days, 2026-08-04
+
+Found while planning, before a key was placed — which is the only useful moment to find it.
+
+Two scheduler lanes were asking The Odds API every thirty minutes: `arb-scan` at 2 credits
+a run and `reap-arb` at 4, for the same prices from the same key. **288 credits a day
+against a free tier of 500 a month**, which is 16.4 a day. The allowance goes in 1.7 days,
+and what happens next is not an error anybody sees — the request fails, the lane reports no
+arb, and a spent account is indistinguishable from a quiet market for the rest of the month.
+`Usage.remaining` was already recorded on every response and nothing acted on it.
+
+Three things, and the first is the one that matters:
+
+- **A floor**, `MINIMUM_REMAINING = 25`, checked in `_get` where the credit is actually
+  spent rather than a level up where it could be bypassed. It raises `QuotaFloorReached`
+  rather than returning empty, because every caller already turns a raise into
+  COULD_NOT_LOOK and an empty list into "looked, found nothing" — getting that backwards
+  would report a lane that declined to spend as a lane that saw a quiet market. The floor
+  is not nought: the last credits are what let a person run one scan by hand, deliberately,
+  after the cadence has been stopped. The reading persists to `data/oddsapi-usage.json`,
+  because each reap is a fresh process and an in-memory count guards one run of a lane
+  whose whole problem is that it runs on a timer. A quota never measured does NOT block —
+  never having looked is not the same as having looked and found it spent.
+- **Cadences that fit what is shipped.** `reap-arb` 30 min → 8 h, `arb-scan` 30 min → daily.
+  Two sports over `uk,eu` at eight hours plus a daily scan is 14 a day. Narrow to one sport
+  with the bookmakers filter and the same budget buys three hours.
+- **`credits_per_day` and `describe_burn`**, printed by preflight from the config actually
+  in front of you, so the cost is stated before a key exists rather than discovered from a
+  lane that quietly stopped finding things. A test asserts the shipped cadences fit the
+  tier, so a future change that shortens them argues with the arithmetic rather than just
+  passing.
+
 ## The execution path could be borrowed by a lane it was never written for
 
 Found while extending the lane registry into the reapers. `place_harvest` ENDED with

@@ -50,7 +50,25 @@ STATE = Path("data/orchestrator.json")
 #: How often each reaper lane is worth re-running, against how fast its underlying thing
 #: actually moves. Odds move in seconds and a scan is bounded by API quota; chain state and
 #: filings move slowly.
-REAP_CADENCES = {"arb": 30 * 60, "crypto": 6 * 3600, "stocks": 24 * 3600}
+#:
+#: **Arb is set by the quota, not by the odds**, and the arithmetic is worth keeping.
+#:
+#: A free tier is 500 requests a MONTH, which is 16.4 a day. A request costs one credit
+#: per market per region, so the shipped example config — two sports, `uk,eu`, one market
+#: — spends four credits a run. At the old thirty minutes, with `arb-scan` asking on the
+#: same cadence, that was ~288 a day: the whole allowance in under two days, ending in a
+#: lane that reports no arb because the key is spent.
+#:
+#: Eight hours is the longest of the honest options and the one that fits the config this
+#: repository actually ships: 3 runs x 4 credits, plus a daily `arb-scan` at 2, is 14 a
+#: day. Narrow to one sport with the bookmakers filter on and the same budget buys a
+#: three-hour cadence. `connectors.oddsapi.credits_per_day` computes it for the config in
+#: front of you rather than leaving this comment to go stale, and preflight prints it
+#: before a key is ever placed.
+#:
+#: The odds would justify every five minutes. The allowance will not, and the allowance is
+#: the binding constraint until the tier is paid for.
+REAP_CADENCES = {"arb": 8 * 3600, "crypto": 6 * 3600, "stocks": 24 * 3600}
 
 #: What a lane nobody has given a cadence gets. Six hours is chosen to be unremarkable —
 #: often enough to be useful, rare enough that a new lane cannot quietly exhaust a free
@@ -103,10 +121,16 @@ LANES = (
     Lane(
         name="arb-scan",
         command=("python", "scan_arb.py", "soccer_epl", "--json"),
-        cadence_seconds=30 * 60,
+        # Daily, and it used to be every 30 minutes alongside `reap-arb` on the same
+        # cadence — two lanes buying the same prices from the same key. This one is the
+        # discovery view a person reads; `reap-arb` is the one that reaches a sized
+        # instruction. Keeping both at half-hourly spent the month's allowance in two days
+        # to answer the same question twice.
+        cadence_seconds=24 * 3600,
         produces_decisions=True,
         findings_exit_codes=(1,),
-        # 2 = no odds source configured. Not a crash, and not "no arb exists".
+        # 2 = no odds source configured, or the quota floor stopped the scan. Not a crash,
+        # and not "no arb exists".
         unconfigured_exit_codes=(2,),
     ),
     Lane(
