@@ -1,7 +1,24 @@
-streamlit>=1.36
-pytest>=8.0
-pypdf>=4.0
-python-dotenv>=1.0
+# Runtime and tests. Deliberately short: the money lanes are arithmetic on structured data
+# and reach the network through the standard library, so there is no HTTP client, no data
+# frame library and no model SDK here. Adding one should be a decision.
+#
+# streamlit, pypdf and python-dotenv were listed and imported by nothing. streamlit alone
+# drags pandas, pyarrow and altair onto the box — hundreds of megabytes and minutes of
+# wheel building on the 1GB droplet this is meant to run on, for a dependency no line of
+# code uses. Removed rather than left for somebody to wonder about.
+
+# The board's schema validation.
 jsonschema>=4.23
+
+# The operator API and dashboard. Only `python -m backend` imports these; the worker that
+# actually runs the lanes does not. pydantic is declared rather than left to arrive with
+# fastapi, because backend/app.py imports it directly and a dependency you use by name is
+# one you should be able to see.
 fastapi>=0.111
 uvicorn>=0.30
+pydantic>=2.0
+
+# Kept in the runtime set on purpose: the deployment runbook has you run the suite on the
+# box before trusting it with a key, and a machine that cannot run the tests is a machine
+# whose results you have no reason to believe.
+pytest>=8.0
