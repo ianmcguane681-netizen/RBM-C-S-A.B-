@@ -1,0 +1,28 @@
+[Unit]
+Description=Provena supervisor — runs each lane on its cadence
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=provena
+WorkingDirectory=/home/provena/RBM-C-S-A.B-
+ExecStart=/home/provena/RBM-C-S-A.B-/.venv/bin/python run.py --serve
+
+# Always, because the failure this exists to prevent is silence: a supervisor that stopped
+# leaves a system that looks entirely normal while nothing runs. Restarting is not a way of
+# hiding that — the heartbeat in data/heartbeat.json is what makes a stop visible, and
+# `status.py` calls it STALE after three missed ticks whatever systemd is doing.
+Restart=always
+RestartSec=30
+
+# The lanes read credentials from the home directory, so this must NOT be sandboxed away.
+# ProtectHome would leave every lane reporting COULD_NOT_LOOK for a reason nothing states.
+NoNewPrivileges=true
+PrivateTmp=true
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

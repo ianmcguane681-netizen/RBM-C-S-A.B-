@@ -1,0 +1,31 @@
+[Unit]
+Description=Provena operator API and dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=provena
+WorkingDirectory=/home/provena/RBM-C-S-A.B-
+
+# Keys live in a file the unit merely points at. A systemd unit in /etc/systemd/system is
+# world-readable, and PROVENA_COMMAND_KEY runs lanes — putting it in `Environment=` here
+# would publish it to every user on the box.
+EnvironmentFile=/etc/provena/api.env
+
+# Loopback only. The dashboard and the money view are behind a key, but there is no reason
+# to expose them to the internet at all: reach them over an ssh tunnel.
+Environment=HOST=127.0.0.1
+Environment=PORT=8000
+ExecStart=/home/provena/RBM-C-S-A.B-/.venv/bin/python -m backend
+
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
