@@ -173,6 +173,60 @@ def _odds_quota(settings: dict) -> dict:
     return quota
 
 
+def _scheduler_state() -> dict:
+    """Whether anything is actually running the lanes, and when it last did.
+
+    **This is the state whose absence is invisible.** Every lane has a cadence, and until
+    `run.py --serve` existed nothing invoked them: the Procfile declared a web process and
+    no worker, and there was no cron entry or timer anywhere. A system in that condition
+    renders perfectly — the dashboard loads, the ledger is intact, every lane reports the
+    state it was last left in — and nothing runs.
+
+    So a supervisor that has stopped must not read the same as one that has nothing to do.
+    NEVER_STARTED, RUNNING and STALE are three different facts, and STALE is the one that
+    costs: it means the cadences on this page are describing an intention.
+    """
+
+    from run import HEARTBEAT, TICK_SECONDS
+
+    if not HEARTBEAT.is_file():
+        return {"status": "NEVER_STARTED", "last_tick_at": None, "ticks": None,
+                "reason": ("No supervisor has run. Every cadence on this page is an "
+                           "intention until `python run.py --serve` is running.")}
+    try:
+        beat = json.loads(HEARTBEAT.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return {"status": "UNREADABLE", "last_tick_at": None, "ticks": None,
+                "reason": f"{type(error).__name__}: {error}"}
+
+    last = str(beat.get("last_tick_at") or "")
+    tick = int(beat.get("tick_seconds") or TICK_SECONDS)
+    age = _age_seconds(last)
+    # Three missed ticks, so an ordinary slow run does not read as a dead supervisor.
+    stale = age is None or age > tick * 3
+    return {
+        "status": "STALE" if stale else "RUNNING",
+        "last_tick_at": last or None,
+        "ticks": beat.get("ticks"),
+        "age_seconds": age,
+        "tick_seconds": tick,
+        "reason": (("The heartbeat has stopped moving, so no lane is being run whatever "
+                    "its cadence says.") if stale else None),
+    }
+
+
+def _age_seconds(stamp: str) -> float | None:
+    """Seconds since an ISO stamp, or None. An unreadable stamp is never young."""
+
+    from datetime import datetime, timezone
+
+    try:
+        moment = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return (datetime.now(timezone.utc) - moment).total_seconds()
+
+
 def _reap_history(limit: int = 10) -> dict:
     """What the lanes reported, kept after the processes that reported it.
 
@@ -586,6 +640,9 @@ def as_json() -> dict:
         # and whether anything was submitted — the only record that outlives the run, and
         # the only thing that can answer whether a function has produced anything real.
         "reap_history": _reap_history(),
+        # Whether anything is running the lanes at all. Every other figure on this page
+        # describes what the lanes found; this one says whether they are being asked.
+        "scheduler": _scheduler_state(),
         "refused_fields": {
             # Named so a front end cannot quietly invent them. Every one is argued
             # against in lib/candidates.py or docs/reference-system.md.

@@ -1,7 +1,8 @@
 """Fire every lane that is due, hold the ones that are not, and show what awaits you.
 
     python run.py                 what would run, and why the rest would not
-    python run.py --go            actually run them
+    python run.py --go            actually run them, once
+    python run.py --serve         run them on their cadences, forever
     python run.py --queue         just the human queue
     python run.py --reap [lane]   every lane, or one of arb/crypto/stocks; places where
                                   the mode allows
@@ -39,13 +40,20 @@ lane cannot sign; both report that rather than looking unfinished.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from lib.orchestrator import HELD, Lane, Orchestrator
 
 STATE = Path("data/orchestrator.json")
+
+
+def _stamp() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 #: How often each reaper lane is worth re-running, against how fast its underlying thing
 #: actually moves. Odds move in seconds and a scan is bounded by API quota; chain state and
@@ -216,6 +224,79 @@ def main(go: bool) -> int:
     return 1 if orchestrator.open_decisions else 0
 
 
+#: Where the supervisor records that it is alive. A count and two timestamps; no subject.
+HEARTBEAT = Path("data/heartbeat.json")
+
+#: How often the supervisor wakes. NOT a lane cadence — the orchestrator decides what is
+#: due, and this only decides how finely that question is asked. A minute is short enough
+#: that a thirty-minute lane fires within 2% of its cadence and cheap enough to be free.
+TICK_SECONDS = 60
+
+
+def _beat(path: Path, ticks: int, started: str, last_exit: int | None) -> None:
+    """Write the heartbeat. Best effort: a supervisor must not die of its own bookkeeping."""
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({
+            "pid": os.getpid(),
+            "started_at": started,
+            "last_tick_at": _stamp(),
+            "ticks": ticks,
+            "last_exit_code": last_exit,
+            "tick_seconds": TICK_SECONDS,
+        }, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
+          heartbeat: Path | None = None) -> int:
+    """Run what is due, forever. The heartbeat this repository did not have.
+
+    Every lane carries a cadence and `--go` runs whatever is due — but `--go` is one shot
+    and **nothing invoked it**. The Procfile declared a web process and no worker, there
+    was no cron entry and no timer, so the cadences described an intention rather than a
+    schedule. Placing an API key would not have changed that: the lanes would have been
+    ready to run and still nobody would have asked them to.
+
+    **The failure this must not have is silence.** A supervisor that dies leaves a system
+    that looks entirely normal — the dashboard renders, the ledger is intact, every lane
+    reports the state it was last in — while nothing runs at all. That is this
+    repository's founding defect at the level of the process table, so the loop writes a
+    heartbeat every tick and `status` reports it STALE when it stops moving. A scheduler
+    nobody can see stop is a scheduler that stops without being seen.
+
+    `limit` bounds the number of ticks, which is what makes this testable without waiting.
+    """
+
+    path = HEARTBEAT if heartbeat is None else heartbeat
+    started = _stamp()
+    ticks = 0
+    last_exit: int | None = None
+
+    print(f"SUPERVISING  waking every {interval}s. The orchestrator decides what is due; "
+          f"this only decides how often it is asked.")
+    print(f"  heartbeat -> {path}. If it stops moving, nothing is running.")
+    _beat(path, ticks, started, last_exit)
+
+    while limit is None or ticks < limit:
+        try:
+            last_exit = main(go=True)
+        except Exception as error:  # noqa: BLE001 - one bad tick must not end the schedule
+            # A lane that throws takes its own run down and nothing else. Ending the loop
+            # here would turn one broken tick into a permanently stopped system, and the
+            # stopping would be invisible.
+            last_exit = -1
+            print(f"  TICK FAILED  {type(error).__name__}: {error}")
+        ticks += 1
+        _beat(path, ticks, started, last_exit)
+        if limit is not None and ticks >= limit:
+            break
+        time.sleep(interval)
+    return 0
+
+
 def reap(lane: str = "", dry: bool = False, *, as_json: bool = False) -> int:
     """Every configured lane, or one named lane, sized — and placed where the mode allows.
 
@@ -352,6 +433,9 @@ if __name__ == "__main__":
         rest = [a for a in argv[argv.index("--reap") + 1:] if not a.startswith("--")]
         raise SystemExit(reap(rest[0] if rest else "", dry="--dry" in argv,
                               as_json="--json" in argv))
+    if "--serve" in argv:
+        rest = [a for a in argv[argv.index("--serve") + 1:] if a.isdigit()]
+        raise SystemExit(serve(int(rest[0]) if rest else TICK_SECONDS))
     if "--queue" in argv:
         raise SystemExit(0 if not print(Orchestrator(LANES, STATE).describe_queue()) else 0)
     raise SystemExit(main("--go" in argv))

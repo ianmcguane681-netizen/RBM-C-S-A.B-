@@ -362,6 +362,32 @@ and its 424 tests, so it was taken apart rather than merged. What was taken:
 Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
 with no stated reason, and deleting `OutcomeLedger.amend_stake`.
 
+## Nothing was running the lanes, 2026-08-04
+
+The blocker for "the three lanes working autonomously", and it was not the credentials.
+
+Every lane carries a `cadence_seconds`, and `run.py --go` runs whatever is due — but `--go`
+is **one shot and nothing invoked it**. The Procfile declared `web: python -m backend` and
+no worker. There was no cron entry, no systemd timer and no workflow anywhere in the repo.
+Placing the Odds API and Alpaca keys would not have changed that: the lanes would have been
+ready to run and nobody would ever have asked them to. The cadences described an intention.
+
+`run.py --serve` is the loop, `worker: python run.py --serve` is the Procfile line, and the
+orchestrator still decides what is due — the tick only decides how often that question gets
+asked.
+
+**The property that matters is that a stopped supervisor is visible.** A supervisor that
+dies leaves a system that looks entirely normal: the dashboard renders, the ledger is
+intact, every lane reports the state it was last left in, and nothing happens. That is the
+founding defect at the level of the process table. So the loop writes `data/heartbeat.json`
+every tick and `status` reports NEVER_STARTED, RUNNING, STALE and UNREADABLE as four
+different things, with STALE at three missed ticks so an ordinary slow run does not read as
+a death. It is the first tile on the dashboard.
+
+One tick failing never ends the loop, and a heartbeat that cannot be written never stops the
+thing it describes — a supervisor that dies of its own bookkeeping has caused the outage it
+was there to make visible.
+
 ## Realised P&L: the one money figure that needs no price source
 
 `OutcomeLedger.realised(lane)` sums what actually came back, from SETTLED positions only.

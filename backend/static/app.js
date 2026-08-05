@@ -125,6 +125,19 @@ function renderHistory(history) {
   }).join("");
 }
 
+// Whether anything is running the lanes. Every other figure on this page describes what
+// the lanes found; this one says whether they are being asked at all — and a supervisor
+// that has stopped leaves a system that renders perfectly while nothing happens.
+function renderScheduler(s) {
+  const label = {RUNNING:"RUNNING", STALE:"STOPPED", NEVER_STARTED:"NEVER STARTED",
+                 UNREADABLE:"UNREADABLE"}[s?.status] || "UNKNOWN";
+  $("scheduler-state").textContent = label;
+  $("scheduler-state").className = s?.status === "RUNNING" ? "up" : "down";
+  $("scheduler-detail").textContent = s?.status === "RUNNING"
+    ? `Last tick ${s.last_tick_at} · ${s.ticks} ticks`
+    : (s?.reason || "No heartbeat");
+}
+
 function renderOverview(data) {
   const capital = data.capital || {}, decisions = data.decisions || {}, engines = data.engines || [], lanes = data.money_lanes || [];
   $("capital-cost").textContent = money(capital.cost_basis, capital.currency || "EUR");
@@ -149,6 +162,7 @@ function renderOverview(data) {
   $("system-posture").innerHTML = [`${engines.length} evidence engines registered`,`${lanes.length} governed money lanes`,`${decisions.open ?? "Unknown"} decisions awaiting attention`,capital.is_complete ? "Portfolio valuation complete" : "Incomplete valuation disclosed"].map(x=>`<li>${safe(x)}</li>`).join("");
   $("runs").innerHTML = data.recent_runs?.length ? data.recent_runs.map(r=>`<div class="run-row"><span>${safe(r.lane)}<small>${safe(r.status)}</small></span><time>${safe(r.at)}</time></div>`).join("") : `<div class="empty">No runs have been recorded yet.<br><small>This is not the same as a run finding nothing.</small></div>`;
   $("decisions").innerHTML = decisions.items?.length ? decisions.items.map(d=>`<div class="decision-row"><span>${safe(d.subject)}<small>${safe(d.lane)}</small></span><time>${safe(d.raised_at)}</time></div>`).join("") : `<div class="empty">Decision queue is empty.</div>`;
+  renderScheduler(data.scheduler);
   renderRealised(lanes);
   renderQuota(lanes);
   renderHistory(data.reap_history);
