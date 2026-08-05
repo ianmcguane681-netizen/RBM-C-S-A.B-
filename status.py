@@ -338,6 +338,10 @@ def money_panel(
         else:
             lines += [f"    {line}" for line in
                       describe_ledger(ledger, lane=lane).splitlines()]
+            # What actually came back. The only figure on this page that is money rather
+            # than a limit, and the only one that needs no price source to be true.
+            lines += [f"    {line}" for line in
+                      ledger.realised(lane).describe().splitlines()]
         lines.append("")
 
     return lines
@@ -372,6 +376,10 @@ def money_state(
             "breaker": {"status": "NOT_CONFIGURED"},
             "positions": {"status": "NOT_CONFIGURED", "open": None,
                           "unsettled_exposure": None, "stale_open": None},
+            # Present on every lane, so a reader never has to tell a missing key from a
+            # lane that has made nothing. NOT_CONFIGURED here means no ledger was read.
+            "realised": {"status": "NOT_CONFIGURED", "realised_profit": None,
+                         "settled": None, "covers_the_whole_book": False},
         }
 
         if config_error:
@@ -407,6 +415,10 @@ def money_state(
                     "stale_open": len(stale),
                     "daily_loss_limit_can_see_exposure": False,
                 }
+                # Carried with its exclusions, never as a bare number. A lane showing a
+                # realised profit while positions are open and UNKNOWN has reported the
+                # result of the part that finished, not the result of the lane.
+                item["realised"] = ledger.realised(lane).to_dict()
             else:
                 item["positions"] = {
                     "status": "UNREADABLE", "reason": ledger.reason,

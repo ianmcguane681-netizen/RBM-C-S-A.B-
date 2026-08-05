@@ -233,6 +233,82 @@ class Application:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class Realised:
+    """Money that actually came back, and everything the figure does not cover.
+
+    **The figure alone is the dangerous half.** A lane reporting `+41.10 realised` with
+    three positions still open and one UNKNOWN has not made 41.10; it has made 41.10 on
+    the part that finished, out of a book whose remainder is undecided and part of which
+    may already be lost. Reporting the number without the exclusions is how a losing run
+    reads as a winning one right up until the outstanding positions land.
+
+    So the counts travel with the total and `is_complete` states plainly whether anything
+    is still outstanding. Voids are counted and deliberately excluded from profit: a
+    returned stake is neither a win nor a loss, and folding it in as a zero would drag a
+    real average toward nothing and end a losing run that never ended.
+    """
+
+    lane: str = ""
+    profit: float | None = None
+    settled: int = 0
+    staked: float = 0.0
+    returned: float = 0.0
+    void: int = 0
+    open: int = 0
+    unknown: int = 0
+    readable: bool = True
+
+    @property
+    def is_complete(self) -> bool:
+        """Whether the figure covers the whole book, or only the part that has finished."""
+
+        return self.readable and not self.open and not self.unknown
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "lane": self.lane or None,
+            # NOTHING_SETTLED is tested before COMPLETE, and the order is the point. A lane
+            # with no positions at all satisfies `is_complete` — nothing open, nothing
+            # unknown — so the reverse order reported COMPLETE beside a null profit, which
+            # reads as "the whole picture, and it came to nothing" for a lane that has
+            # never finished a position.
+            "status": ("UNREADABLE" if not self.readable else
+                       "NOTHING_SETTLED" if not self.settled else
+                       "COMPLETE" if self.is_complete else "PARTIAL"),
+            "realised_profit": self.profit,
+            "settled": self.settled if self.readable else None,
+            "staked": self.staked if self.readable else None,
+            "returned": self.returned if self.readable else None,
+            "void": self.void if self.readable else None,
+            "still_open": self.open if self.readable else None,
+            "unknown": self.unknown if self.readable else None,
+            "covers_the_whole_book": self.is_complete,
+        }
+
+    def describe(self) -> str:
+        if not self.readable:
+            return ("REALISED  UNREADABLE  the ledger could not be read, so nothing is "
+                    "known about what came back.")
+        if not self.settled:
+            outstanding = self.open + self.unknown
+            if outstanding:
+                return (f"REALISED  NOTHING HAS SETTLED  {outstanding} position(s) are "
+                        f"still outstanding. No profit or loss has been established.")
+            return ("REALISED  NOTHING HAS SETTLED  and nothing is outstanding. This lane "
+                    "has not yet finished a position.")
+        head = (f"REALISED  {self.profit:+,.2f} over {self.settled} settled position(s) "
+                f"({self.staked:,.2f} staked, {self.returned:,.2f} returned)")
+        if self.void:
+            head += (f"\n  {self.void} void, excluded: a returned stake is neither a win "
+                     f"nor a loss.")
+        if not self.is_complete:
+            head += (f"\n  INCOMPLETE. {self.open} still open and {self.unknown} UNKNOWN "
+                     f"are not in this figure, so it is the result of the part that has "
+                     f"finished rather than the result of this lane.")
+        return head
+
+
 class OutcomeLedger:
     """Positions on file. Append-and-amend; nothing is ever deleted."""
 
@@ -307,6 +383,33 @@ class OutcomeLedger:
             if age is None or age >= hours:
                 out.append(position)
         return tuple(out)
+
+    def realised(self, lane: str = "") -> Realised:
+        """What came back, with what the figure excludes carried beside it.
+
+        Computed from SETTLED positions only. Open positions have no profit yet, UNKNOWN
+        positions have one nobody established, and voids returned the stake — none of the
+        three is a zero, and `Realised` reports each as a count rather than letting any of
+        them quietly average into the total.
+        """
+
+        if not self.readable:
+            return Realised(lane, readable=False)
+
+        rows = [p for p in self.positions if not lane or p.lane == lane]
+        settled = [p for p in rows if p.status == SETTLED]
+        return Realised(
+            lane=lane,
+            # `p.profit` is never None for a SETTLED position; the guard is against a
+            # malformed row rather than against the ordinary case.
+            profit=sum(p.profit or 0.0 for p in settled) if settled else None,
+            settled=len(settled),
+            staked=sum(p.staked for p in settled),
+            returned=sum(p.returned for p in settled),
+            void=sum(1 for p in rows if p.status == VOID),
+            open=sum(1 for p in rows if p.status == OPEN),
+            unknown=sum(1 for p in rows if p.status == UNKNOWN),
+        )
 
     def pending_application(self, lane: str = "") -> tuple[Position, ...]:
         return tuple(p for p in self.positions

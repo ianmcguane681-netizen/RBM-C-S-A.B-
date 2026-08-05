@@ -362,6 +362,28 @@ and its 424 tests, so it was taken apart rather than merged. What was taken:
 Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
 with no stated reason, and deleting `OutcomeLedger.amend_stake`.
 
+## Realised P&L: the one money figure that needs no price source
+
+`OutcomeLedger.realised(lane)` sums what actually came back, from SETTLED positions only.
+It needs no valuation and no broker, which is why it is the figure worth having while
+pricing is unwired — and it is the evidence for *prove one function produces something
+real*, which nothing until now could answer.
+
+**The number never travels alone.** A lane reporting `+41.10 realised` with three positions
+open and one UNKNOWN has not made 41.10; it has made 41.10 on the part that finished, out
+of a book whose remainder is undecided and part of which may already be lost. `Realised`
+carries the counts and `covers_the_whole_book`, and `describe()` says INCOMPLETE in as many
+words. This is the unsettled-position-as-zero defect moved from the breakers to the
+dashboard, and it is refused in the same way.
+
+Voids are counted and excluded from the profit: a returned stake is neither a win nor a
+loss, and averaging it in as a zero would end a losing run that never ended.
+
+One bug in the first version, caught by running it: `is_complete` is satisfied by an empty
+book — nothing open, nothing unknown — so a lane that had never finished a position
+reported `COMPLETE` beside a null profit, which reads as "the whole picture, and it came to
+nothing". NOTHING_SETTLED is now tested first.
+
 ## Persistence: a run now leaves a record, 2026-08-04
 
 `migrations/0002` created `reaper_runs`, `harvests`, `executions` and four more tables, and
