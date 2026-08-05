@@ -230,3 +230,39 @@ def test_dry_run_invokes_domain_reaper_without_placing(monkeypatch):
     assert response_status == 200
     assert called == {"lanes": ("arb",), "place": False}
     assert response["dry_run"] is True
+
+
+def test_the_api_and_the_cli_report_one_run_the_same_way(monkeypatch):
+    """Two serialisers for one domain is two answers to one question.
+
+    `backend/app.py` kept a private `_jsonable` that checked `is_dataclass` first and had
+    no `to_dict` branch, so every domain type that had curated an honest projection was
+    flattened back to raw fields on the way out of this API. An UNRESOLVED placement —
+    an order that MAY EXIST — reported `filled_quantity: 0.0` and dropped
+    `needs_a_person`, while `run.py --reap --json` reported null and true for the same
+    object. A caller reading this endpoint would resubmit an order the CLI would have
+    told it to go and query.
+    """
+
+    from lib.placing import UNRESOLVED, Placement
+    from lib.reaping import CONFIGURED, Assembly, Reaping
+
+    reaping = Reaping(
+        assemblies=(Assembly("stocks", CONFIGURED),),
+        placements=(Placement("stocks", UNRESOLVED, subject="ACME",
+                              position_id="POS-1", client_order_id="abc",
+                              requested_quantity=3.0, reason="the broker returned 502"),),
+    )
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "test-key")
+    # `backend.app` binds `reap` at import, so the name to replace is the one it holds.
+    monkeypatch.setattr("backend.app.reap", lambda **_kw: reaping)
+
+    _status, body = request(
+        create_app(), "POST", "/api/v1/reapers/run", payload={"dry_run": True},
+        headers={"X-Provena-Command-Key": "test-key"})
+
+    assert body["result"] == reaping.to_dict()
+    placement = body["result"]["placements"][0]
+    assert placement["filled_quantity"] is None
+    assert placement["needs_a_person"] is True
+    assert body["result"]["schema_version"]

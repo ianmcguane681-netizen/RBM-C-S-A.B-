@@ -20,7 +20,6 @@ nobody wires up, and it discloses nothing but the fact that a process is running
 from __future__ import annotations
 
 import os
-from dataclasses import asdict, is_dataclass
 from hmac import compare_digest
 from pathlib import Path
 from threading import Lock
@@ -35,6 +34,7 @@ from pydantic import BaseModel, Field, field_validator
 import status
 from lib.preflight import all_lanes
 from lib.reaping import reap
+from lib.ui_contract import serialise
 
 
 _run_lock = Lock()
@@ -42,19 +42,20 @@ _static = Path(__file__).with_name("static")
 
 
 def _jsonable(value: Any) -> Any:
-    """Turn domain results into a transport projection without changing the domain types."""
+    """The repository's one serialiser, not a second one that happens to agree.
 
-    if is_dataclass(value):
-        return {key: _jsonable(item) for key, item in asdict(value).items()}
-    if isinstance(value, dict):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (tuple, list, set, frozenset)):
-        return [_jsonable(item) for item in value]
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    # Connector responses can contain provider objects. Their repr is diagnostic only and
-    # must not turn a successful run into a serialization failure.
-    return repr(value)
+    This was a private copy, and it did not agree. It checked `is_dataclass` before
+    anything else and had no `to_dict` branch, so every domain type that had spent effort
+    on an honest projection was flattened straight back to its raw fields on the way out
+    of this API: an UNRESOLVED placement reported `filled_quantity: 0.0` for an order that
+    MAY EXIST, dropped `needs_a_person`, and carried no `schema_version`. The CLI's
+    `--reap --json` and this endpoint returned two different shapes for the same run.
+
+    `lib.ui_contract.serialise` prefers `to_dict` and falls back to dataclass fields, so
+    types that curate their own view keep it and types that do not are unchanged.
+    """
+
+    return serialise(value)
 
 
 def _allowed_origins() -> list[str]:
@@ -239,10 +240,15 @@ def create_app() -> FastAPI:
             )
         finally:
             _run_lock.release()
+        # `result.to_dict()` explicitly, not a generic projection of it. This is the same
+        # run `run.py --reap --json` reports, so it is the same payload — carrying
+        # schema_version, the four kinds of nothing kept apart, and placements beside the
+        # harvests. Two shapes for one run is how a UI ends up believing something the CLI
+        # would have told it plainly.
         return {
             "dry_run": command.dry_run,
             "execution_enabled": _execution_enabled(command),
-            "result": _jsonable(result),
+            "result": result.to_dict(),
             "description": result.describe(),
         }
 
