@@ -131,6 +131,31 @@ def evidence_panel() -> list[str]:
     return lines
 
 
+def _reap_history(limit: int = 10) -> dict:
+    """What the lanes reported, kept after the processes that reported it.
+
+    UNREADABLE and empty are separate, and the difference matters here more than most:
+    "no run has been recorded" is a fact about this system, while "the journal will not
+    open" is a fact about a file — and rendering the second as the first would say a
+    system that has been running for weeks has never run.
+    """
+
+    from lib.journal import Journal
+    from lib.reaping import JOURNAL
+
+    journal = Journal(JOURNAL)
+    if not journal.readable:
+        return {"status": "UNREADABLE", "reason": journal.reason, "runs": None,
+                "counts": journal.counts()}
+    runs = journal.recent_runs(limit)
+    return {
+        "status": "READABLE" if runs else "EMPTY",
+        "reason": None,
+        "runs": [dict(run) for run in runs],
+        "counts": journal.counts(),
+    }
+
+
 def _capital_state(book, positions, exposure) -> dict:
     """The capital block, keeping a book that vanished apart from a book that is empty.
 
@@ -485,10 +510,16 @@ def as_json() -> dict:
         ],
         "money_lanes": money_state(),
         "boards": boards,
+        # The scheduler's view: which lane fired, when, and with what exit code.
         "recent_runs": [
             {"lane": r.lane, "at": r.started_at, "status": r.status, "exit": r.exit_code}
             for r in orchestrator.runs[-10:]
         ],
+        # The journal's view, which is a different question. `recent_runs` above says a
+        # process ran and what it exited with; this says what the lanes actually reported
+        # and whether anything was submitted — the only record that outlives the run, and
+        # the only thing that can answer whether a function has produced anything real.
+        "reap_history": _reap_history(),
         "refused_fields": {
             # Named so a front end cannot quietly invent them. Every one is argued
             # against in lib/candidates.py or docs/reference-system.md.

@@ -362,6 +362,43 @@ and its 424 tests, so it was taken apart rather than merged. What was taken:
 Also declined from the same branch: raising the arb grant's `max_exposure` from 20 to 50
 with no stated reason, and deleting `OutcomeLedger.amend_stake`.
 
+## Persistence: a run now leaves a record, 2026-08-04
+
+`migrations/0002` created `reaper_runs`, `harvests`, `executions` and four more tables, and
+**nothing in the codebase wrote to any of them** — a schema with no writer. Everything a
+reap produced was printed once and lost; `data/orchestrator.json` kept a last-run time and
+an exit code, and the harvests, their reasons and the placements existed for the length of
+one stdout. So "what did the arb lane find on Tuesday" had no answer, and neither did the
+question the plan turns on: *prove one function produces something real before starting a
+fourth.* You cannot prove it from a record that does not exist.
+
+`lib/journal.py` is an append-only SQLite journal — same column names as the migration, so
+moving to Postgres is a copy rather than a translation, and SQLite because it needs no
+server and can be verified by running it. `lib.reaping.reap` records every run.
+
+**It is a record, not a source of truth.** `data/outcomes.json` remains the ledger: what
+the breakers read, what `unsettled_exposure` sums. Nothing in the journal answers a money
+question, and a test asserts it exposes no `live` or `unsettled_exposure` — a second answer
+to "what is at risk" is worse than none, because the two eventually disagree and nothing
+says which is right. Writes never raise: a reap that placed an order and then could not
+write its diary has still placed the order.
+
+`migrations/0003` fixes two things in 0002 that would have made the database contradict the
+code. Seven CHECK constraints spelled out the three lanes — the last hardcoded copy, and
+the worst placed, since a lane that assembles, schedules and places would have failed at the
+INSERT *after* the money moved; they are now a foreign key to `operations.lanes`, so adding
+a lane is a row rather than a migration. And `capital_snapshots.cost_basis NUMERIC NOT NULL`
+with a `value_status` CHECK listing only priced outcomes meant the honest capital states
+could not be stored at all: NOT NULL forces a number and the only number available is the
+0.0 that was removed this same day for being a lie.
+
+**One defect found in my own work while doing it.** `reap(journal_path=JOURNAL)` bound the
+path as a default argument, evaluated at import, so a full `pytest` wrote a 40KB journal
+and a quota file straight into the live `data/` — beside the real breaker state and the
+real outcome ledger. Gitignore was never the guard; the risk is a test run writing where
+the money lives. Both defaults are sentinels resolved at call time now, `tests/conftest.py`
+redirects them per test, and a test asserts the signature default is not a Path.
+
 ## The free tier was set to empty itself in under two days, 2026-08-04
 
 Found while planning, before a key was placed — which is the only useful moment to find it.

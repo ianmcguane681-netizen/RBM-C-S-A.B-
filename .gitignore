@@ -56,3 +56,10 @@ data/outcomes.json
 # took it. A count and a timestamp — no subject and no credential — but it is operational
 # state that belongs to one machine's key, and it changes on every scan.
 data/oddsapi-usage.json
+
+# The run journal: what ran, what each lane reported, and what was submitted. It names
+# subjects and stakes exactly as the outcome ledger does, and this repository is public.
+# A record rather than a source of truth — data/outcomes.json remains the ledger.
+data/journal.sqlite3
+data/journal.sqlite3-wal
+data/journal.sqlite3-shm

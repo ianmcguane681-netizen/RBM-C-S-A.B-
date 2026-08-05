@@ -73,6 +73,11 @@ USAGE = Path("data/oddsapi-usage.json")
 #: actually care about, after the cadence has been stopped.
 MINIMUM_REMAINING = 25
 
+#: Distinguishes "caller said nothing" from "caller said None", where None means do
+#: not persist at all. A plain `= USAGE` default binds the path at import, which made
+#: the constant unpatchable and sent test writes into the live `data/`.
+_DEFAULT = object()
+
 
 #: A free tier, in requests per month. Named so the burn-rate estimate has something to be
 #: a fraction OF, and so the number appears once rather than in four comments.
@@ -244,7 +249,7 @@ class OddsApiSource:
         regions: str = UK_IE_EU,
         bookmakers: Sequence[str] = (),
         minimum_remaining: int = MINIMUM_REMAINING,
-        usage_path: Path | None = USAGE,
+        usage_path: Any = _DEFAULT,
         opener: Callable[..., Any] = retrying_urlopen,
     ) -> None:
         """`bookmakers` narrows the request itself; empty keeps the whole region.
@@ -278,7 +283,9 @@ class OddsApiSource:
             )
         self._opener = opener
         self.minimum_remaining = int(minimum_remaining)
-        self.usage_path = Path(usage_path) if usage_path is not None else None
+        # Resolved here so USAGE is read at call time rather than bound at import.
+        chosen = USAGE if usage_path is _DEFAULT else usage_path
+        self.usage_path = Path(chosen) if chosen is not None else None
         self.usage = Usage.load(self.usage_path)
 
     @classmethod
