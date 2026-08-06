@@ -53,8 +53,23 @@ OUTCOMES = Path("data/outcomes.json")
 from lib.reaping import LANES as MONEY_LANES  # noqa: E402
 
 
-def capital_panel() -> list[str]:
-    """What is deployed, per lane, and what could not be marked."""
+def _pricing_for(positions, source=None):
+    """One look at a price source, resolved at call time rather than at import.
+
+    `source=None` means "build the default", not "no source" — the two would be the same
+    argument otherwise, and the second is what a test injects a fake for. The default is
+    constructed here rather than bound as a default argument, for the reason
+    `lib.reaping.reap` records: an import-time default once wrote a journal into the live
+    `data/`.
+    """
+
+    from lib.pricing import alpaca_prices, value_book
+
+    return value_book(positions, source if source is not None else alpaca_prices())
+
+
+def capital_panel(source=None) -> list[str]:
+    """What is deployed, per lane, what it is worth now, and what could not be marked."""
 
     book = Portfolio(BOOK)
     lines = ["CAPITAL"]
@@ -70,9 +85,8 @@ def capital_panel() -> list[str]:
         return lines
 
     positions = book.positions()
-    # No price source is wired for any lane yet, so every holding marks UNPRICED. That is
-    # the honest state and it is stated rather than shown as zero.
-    valuations = [p.value_at(None) for p in positions]
+    pricing = _pricing_for(positions, source)
+    valuations = pricing.valuations
     exposure = book.exposure(valuations)
 
     by_lane: dict[str, float] = {}
@@ -86,6 +100,10 @@ def capital_panel() -> list[str]:
         held = [p.asset for p in positions if p.lane == lane]
         lines.append(f"  {lane:<10} {cost:>12,.2f} at cost   {', '.join(held)}")
 
+    lines.append("")
+    lines.append(f"  {pricing.describe()}")
+    for valuation in valuations:
+        lines.append(f"    {valuation.describe()}")
     lines.append("")
     lines.append(f"  {exposure.describe()}")
     lines.append("")
@@ -252,7 +270,7 @@ def _reap_history(limit: int = 10) -> dict:
     }
 
 
-def _capital_state(book, positions, exposure) -> dict:
+def _capital_state(book, positions, exposure, pricing=None) -> dict:
     """The capital block, keeping a book that vanished apart from a book that is empty.
 
     **Three different nothings were rendering as one zero.** A portfolio file that never
@@ -282,6 +300,11 @@ def _capital_state(book, positions, exposure) -> dict:
     What was paid is knowable without any price source, which is exactly why it is the
     figure worth showing while pricing is unwired. The priced subset keeps its own name in
     `priced_value`, null until the valuation is complete.
+
+    **`priced_value` stays null for a third reason now that a source is wired**: a book
+    whose holdings priced in more than one currency has no single total, and `Exposure`
+    returns `None` rather than a sum of euro and dollars. A reader must not fill that null
+    with the arithmetic this layer refused to do.
     """
 
     unknown = {
@@ -290,10 +313,13 @@ def _capital_state(book, positions, exposure) -> dict:
         "priced_cost_basis": None,
         "is_complete": False,
         "unpriced_assets": [],
+        "stale_assets": [],
+        "by_currency": {},
         "by_lane_cost": {},
         "positions": [],
         "currency": exposure.currency,
         "store_state": book.status.state,
+        "pricing": pricing.to_dict() if pricing is not None else None,
     }
 
     if book.status.state in {LOST, UNREADABLE}:
@@ -306,26 +332,70 @@ def _capital_state(book, positions, exposure) -> dict:
         return {**unknown, "reason": None,
                 "value_status": "EMPTY_BOOK" if BOOK.is_file() else "NOT_CONFIGURED"}
 
+    valuations = {v.asset: v for v in (pricing.valuations if pricing else ())}
     return {
         "priced_value": exposure.priced_value if exposure.is_complete else None,
-        "value_status": "PRICED" if exposure.is_complete else "PARTIALLY_UNPRICED",
+        "value_status": _value_status(exposure),
         "currency": exposure.currency,
         "cost_basis": sum(p.cost_basis for p in positions),
         "priced_cost_basis": exposure.cost_basis,
         "is_complete": exposure.is_complete,
         "unpriced_assets": list(exposure.unpriced_assets),
+        "stale_assets": list(exposure.stale_assets),
+        # Each unit under its own name. A reader wanting one number must decide what rate
+        # to use and own that decision; there is none here to borrow.
+        "by_currency": dict(exposure.by_currency),
         "by_lane_cost": {
             lane: sum(p.cost_basis for p in positions if p.lane == lane)
             for lane in {p.lane for p in positions}
         },
-        "positions": [
-            {"asset": p.asset, "lane": p.lane, "quantity": p.quantity,
-             "cost_basis": p.cost_basis, "currency": p.currency,
-             "value": None, "value_status": "UNPRICED"}
-            for p in positions
-        ],
+        "positions": [_position_state(p, valuations.get(p.asset)) for p in positions],
         "store_state": book.status.state,
+        "pricing": pricing.to_dict() if pricing is not None else None,
         "reason": None,
+    }
+
+
+def _value_status(exposure) -> str:
+    """The book's valuation in one word, with the two incomplete cases told apart.
+
+    `MIXED_CURRENCY` is not a degraded `PARTIALLY_UNPRICED`: every holding may have priced
+    perfectly and there is still no total, because the answers are in different units. A
+    front end told only "partially unpriced" would go looking for the missing prices.
+    """
+
+    if exposure.nothing_priced:
+        # Not PARTIALLY_UNPRICED: no part of this book priced. The dashboard renders this
+        # word beside a null, and "partially" beside a null reads as a rendering fault.
+        return "NOTHING_PRICED"
+    if exposure.spans_currencies:
+        return "MIXED_CURRENCY"
+    if exposure.stale_assets and not exposure.unpriced_assets:
+        return "PARTIALLY_STALE"
+    return "PRICED" if exposure.is_complete else "PARTIALLY_UNPRICED"
+
+
+def _position_state(position, valuation) -> dict:
+    """One holding, with its value null unless a price actually stands behind it.
+
+    `value_currency` is separate from `currency` deliberately: the second is what the
+    holding cost, the first is the unit its price came back in, and on a US quote against
+    a euro book they differ. Collapsing them is the defect that once printed `-EUR 38.00`.
+    """
+
+    priced = valuation is not None and valuation.value is not None
+    return {
+        "asset": position.asset,
+        "lane": position.lane,
+        "quantity": position.quantity,
+        "cost_basis": position.cost_basis,
+        "currency": position.currency,
+        "value": valuation.value if priced else None,
+        "value_status": valuation.status if valuation is not None else "UNPRICED",
+        "value_currency": valuation.currency if priced else None,
+        "unit_price": valuation.unit_price if priced else None,
+        "priced_at": (valuation.priced_at or None) if priced else None,
+        "price_source": (valuation.source or None) if priced else None,
     }
 
 
@@ -567,7 +637,7 @@ def boards_panel() -> list[str]:
     return lines
 
 
-def as_json() -> dict:
+def as_json(source=None) -> dict:
     """The same state, for a front end.
 
     **Unpriced holdings emit `null`, never `0`.** A dashboard rendering `€0.00` for a
@@ -586,8 +656,8 @@ def as_json() -> dict:
 
     book = Portfolio(BOOK)
     positions = book.positions()
-    valuations = [p.value_at(None) for p in positions]
-    exposure = book.exposure(valuations)
+    pricing = _pricing_for(positions, source)
+    exposure = book.exposure(pricing.valuations)
 
     orchestrator = Orchestrator(LANES, Path("data/orchestrator.json"))
     lanes = all_lanes()
@@ -611,7 +681,7 @@ def as_json() -> dict:
         "generated_at": _now(),
         # Every figure null unless there are real positions behind it, and a book that
         # vanished reported apart from one that is empty. See `_capital_state`.
-        "capital": _capital_state(book, positions, exposure),
+        "capital": _capital_state(book, positions, exposure, pricing),
         "decisions": {
             "open": len(orchestrator.open_decisions),
             "limit": orchestrator.queue_limit,

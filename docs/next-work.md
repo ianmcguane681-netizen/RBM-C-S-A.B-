@@ -327,34 +327,66 @@ Remaining after that: app making, faceless YouTube, Etsy/Craigslist.
 
 ---
 
-# NEXT JOB — portfolio pricing, designed and not yet built
+# Portfolio pricing — BUILT 2026-08-06
 
-**Start here if you are picking this up fresh.** `docs/pricing-design.md` has the whole
-thing: what is missing, the three decisions that are the actual work, and the tests to
-write. Roughly one to two hours.
+`docs/pricing-design.md` designed this and now records what was decided in the building.
+`lib/pricing.py` is the join: a `PriceSource` protocol, `value_book()`, and `AlpacaPrices`
+as the first implementation. `status.py` holds no connector knowledge and calls
+`value_book` where it hardcoded `value_at(None)`.
 
-The short version: `status.py` values every holding with `value_at(None)`, so everything
-marks UNPRICED however much is knowable, while `AlpacaBroker.quote()` sits there able to
-answer. Both ends exist and nothing joins them.
+The three decisions went as designed — the **bid**, an **explicit 15-minute ceiling** with
+`priced_at` taken from the feed's own timestamp, and **no FX**: each holding valued in the
+unit its price arrived in, with a total spanning two currencies refused rather than summed.
 
-The three decisions, because getting them wrong is the whole risk:
+**The open question the design left, answered.** A shut market is not a stale price, so it
+gets its own state. `MARKET_CLOSED` is a price older than the ceiling at a venue the clock
+says is closed; it counts toward the total, because the last trade genuinely is the last
+price. The asymmetry is the point and it is where the safety lives: a clock that could not
+be read is `UNKNOWN`, and UNKNOWN keeps the stricter word, STALE. Resolving an unread clock
+to "closed" would relabel every stale price as an honest weekend one and report an outage
+as reassurance.
 
-1. **Value at the bid**, not the mid or the ask. A holding is worth what you could get.
-2. **Staleness is mandatory**, and `stale_after_seconds=-1.0` — the default — means never
-   stale. A price from an hour ago rendered as current is the founding defect with a
-   timestamp on it.
-3. **The book is EUR and Alpaca quotes USD.** There is no FX rate here and an FX rate is
-   itself a price that goes stale. Value per currency and refuse a mixed total — the
-   dashboard already does this for realised P&L after summing EUR and USD into one number
-   and printing it.
+**Two things found by running it rather than reading it.**
 
-Expect roughly six of ten holdings to price: Alpaca quotes US-listed names, and European
-UCITS ETFs almost certainly will not resolve. `PARTIALLY_UNPRICED` with the rest named is
-the correct answer, not a gap to close with a scraped number.
+`capital_panel` printed `Priced holdings: 0.00 EUR` for a fully stocked book whenever
+nothing priced — which is now every run without Alpaca credentials, where before it was
+unreachable. Nothing-priced and nothing-held both produce an empty set of priced values and
+only one of them is worth zero; that is `Realised` reporting COMPLETE over an empty book,
+in the capital panel. `Exposure.priced_value` is `None` for it and the status is
+`NOTHING_PRICED`, told apart from `PARTIALLY_UNPRICED`.
 
-It blocks no lane. The stocks reaper quotes independently for sizing and works today.
+And a **stale price was being counted into the total**. `Exposure` totalled anything whose
+`value` was not `None`, and STALE valuations carry a real number — so the first stale quote
+would have entered a figure labelled as the current value of the book. Stale holdings are
+named and excluded; the per-holding figure is still visible with STALE on it.
 
----
+**A third, from reading the retry policy the quote path inherits.** `retrying_urlopen`
+sleeps 5, 20 and 60 seconds on a 429, which is right for a research run and wrong for a
+page load: ten holdings rate-limited would have been about fourteen minutes of sleeping in
+front of a blank panel. The valuation path uses a single-attempt opener with a 10s timeout
+and reports the holding as unreachable. The lanes keep the retrying opener.
+
+`schema_version` is **1.1** — additive, and the reasoning for calling it minor rather than
+major is in `lib/ui_contract.py`. `tests/conftest.py` now also points the default price
+source at an empty credentials directory, so a unit test on a machine with `~/.alpaca/`
+present cannot quietly call a live broker.
+
+## What was found and deliberately not done
+
+- **The dashboard still shows CAPITAL AT COST and does not render the priced value.** The
+  JSON carries `priced_value`, `by_currency`, `stale_assets` and a `pricing` block, and the
+  page reads none of them yet. Adding a valuation tile is UI work with its own question —
+  what a mixed-currency book shows in one tile — and it is not the wiring this job was.
+- **No caching.** `/api/v1/overview` prices the whole book on every load, which is fine at
+  ten holdings and one operator, and wrong at either scaled up. A cache is legitimate here
+  only if it keeps the feed's timestamp and lets the existing ceiling mark it STALE; a
+  cache that refreshes `priced_at` is the defect this module exists to refuse.
+- **The four European UCITS ETFs are still unpriceable**, which is the expected answer and
+  not a gap. Verifying it against a real Alpaca key is blocked on the key; the code reports
+  them as `unquotable` — the source answered and does not carry them — rather than as a
+  failure. A second source for them is a separate job.
+- **No FX**, per the design. An unavailable rate has to make a total UNKNOWN rather than
+  fall back to a stale rate, and that is its own piece of work.
 
 # The UI contract, and what was declined with it
 

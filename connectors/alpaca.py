@@ -274,6 +274,25 @@ class AlpacaBroker:
             return None
         return self._call(f"{self.credentials.base}/v2/account")
 
+    def is_market_open(self) -> bool | None:
+        """True, False, or **None meaning nobody asked successfully**.
+
+        Three states rather than two, because the caller uses this to decide whether an
+        old price is a feed falling behind or a shut venue. A failed clock read resolving
+        to False would relabel every stale price as "the market is closed, this is simply
+        the last one" — the flattering answer, produced by an error. `None` leaves the
+        caller on its stricter branch.
+        """
+
+        if not self.is_configured:
+            return None
+        try:
+            payload = self._call(f"{self.credentials.base}/v2/clock")
+        except (urllib.error.HTTPError, TransientRetrievalError, OSError, ValueError):
+            return None
+        state = (payload or {}).get("is_open")
+        return bool(state) if isinstance(state, bool) else None
+
     def quote(self, symbol: str) -> Quote | None:
         """Latest bid and ask WITH sizes. None when unconfigured or unquoted."""
 

@@ -1,4 +1,4 @@
-"""Keep the test suite out of `data/`, which is the live operational directory.
+"""Keep the test suite out of `data/` and off the operator's own credentials.
 
 Two modules gained a default path that writes: `lib.reaping.JOURNAL` records every run,
 and `connectors.oddsapi.USAGE` records the last quota reading so the spending floor
@@ -13,6 +13,13 @@ one that stamps a quota reading over the real one and stops a live lane at its f
 
 So every test gets its own `data/` and has to opt back in explicitly. `monkeypatch` is
 function-scoped, so this unwinds itself after each test.
+
+The same argument covers the default **price source**. `status.as_json()` builds one when
+no source is injected, and on a machine with `~/.alpaca/` present that is a live broker
+call from a unit test — slow, rate-limited, and dependent on whose machine it runs on, so
+the same test would pass here and fail in CI for a reason nothing states. The credentials
+directory is pointed at an empty path instead, which makes the source report
+COULD_NOT_LOOK and names why. Tests that need prices inject a fake and never touch this.
 """
 from __future__ import annotations
 
@@ -28,8 +35,15 @@ def _keep_tests_out_of_the_live_data_directory(tmp_path, monkeypatch):
     """
 
     import connectors.oddsapi
+    import lib.pricing
     import lib.reaping
 
     monkeypatch.setattr(lib.reaping, "JOURNAL", tmp_path / "journal.sqlite3")
     monkeypatch.setattr(connectors.oddsapi, "USAGE", tmp_path / "oddsapi-usage.json")
+
+    unconfigured = tmp_path / "no-alpaca-credentials"
+    real_source = lib.pricing.alpaca_prices
+    monkeypatch.setattr(
+        lib.pricing, "alpaca_prices", lambda directory=None: real_source(unconfigured)
+    )
     yield

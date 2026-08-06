@@ -27,6 +27,20 @@ applies with no judgement left in it — the next change of this kind is a 2.0 e
 nothing appears to consume the field, because "nothing consumes it yet" is how a contract
 stops being one.
 
+**1.1 — the capital block learned to price.** `positions[].value` and `priced_value` could
+only ever be null while no price source was wired; they now carry numbers when one answers.
+The capital block gained `stale_assets`, `by_currency` and `pricing`, positions gained
+`value_currency`, `unit_price`, `priced_at` and `price_source`, and `value_status` gained
+`PARTIALLY_STALE`, `MIXED_CURRENCY` and `NOTHING_PRICED`.
+
+A minor bump, on the rule above: nothing was removed, nothing renamed, and no field means
+something it did not mean before — a null still means "not known" and a number still means
+the same measurement. The new `value_status` values are the argued exception. A reader
+switching on the old set now meets three words it does not know, and the correct behaviour
+for an unrecognised status was always to show it rather than to assume PRICED, which is
+what a reader that coerces the unknown to "fine" gets wrong in the flattering direction.
+Anything rendering `value_status` as a label is unaffected.
+
 **What the version does not buy.** It says the shape is stable, not that the numbers are
 present. Every payload keeps the third states the rest of this repository is built on:
 `NOT_CONFIGURED`, `UNREADABLE` and a real zero are different values, and a monetary field
@@ -39,7 +53,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 
 def serialise(value: Any) -> Any:

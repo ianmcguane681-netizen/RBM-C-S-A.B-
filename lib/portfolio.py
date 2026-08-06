@@ -20,9 +20,11 @@ value goes stale silently. A zero shows a portfolio shrinking the moment a feed 
 would read as a loss that never happened, and — worse — a risk limit computed against it
 would size the next position against a balance that is wrong in the reassuring direction.
 
-    PRICED     a price was supplied, with its source and timestamp
-    UNPRICED   no price was supplied. NOT a value of zero.
-    STALE      a price was supplied and is older than the caller's tolerance
+    PRICED         a price was supplied, with its source and timestamp
+    UNPRICED       no price was supplied. NOT a value of zero.
+    STALE          a price was supplied and is older than the caller's tolerance
+    MARKET_CLOSED  older than the tolerance because the venue is shut, which is a
+                   different fact: the last trade genuinely is the last price
 """
 from __future__ import annotations
 
@@ -35,6 +37,11 @@ from typing import Iterable, Sequence
 PRICED = "PRICED"
 UNPRICED = "UNPRICED"
 STALE = "STALE"
+#: Set by `lib/pricing.py`, which is the only thing here that knows a market has hours.
+#: A weekend price is not a feed falling behind, and collapsing the two would mean either
+#: a book that reads STALE every Sunday or a ceiling loose enough to hide a dead feed on a
+#: Tuesday afternoon.
+MARKET_CLOSED = "MARKET_CLOSED"
 
 BUY = "BUY"
 SELL = "SELL"
@@ -119,7 +126,11 @@ class Valuation:
                 f"This is NOT a value of zero and this holding is absent from any total "
                 f"below rather than counted as nothing."
             )
-        marker = " (STALE)" if self.status == STALE else ""
+        marker = ""
+        if self.status == STALE:
+            marker = " (STALE)"
+        elif self.status == MARKET_CLOSED:
+            marker = " (market shut; last price)"
         return (
             f"{self.asset}: {self.quantity:,.6g} @ {self.unit_price:,.4f} "
             f"{self.currency} = {self.value:,.2f}{marker}  [{self.source} {self.priced_at}]"
@@ -148,7 +159,17 @@ class Position:
         source: str = "",
         priced_at: str = "",
         stale_after_seconds: float = -1.0,
+        currency: str = "",
     ) -> Valuation:
+        """`currency` is the PRICE's currency, which need not be the book's.
+
+        This holding's cost is recorded in whatever was paid — euro, here — and a US
+        quote comes back in dollars. Stamping the book's currency onto a dollar figure is
+        how `EUR 39.00` and `USD -77.00` were once added into `-EUR 38.00`: not a
+        conversion, two different units summed. So the valuation carries the unit its
+        price arrived in, and `Exposure` refuses a total that spans more than one.
+        """
+
         if unit_price is None:
             return Valuation(UNPRICED, self.asset, self.quantity, currency=self.currency)
 
@@ -163,38 +184,112 @@ class Position:
         if stale_after_seconds >= 0 and age >= 0 and age > stale_after_seconds:
             status = STALE
         return Valuation(
-            status, self.asset, self.quantity, unit_price, self.currency,
+            status, self.asset, self.quantity, unit_price, currency or self.currency,
             priced_at, source, age,
         )
 
 
 @dataclass(frozen=True, slots=True)
 class Exposure:
-    """Totals, with what could not be priced kept visible beside them."""
+    """Totals, with what could not be priced kept visible beside them.
+
+    Three things are kept out of `priced_value` rather than summed into it, and each is a
+    different reason for the same refusal.
+
+    **UNPRICED** is the original one: a holding with no price is absent from the total and
+    named beside it, never counted as nothing.
+
+    **STALE** joined it when a price source was first wired. A stale price is still a
+    price and `Valuation.value` still returns it — but a total built partly on prices the
+    caller has already declared too old, presenting itself as the current value of the
+    book, is the founding defect one level up. The stale holdings are named and the total
+    covers what is actually current.
+
+    **More than one currency** produces no total at all. The book records cost in euro and
+    a US quote arrives in dollars; there is no rate in this repository, and a rate is
+    itself a price that goes stale. Adding them once produced `EUR 39.00 + USD -77.00 =
+    -EUR 38.00`. `priced_value` is `None` in that case, `by_currency` holds each subtotal
+    under its own unit, and nothing here will guess the missing rate.
+    """
 
     currency: str
-    priced_value: float = 0.0
+    #: `None` means no single total can be stated — not zero, and not "nothing priced".
+    priced_value: float | None = 0.0
     cost_basis: float = 0.0
     unpriced_assets: tuple[str, ...] = ()
     by_lane: dict[str, float] = field(default_factory=dict)
+    stale_assets: tuple[str, ...] = ()
+    by_currency: dict[str, float] = field(default_factory=dict)
+
+    @property
+    def spans_currencies(self) -> bool:
+        return len(self.by_currency) > 1
 
     @property
     def is_complete(self) -> bool:
-        return not self.unpriced_assets
+        """Every holding priced, currently, in one unit. Anything less says so."""
+
+        return not self.unpriced_assets and not self.stale_assets and not self.spans_currencies
+
+    @property
+    def nothing_priced(self) -> bool:
+        """Holdings are held and not one of them has a price behind it."""
+
+        return not self.by_currency and bool(self.unpriced_assets or self.stale_assets)
 
     def describe(self) -> str:
-        lines = [
-            f"Priced holdings: {self.priced_value:,.2f} {self.currency} "
-            f"against {self.cost_basis:,.2f} cost."
-        ]
-        for lane, value in sorted(self.by_lane.items()):
-            share = (value / self.priced_value * 100.0) if self.priced_value else 0.0
-            lines.append(f"  {lane:<8} {value:>14,.2f}  {share:5.1f}% of priced")
+        lines: list[str] = []
+        if self.nothing_priced:
+            held = len(self.unpriced_assets) + len(self.stale_assets)
+            lines.append(
+                f"Nothing could be priced: {held} holding(s) are held and no current price "
+                f"stands behind any of them. This is NOT a book worth 0.00 — what it is "
+                f"worth is unknown, and what it cost is the figure above."
+            )
+        elif self.spans_currencies:
+            lines.append(
+                "No single priced total: the holdings that priced are quoted in "
+                f"{', '.join(sorted(self.by_currency))}, and there is no exchange rate "
+                "anywhere in this system to add them with."
+            )
+            for unit, value in sorted(self.by_currency.items()):
+                lines.append(f"  {value:>14,.2f} {unit} priced")
+            lines.append(
+                f"  Cost is recorded in {self.currency}: {self.cost_basis:,.2f} for the "
+                f"priced holdings, and is not comparable with a total in another unit."
+            )
+        else:
+            priced_currency = next(iter(self.by_currency), self.currency)
+            lines.append(
+                f"Priced holdings: {self.priced_value or 0.0:,.2f} {priced_currency}."
+            )
+            if priced_currency == self.currency:
+                lines.append(f"  Cost of those holdings: {self.cost_basis:,.2f} "
+                             f"{self.currency}.")
+            else:
+                # On their own lines, because a value and a cost in different units side
+                # by side invite exactly the subtraction that has no answer here.
+                lines.append(
+                    f"  Cost of those holdings: {self.cost_basis:,.2f} {self.currency}. "
+                    f"Different unit from the value above; there is no rate here and the "
+                    f"difference between them is not a gain."
+                )
+            for lane, value in sorted(self.by_lane.items()):
+                share = (value / self.priced_value * 100.0) if self.priced_value else 0.0
+                lines.append(f"  {lane:<8} {value:>14,.2f}  {share:5.1f}% of priced")
+
+        if self.stale_assets:
+            lines.append(
+                f"  {len(self.stale_assets)} holding(s) priced STALE and are NOT in the "
+                f"total above: {', '.join(self.stale_assets)}. A price too old to trust is "
+                f"not a current value."
+            )
         if self.unpriced_assets:
             lines.append(
                 f"  {len(self.unpriced_assets)} holding(s) are UNPRICED and are NOT in the "
                 f"total above: {', '.join(self.unpriced_assets)}."
             )
+        if self.unpriced_assets or self.stale_assets:
             lines.append(
                 "  Every percentage here is a share of what could be priced, not of what "
                 "is held. Do not size a position against this number."
@@ -279,26 +374,54 @@ class Portfolio:
         )
 
     def exposure(self, valuations: Sequence[Valuation], *, currency: str = "EUR") -> Exposure:
-        """Totals over what could be priced, with the rest named rather than counted."""
+        """Totals over what could be priced CURRENTLY, with the rest named rather than
+        counted.
+
+        A STALE valuation is excluded from the total and named separately. It carries a
+        real number — the caller can still see it per holding — but a book total assembled
+        from prices already declared too old, rendered as what the holdings are worth now,
+        is exactly the defect this module was written against, arriving through the one
+        door left open for it.
+        """
 
         by_lane: dict[str, float] = {}
+        by_currency: dict[str, float] = {}
         lanes = {p.asset: p.lane for p in self.positions()}
         basis = {p.asset: p.cost_basis for p in self.positions()}
 
-        priced_total = 0.0
         cost_total = 0.0
         unpriced: list[str] = []
+        stale: list[str] = []
         for valuation in valuations:
             value = valuation.value
             if value is None:
                 unpriced.append(valuation.asset)
                 continue
-            priced_total += value
+            if valuation.status == STALE:
+                stale.append(valuation.asset)
+                continue
+            unit = valuation.currency or currency
+            by_currency[unit] = by_currency.get(unit, 0.0) + value
             cost_total += basis.get(valuation.asset, 0.0)
             lane = lanes.get(valuation.asset, "unknown")
             by_lane[lane] = by_lane.get(lane, 0.0) + value
 
-        return Exposure(currency, priced_total, cost_total, tuple(unpriced), by_lane)
+        priced_total: float | None = sum(by_currency.values()) if by_currency else 0.0
+        if len(by_currency) > 1:
+            # Not a total anybody can state. None rather than the sum, which would be a
+            # number made of two units.
+            priced_total = None
+        elif not by_currency and valuations:
+            # Holdings exist and not one of them priced. `0.0` here is the same mistake
+            # `Realised` made by reporting COMPLETE over an empty book: a total of nought
+            # reads as "we looked at everything and it came to nothing", when nothing was
+            # valued at all. Only a book with no holdings totals to zero.
+            priced_total = None
+
+        return Exposure(
+            currency, priced_total, cost_total, tuple(unpriced), by_lane,
+            tuple(stale), by_currency,
+        )
 
     def save(self, when: str = "") -> None:
         from lib.store import JSON_BACKEND, Receipt

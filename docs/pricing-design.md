@@ -1,6 +1,8 @@
 # Wiring a price source into portfolio valuation
 
-Designed 2026-08-05, not yet built. The next session can pick this up from cold.
+Designed 2026-08-05. **Built 2026-08-06 in `lib/pricing.py`**, and this file is kept as
+the argument behind the code rather than as a plan. Where the building answered a question
+this design left open, the answer is marked BUILT below.
 
 ## What is missing, exactly
 
@@ -50,6 +52,13 @@ market being closed is not staleness — the last trade genuinely is the last pr
 either the ceiling is generous enough to cover a weekend or `STALE` needs to mean
 "the market is shut", which is a different fact and probably deserves its own state.
 **Decide that explicitly rather than picking a number.**
+
+**BUILT: its own state, and the unknown case is the one that matters.** `MARKET_CLOSED` is
+a price past the ceiling at a venue the clock reports shut, and it counts toward the total
+because the last trade genuinely is the last price. `AlpacaBroker.is_market_open()` returns
+True, False or **None**, and a clock that could not be read leaves the valuation on STALE.
+Resolving an unread clock to "closed" would relabel every stale price as an honest weekend
+one — an outage arriving as reassurance — which is the direction this repository refuses.
 
 ## Decision 3 — currency, and this is the one that will bite
 
@@ -103,6 +112,12 @@ If those four matter enough to price, that is a second connector and a separate 
   `COULD_NOT_LOOK` versus `NOTHING_FOUND`, applied to prices.
 - Alpaca rate limits exist. Ten holdings is nothing, but isolate the calls so one 429 does
   not take the page down, and do not retry into the limit.
+
+**BUILT, and the second half of that line had teeth.** `AlpacaBroker` defaults to
+`retrying_urlopen`, which sleeps 5, 20 and 60 seconds on a 429 — correct for the research
+connector it was written for, and about fourteen minutes of blank panel across ten
+rate-limited holdings here. The valuation path passes a single-attempt opener with a 10s
+timeout; the lanes keep the retrying one.
 
 ---
 

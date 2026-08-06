@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 import status
 from lib.breakers import Breakers, Ringfence
 from lib.outcomes import OutcomeLedger
@@ -221,8 +223,11 @@ class TestCapitalNeverReportsAZeroItDidNotMeasure:
         capital = status.as_json()["capital"]
 
         assert capital["cost_basis"] == 240.0
-        assert capital["value_status"] == "PARTIALLY_UNPRICED"
-        assert capital["priced_value"] is None      # no price source is wired
+        # NOTHING_PRICED rather than PARTIALLY_UNPRICED since a source got wired: the
+        # fixture supplies no credentials, so no part of this book priced. "Partially"
+        # would send a reader looking for the holdings that did.
+        assert capital["value_status"] == "NOTHING_PRICED"
+        assert capital["priced_value"] is None
         assert capital["by_lane_cost"] == {"stocks": 240.0}
 
     def test_what_was_paid_does_not_depend_on_a_price_source(
@@ -287,3 +292,131 @@ class TestAMonetaryFigureCarriesItsUnit:
 
         assert lanes["arb"]["realised"]["currency"] == "EUR"
         assert lanes["stocks"]["realised"]["currency"] == "USD"
+
+
+class TestTheCapitalBlockNowCarriesPricesAndTheirLimits:
+    """A wired price source is a new way for the capital block to overstate itself.
+
+    Everything below the JSON layer was built to keep "not known" and "nothing" apart, and
+    the presentation layer is where that distinction has died twice already. Now that a
+    holding can actually price, three new nulls have to survive the trip: a source nobody
+    could reach, a book priced in two currencies, and a price too old to be called current.
+    """
+
+    def _stocked(self, tmp_path, monkeypatch):
+        from lib.portfolio import BUY, Entry
+
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data").mkdir()
+        book = Portfolio(tmp_path / "data" / "portfolio.json")
+        book.add(Entry("NET", "equity", BUY, 40, 96.10, "EUR", "2026-07-01T10:00:00Z", "t"))
+        book.add(Entry("VUAA", "equity", BUY, 12, 92.40, "EUR", "2026-07-01T10:00:00Z", "t"))
+        book.save()
+        return book
+
+    def test_a_priced_holding_reaches_the_payload_with_its_unit_and_its_age(
+        self, tmp_path, monkeypatch
+    ):
+        from tests.test_pricing import FakeSource, _stamp
+        from lib.pricing import Price
+
+        self._stocked(tmp_path, monkeypatch)
+        source = FakeSource({"NET": Price(104.55, "USD", _stamp(30), "fake")})
+
+        capital = status.as_json(source)["capital"]
+        net = {p["asset"]: p for p in capital["positions"]}["NET"]
+
+        assert net["value"] == pytest.approx(4182.0)
+        assert net["value_status"] == "PRICED"
+        assert net["value_currency"] == "USD"     # the price's unit, not the book's
+        assert net["currency"] == "EUR"           # what it cost
+        assert net["price_source"] == "fake"
+        assert net["priced_at"]
+
+    def test_an_unquotable_holding_emits_null_beside_the_reason_it_is_null(
+        self, tmp_path, monkeypatch
+    ):
+        """The correct answer for a European ETF at a US broker, not a missing number."""
+
+        from tests.test_pricing import FakeSource, _stamp
+        from lib.pricing import Price
+
+        self._stocked(tmp_path, monkeypatch)
+        source = FakeSource({"NET": Price(104.55, "USD", _stamp(30), "fake")})
+
+        capital = status.as_json(source)["capital"]
+        etf = {p["asset"]: p for p in capital["positions"]}["VUAA"]
+
+        assert etf["value"] is None
+        assert etf["value_status"] == "UNPRICED"
+        assert capital["pricing"]["unquotable"] == ["VUAA"]
+        assert capital["pricing"]["unreachable"] == []
+
+    def test_a_source_nobody_could_reach_is_not_a_book_worth_zero(
+        self, tmp_path, monkeypatch
+    ):
+        """Found by running the panel, which printed `Priced holdings: 0.00 EUR`."""
+
+        from tests.test_pricing import FakeSource
+
+        self._stocked(tmp_path, monkeypatch)
+
+        capital = status.as_json(FakeSource(unavailable="no credentials"))["capital"]
+
+        assert capital["value_status"] == "NOTHING_PRICED"
+        assert capital["priced_value"] is None
+        assert capital["cost_basis"] == pytest.approx(4952.8)   # what it cost is knowable
+        assert capital["pricing"]["look"] == "COULD_NOT_LOOK"
+
+    def test_two_currencies_produce_no_total_and_say_which_two(
+        self, tmp_path, monkeypatch
+    ):
+        from tests.test_pricing import FakeSource, _stamp
+        from lib.pricing import Price
+
+        self._stocked(tmp_path, monkeypatch)
+        source = FakeSource({
+            "NET": Price(104.55, "USD", _stamp(30), "fake"),
+            "VUAA": Price(101.20, "EUR", _stamp(30), "fake"),
+        })
+
+        capital = status.as_json(source)["capital"]
+
+        assert capital["value_status"] == "MIXED_CURRENCY"
+        assert capital["priced_value"] is None
+        assert set(capital["by_currency"]) == {"USD", "EUR"}
+        assert capital["is_complete"] is False
+
+    def test_a_stale_price_is_visible_per_holding_and_absent_from_the_total(
+        self, tmp_path, monkeypatch
+    ):
+        from tests.test_pricing import FakeSource, _stamp
+        from lib.pricing import Price
+
+        self._stocked(tmp_path, monkeypatch)
+        source = FakeSource({
+            "NET": Price(104.55, "USD", _stamp(30), "fake"),
+            "VUAA": Price(101.20, "USD", _stamp(7200), "fake"),
+        })
+
+        capital = status.as_json(source)["capital"]
+        etf = {p["asset"]: p for p in capital["positions"]}["VUAA"]
+
+        assert etf["value_status"] == "STALE"
+        assert capital["stale_assets"] == ["VUAA"]
+        assert capital["value_status"] == "PARTIALLY_STALE"
+        assert capital["priced_value"] is None       # incomplete, so no total is stated
+
+    def test_the_default_source_is_built_at_call_time_rather_than_bound_at_import(self):
+        """The journal's defect, in a module that reaches a broker instead of a disk.
+
+        A source bound as a default argument would be constructed once at import, against
+        whatever credentials existed then, and could not be redirected by a fixture — so
+        a unit test on a developer's laptop would quietly call a live broker.
+        """
+
+        import inspect
+
+        default = inspect.signature(status.as_json).parameters["source"].default
+
+        assert default is None
