@@ -14,9 +14,9 @@ Evidence must prove.
 Deterministic rules must decide.
 ```
 
-## Current state — 3 August 2026
+## Current state — 5 August 2026
 
-**1187 tests, 2 skipped.** Two things live here: the **review board engine** (the original
+**1312 tests, 2 skipped.** Two things live here: the **review board engine** (the original
 project, five methodology profiles, three published and ratified decisions) and the
 **reaper lanes** built on top of it, which run the same gates without convening a board.
 
@@ -47,7 +47,12 @@ project, five methodology profiles, three published and ratified decisions) and 
 | **crypto** | contract → cascade → unsigned transactions | *nothing to wire — it cannot sign, by design* |
 | **breakers** | all six controls, fed by `positions.py` before every run | — |
 | **modes** | `AUTONOMOUS` / owner-operating / halted, per lane, switchable from a file | — |
-| **cadence** | arb 30 min, crypto 6 h, stocks 24 h, under the orchestrator's queue throttle | — |
+| **cadence** | arb 8 h (set by the odds quota, not the odds), crypto 6 h, stocks 24 h, under the queue throttle | — |
+| **supervisor** | `run.py --serve` runs the lanes on those cadences; a stopped one reports STALE rather than looking idle | — |
+| **pricing** | — | holdings mark UNPRICED: `AlpacaBroker.quote()` exists and is not wired to valuation. See `docs/pricing-design.md` |
+
+**Picking this up cold?** [`CONTRIBUTING.md`](CONTRIBUTING.md) is the standard of work and
+the map of every other document; [`CLAUDE.md`](CLAUDE.md) is the doctrine it defers to.
 
 **Read [`docs/next-work.md`](docs/next-work.md) for the full checkpoint**: every claim above
 grepped with file and line, the five gaps in priority order, and the next piece designed far

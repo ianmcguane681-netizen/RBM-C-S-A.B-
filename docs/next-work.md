@@ -327,6 +327,35 @@ Remaining after that: app making, faceless YouTube, Etsy/Craigslist.
 
 ---
 
+# NEXT JOB — portfolio pricing, designed and not yet built
+
+**Start here if you are picking this up fresh.** `docs/pricing-design.md` has the whole
+thing: what is missing, the three decisions that are the actual work, and the tests to
+write. Roughly one to two hours.
+
+The short version: `status.py` values every holding with `value_at(None)`, so everything
+marks UNPRICED however much is knowable, while `AlpacaBroker.quote()` sits there able to
+answer. Both ends exist and nothing joins them.
+
+The three decisions, because getting them wrong is the whole risk:
+
+1. **Value at the bid**, not the mid or the ask. A holding is worth what you could get.
+2. **Staleness is mandatory**, and `stale_after_seconds=-1.0` — the default — means never
+   stale. A price from an hour ago rendered as current is the founding defect with a
+   timestamp on it.
+3. **The book is EUR and Alpaca quotes USD.** There is no FX rate here and an FX rate is
+   itself a price that goes stale. Value per currency and refuse a mixed total — the
+   dashboard already does this for realised P&L after summing EUR and USD into one number
+   and printing it.
+
+Expect roughly six of ten holdings to price: Alpaca quotes US-listed names, and European
+UCITS ETFs almost certainly will not resolve. `PARTIALLY_UNPRICED` with the rest named is
+the correct answer, not a gap to close with a scraped number.
+
+It blocks no lane. The stocks reaper quotes independently for sizing and works today.
+
+---
+
 # The UI contract, and what was declined with it
 
 Added 2026-08-04 from a review of `codex/request-for-feedback-73js4m` (PR #3). That branch
