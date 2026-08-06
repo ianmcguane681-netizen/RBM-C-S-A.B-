@@ -371,6 +371,42 @@ major is in `lib/ui_contract.py`. `tests/conftest.py` now also points the defaul
 source at an empty credentials directory, so a unit test on a machine with `~/.alpaca/`
 present cannot quietly call a live broker.
 
+## A whole-repository security review, 2026-08-06
+
+`docs/security-review-2026-08-06.md` is the record: what was found, what was fixed, what
+needs a decision, and — deliberately — what was checked and found clean, so the next review
+does not re-derive it.
+
+**The one that mattered.** The bind default is `0.0.0.0`, and behind it `/api/v1/overview`
+served the portfolio, every open decision's subject and each lane's exposure on one static
+key that lives in browser storage, never expires and crosses plain HTTP in clear. The key
+was never wrong; it was sized for a boundary — the ssh tunnel to a loopback bind — that the
+default had removed. `deploy/provena-web.service` sets `HOST=127.0.0.1`, so a by-the-runbook
+deployment was never in this state. Anyone running `python -m backend` on a public box was.
+
+`lib/access.py` now decides LOCAL / EXPOSED / UNKNOWN and the read gate depends on it: a key
+still suffices on loopback, an exposed server needs an operator login, and **UNKNOWN counts
+as EXPOSED** — assuming loopback when nobody said would make the default the case that
+silently turns the check off. An exposed box with no credential serves nothing rather than
+falling back. Passphrases are scrypt, sessions are stateless HMACs that expire in 8 hours
+and grant seeing and never doing, and five failures lock the login, file-backed so a restart
+does not reset an attacker's budget. An unreadable attempt record denies rather than
+permits: corrupting one file must not buy unlimited guesses.
+
+Two smaller fixes: two unescaped attribute interpolations in the dashboard, and — found by
+the conftest patch for this work — `OperatorCredential.load(path=CREDENTIAL)` bound its path
+at import, the journal's defect in the module that guards the money view.
+
+**Three left needing a decision, not silently fixed.** No TLS anywhere (keep the tunnel, or
+put Caddy in front); unpinned dependencies with no lockfile on the box that holds the broker
+key; and nothing verifies credential file modes after `setup-credentials.sh` has written
+them. Each is argued in the review document.
+
+**Looked for specifically and not found:** any backdoor. Every human-only act refuses the
+automation prefixes at construction in five modules, there is no `force=True` in non-test
+code, no debug branch returns permission, and `chain_exec` has no key path — `sign()` raises
+and `send`/`broadcast` are bound to the same refusal so neither name is a way round it.
+
 ## Nothing told anybody, 2026-08-06
 
 `operations.alerts` has been in `migrations/0002` since the operator backend landed and

@@ -20,4 +20,13 @@ def server_address(environ: dict[str, str] | None = None) -> tuple[str, int]:
 
 if __name__ == "__main__":
     host, port = server_address()
+    # Tell the application what it was actually bound to. Nothing inside FastAPI can ask,
+    # and `lib.access` treats an unstated bind as exposed — so this is not a convenience,
+    # it is the difference between a loopback server demanding a login it does not need
+    # and an exposed one being reported as safe because nobody said otherwise.
+    os.environ.setdefault("PROVENA_BIND_HOST", host)
+
+    from lib.access import describe_posture
+
+    print(f"ACCESS  {describe_posture(host)}")
     uvicorn.run("backend.app:app", host=host, port=port, reload=False)

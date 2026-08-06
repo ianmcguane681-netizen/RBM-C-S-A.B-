@@ -16,7 +16,7 @@ Deterministic rules must decide.
 
 ## Current state — 6 August 2026
 
-**1377 tests, 2 skipped.** Two things live here: the **review board engine** (the original
+**1406 tests, 2 skipped.** Two things live here: the **review board engine** (the original
 project, five methodology profiles, three published and ratified decisions) and the
 **reaper lanes** built on top of it, which run the same gates without convening a board.
 
@@ -49,6 +49,7 @@ project, five methodology profiles, three published and ratified decisions) and 
 | **modes** | `AUTONOMOUS` / owner-operating / halted, per lane, switchable from a file | — |
 | **cadence** | arb 8 h (set by the odds quota, not the odds), crypto 6 h, stocks 24 h, under the queue throttle | — |
 | **supervisor** | `run.py --serve` runs the lanes on those cadences; a stopped one reports STALE rather than looking idle | — |
+| **access** | a key suffices on a loopback bind; a server reachable from other machines requires an operator login, and an unstated bind counts as exposed | no TLS — keep the ssh tunnel or put a terminator in front |
 | **alerting** | `alerts.py` on its own timer posts what is asking for you; an unconfigured channel exits 2 and says nobody was told, rather than looking healthy | needs a webhook URL at `~/.provena/alert_webhook` |
 | **pricing** | holdings value at the bid with an explicit staleness ceiling; STALE, MARKET_CLOSED and UNPRICED are four different answers, and two currencies produce no total | needs an Alpaca key to price anything; the European ETFs need a second source |
 
@@ -90,9 +91,20 @@ with the tab, and asks for it by name rather than reporting a running server as 
 A single key for both would have made the convenient thing — paste it into the dashboard —
 also the thing that puts a lane-running credential one cross-site script away.
 
-The server binds to `0.0.0.0` so container and IDE previews can reach it, and reads the
-platform-provided `PORT` (default `8000`). `HOST` may override the bind address when a local
-machine deliberately wants loopback-only access.
+**A key is enough only while the server is loopback.** The bind default is `0.0.0.0` so
+container and IDE previews can reach it, and that default is what makes the rule necessary:
+a static string in browser storage that never expires and crosses plain HTTP in clear is
+poor sole cover for the money view. So a server reachable from other machines additionally
+requires an **operator login** — `python access.py --set-operator <name>`, a scrypt-hashed
+passphrase in `~/.provena/operator.json` — and one with no credential configured serves no
+lane data at all rather than falling back to the key. **An unstated bind counts as exposed**,
+because assuming loopback when nobody said is the assumption that quietly disables the
+check. A login yields an 8-hour session that grants seeing and never doing; five wrong
+attempts lock it and raise an alert. `deploy/provena-web.service` binds `127.0.0.1` and the
+runbook reaches it over an ssh tunnel, which keeps a by-the-book deployment on the simple
+side of the rule. Nothing here provides TLS: see `docs/security-review-2026-08-06.md`.
+
+`PORT` is read from the environment (default `8000`); `HOST` overrides the bind address.
 
 Static-site previews may publish the repository root directly: `index.html` is a complete
 dashboard entry point. Without the Python API it renders an explicitly labelled offline

@@ -41,6 +41,14 @@ def _keep_tests_out_of_the_live_data_directory(tmp_path, monkeypatch):
     monkeypatch.setattr(lib.reaping, "JOURNAL", tmp_path / "journal.sqlite3")
     monkeypatch.setattr(connectors.oddsapi, "USAGE", tmp_path / "oddsapi-usage.json")
 
+    # The API's read rule depends on what the server was bound to, and a test binds
+    # nothing. Unstated means EXPOSED — the deliberate strict default — which would make
+    # every existing API test assert against a server demanding a login. Tests describing
+    # an ordinary loopback server say so here; the ones about exposure set it themselves.
+    monkeypatch.setenv("PROVENA_BIND_HOST", "127.0.0.1")
+    monkeypatch.setattr("lib.access.CREDENTIAL", tmp_path / "operator.json")
+    monkeypatch.setattr("lib.access.ATTEMPTS", tmp_path / "access-attempts.json")
+
     unconfigured = tmp_path / "no-alpaca-credentials"
     real_source = lib.pricing.alpaca_prices
     monkeypatch.setattr(

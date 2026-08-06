@@ -157,7 +157,7 @@ function renderOverview(data) {
   // directly beneath it.
   $("reaper-total").textContent = `${engines.length} LANE${engines.length === 1 ? "" : "S"}`;
   $("division-grid").innerHTML = engines.map(e => divisionCard(e, lanes.find(l=>l.lane===e.lane))).join("");
-  $("reaper-list").innerHTML = engines.map(e => `<div><span>${safe(laneName(e.lane))}</span><span class="status-pill ${e.status.toLowerCase()}">${safe(e.status)}</span></div>`).join("");
+  $("reaper-list").innerHTML = engines.map(e => `<div><span>${safe(laneName(e.lane))}</span><span class="status-pill ${safe(e.status).toLowerCase()}">${safe(e.status)}</span></div>`).join("");
   $("safety-list").innerHTML = lanes.map(l => `<div><span>${safe(laneName(l.lane))} breaker</span><b>${safe(l.breaker?.status || "UNKNOWN")}</b></div>`).join("");
   $("system-posture").innerHTML = [`${engines.length} evidence engines registered`,`${lanes.length} governed money lanes`,`${decisions.open ?? "Unknown"} decisions awaiting attention`,capital.is_complete ? "Portfolio valuation complete" : "Incomplete valuation disclosed"].map(x=>`<li>${safe(x)}</li>`).join("");
   $("runs").innerHTML = data.recent_runs?.length ? data.recent_runs.map(r=>`<div class="run-row"><span>${safe(r.lane)}<small>${safe(r.status)}</small></span><time>${safe(r.at)}</time></div>`).join("") : `<div class="empty">No runs have been recorded yet.<br><small>This is not the same as a run finding nothing.</small></div>`;
@@ -170,7 +170,7 @@ function renderOverview(data) {
 }
 
 function renderConnectors(data) {
-  $("connectors").innerHTML = data.lanes.map(l=>`<div class="connector-row"><span>${safe(laneName(l.lane))}<small>${safe(l.missing?.join(", ") || "All requirements present")}</small></span><b class="${l.status.toLowerCase()}">${safe(l.status)}</b></div>`).join("");
+  $("connectors").innerHTML = data.lanes.map(l=>`<div class="connector-row"><span>${safe(laneName(l.lane))}<small>${safe(l.missing?.join(", ") || "All requirements present")}</small></span><b class="${safe(l.status).toLowerCase()}">${safe(l.status)}</b></div>`).join("");
 }
 
 // The VIEW key only, never the command key. sessionStorage rather than localStorage so it
@@ -178,7 +178,12 @@ function renderConnectors(data) {
 // what the CLI already prints rather than the ability to run a lane.
 const VIEW_KEY = "provena-view-key";
 const viewKey = () => sessionStorage.getItem(VIEW_KEY) || "";
-const authed = () => viewKey() ? {"X-Provena-View-Key": viewKey()} : {};
+const authed = () => {
+  const headers = {};
+  if (viewKey()) headers["X-Provena-View-Key"] = viewKey();
+  if (session()) headers["X-Provena-Session"] = session();
+  return headers;
+};
 
 function askForViewKey() {
   const entered = window.prompt(
@@ -191,10 +196,59 @@ function askForViewKey() {
   return true;
 }
 
+// A session token, not a key: issued by /api/v1/login, expires on its own, and grants
+// exactly what the view key grants — seeing. The command key is never accepted here and
+// never asked for; nothing that can move money belongs in a browser.
+const SESSION = "provena-session";
+const session = () => sessionStorage.getItem(SESSION) || "";
+
+async function askForLogin(message) {
+  const username = window.prompt(
+    (message ? message + "\n\n" : "") +
+    "This server is reachable from other machines, so it needs an operator login " +
+    "rather than a key.\n\nOperator username:"
+  );
+  if (username === null) return false;
+  const password = window.prompt("Passphrase for " + username + ":");
+  if (password === null) return false;
+  const response = await fetch("/api/v1/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({username: username.trim(), password}),
+  });
+  if (!response.ok) {
+    // The server's own words: locked out, no credential configured and wrong passphrase
+    // are different facts, and a generic "login failed" sends a person to change a
+    // passphrase that was never wrong.
+    const detail = await response.json().catch(() => ({}));
+    loginPrompt(detail.detail || `Login refused (${response.status})`);
+    return false;
+  }
+  sessionStorage.setItem(SESSION, (await response.json()).token || "");
+  return true;
+}
+
+function loginPrompt(message) {
+  $("connection").className = "connection error";
+  $("connection").innerHTML = `<span></span> ${safe(message)} · <a href="#" id="log-in">log in</a>`;
+  $("log-in").onclick = async (event) => { event.preventDefault(); if (await askForLogin()) boot(); };
+}
+
 function keyPrompt(message) {
   $("connection").className = "connection error";
   $("connection").innerHTML = `<span></span> ${safe(message)} · <a href="#" id="enter-key">enter view key</a>`;
   $("enter-key").onclick = (event) => { event.preventDefault(); if (askForViewKey()) boot(); };
+}
+
+// Ask the server which credential it wants rather than guessing. A dashboard that guesses
+// wrong sends its operator looking for a key that will not work on this box.
+async function accessPosture() {
+  try {
+    const response = await fetch("/api/v1/access");
+    return response.ok ? await response.json() : {};
+  } catch (error) {
+    return {};
+  }
 }
 
 async function boot() {
@@ -213,13 +267,21 @@ async function boot() {
     if (overview.status === 503 || connectors.status === 503) {
       renderOverview(offlineOverview); renderConnectors(offlineConnectors);
       $("connection").className = "connection error";
-      $("connection").innerHTML = "<span></span> API is running · no key is set on the server, so no lane data is served. Set PROVENA_VIEW_KEY";
+      // Two different 503s, and telling them apart is the difference between setting an
+      // environment variable and creating a credential on the box.
+      const posture = await accessPosture();
+      $("connection").innerHTML = posture.operator_credential === "NOT_CONFIGURED" && posture.login_required
+        ? "<span></span> API is running · this server is reachable from other machines and has no operator credential, so it serves no lane data. Run python access.py --set-operator &lt;name&gt; on the box"
+        : "<span></span> API is running · no key is set on the server, so no lane data is served. Set PROVENA_VIEW_KEY";
       return;
     }
     if (overview.status === 401 || connectors.status === 401) {
       sessionStorage.removeItem(VIEW_KEY);
+      sessionStorage.removeItem(SESSION);
       renderOverview(offlineOverview); renderConnectors(offlineConnectors);
-      keyPrompt("API is running · this view needs the read-only key");
+      const posture = await accessPosture();
+      if (posture.login_required) loginPrompt("API is running · this server needs an operator login");
+      else keyPrompt("API is running · this view needs the read-only key");
       return;
     }
     if (!overview.ok || !connectors.ok) throw new Error(`API returned ${overview.status}/${connectors.status}`);

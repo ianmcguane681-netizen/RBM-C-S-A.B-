@@ -123,6 +123,33 @@ journalctl -u provena-worker -f
 what the lanes found; that one says whether they are being asked at all. If it reads
 `STALE`, nothing is running whatever the cadences say.
 
+## 5b. Who may look at it
+
+The web unit binds `127.0.0.1`, so the API is reachable only through the ssh tunnel above
+and a key is enough. **If you ever change that bind, a key stops being enough**: an exposed
+server requires an operator login and, with no operator credential on the box, serves no
+lane data at all rather than falling back to the key.
+
+```bash
+su - provena
+cd RBM-C-S-A.B-
+.venv/bin/python access.py                      # what this box is and what it requires
+.venv/bin/python access.py --set-operator ian   # prompts twice, echo off, writes 600
+```
+
+The passphrase is hashed with scrypt into `~/.provena/operator.json` and never stored. It
+is never taken as an argument and never read from a pipe — an argument is visible in `ps`
+and lands in shell history, and a passphrase on a pipe is a passphrase in somebody's
+deployment script.
+
+A login yields a session that lasts 8 hours and grants **seeing, never doing**: the command
+key still runs lanes and still never has to leave your shell. Five wrong attempts lock the
+login for fifteen minutes and raise an alert.
+
+Nothing here encrypts the connection. On plain HTTP a passphrase crosses the network in
+clear, so keep the tunnel, or put Caddy or nginx with a certificate in front and leave
+uvicorn on loopback behind it.
+
 ## 6b. Being told, rather than having to look
 
 Everything in step 6 requires you to go and look. `provena-alerts.timer` is the part that

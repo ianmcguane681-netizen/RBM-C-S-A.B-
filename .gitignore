@@ -71,3 +71,6 @@ data/heartbeat.json
 # What has already been announced. Its keys name lanes and controls rather than subjects,
 # but it is per-box operational state and the receipt beside it carries the counts.
 data/alerts.json
+
+# Failed login attempts, so a lockout survives a restart. Per-box operational state.
+data/access-attempts.json

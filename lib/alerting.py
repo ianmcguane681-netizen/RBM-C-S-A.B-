@@ -270,6 +270,44 @@ def _lane_conditions(lane: dict) -> list[Condition]:
     return found
 
 
+def _access_conditions() -> list[Condition]:
+    """Somebody guessing the operator passphrase, which no page would otherwise show.
+
+    Read from the attempt record directly rather than from the state payload: this is not a
+    money fact and has no business on the capital dashboard, but it is exactly the kind of
+    thing that is discovered weeks later in a log nobody opens.
+    """
+
+    from lib.access import MAX_FAILURES, AttemptRecord, ATTEMPTS
+
+    record = AttemptRecord(ATTEMPTS)
+    if not record.readable:
+        return [Condition(
+            "access-record-unreadable", STOP, "access",
+            f"The failed-login record at {record.path} will not parse, so the lockout "
+            f"cannot be evaluated. Logins are being refused until it is repaired.",
+            "Inspect the file and remove it if its contents are not recoverable; an "
+            "unreadable lockout is refused rather than assumed absent.",
+        )]
+    failures = record.recent_failures()
+    if failures >= MAX_FAILURES:
+        return [Condition(
+            "access-locked-out", STOP, "access",
+            f"{failures} failed logins in the last window: the operator login is locked "
+            f"out. If this was not you, the passphrase is being guessed.",
+            "Check who can reach this port — `python access.py` says whether it is exposed "
+            "— and change the passphrase with `python access.py --set-operator <name>`.",
+        )]
+    if failures > 1:
+        return [Condition(
+            "access-failures", ATTENTION, "access",
+            f"{failures} failed login attempt(s) recently.",
+            "If none of them was you, bind the API to loopback and reach it over an ssh "
+            "tunnel rather than leaving the port open.",
+        )]
+    return []
+
+
 def _capital_conditions(state: dict) -> list[Condition]:
     capital = state.get("capital") or {}
     if capital.get("value_status") in {"LOST", "UNREADABLE"}:
@@ -297,6 +335,7 @@ def assess(state: dict | None, *, reason: str = "") -> Assessment:
     found: list[Condition] = []
     found.extend(_scheduler_conditions(state))
     found.extend(_capital_conditions(state))
+    found.extend(_access_conditions())
     for lane in state.get("money_lanes") or ():
         found.extend(_lane_conditions(lane))
 
