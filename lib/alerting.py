@@ -289,9 +289,23 @@ def _access_conditions() -> list[Condition]:
             "Inspect the file and remove it if its contents are not recoverable; an "
             "unreadable lockout is refused rather than assumed absent.",
         )]
+    from lib.credentials import exposed
+
+    loose = exposed()
+    if loose:
+        found = [Condition(
+            "credential-mode", ATTENTION, "access",
+            f"{len(loose)} credential file(s) are readable beyond their owner: "
+            f"{', '.join(str(f.path) for f in loose)}.",
+            "chmod 600 each of them. The files are present and working, which is why "
+            "nothing else reports this.",
+        )]
+    else:
+        found = []
+
     failures = record.recent_failures()
     if failures >= MAX_FAILURES:
-        return [Condition(
+        return found + [Condition(
             "access-locked-out", STOP, "access",
             f"{failures} failed logins in the last window: the operator login is locked "
             f"out. If this was not you, the passphrase is being guessed.",
@@ -299,13 +313,13 @@ def _access_conditions() -> list[Condition]:
             "— and change the passphrase with `python access.py --set-operator <name>`.",
         )]
     if failures > 1:
-        return [Condition(
+        return found + [Condition(
             "access-failures", ATTENTION, "access",
             f"{failures} failed login attempt(s) recently.",
             "If none of them was you, bind the API to loopback and reach it over an ssh "
             "tunnel rather than leaving the port open.",
         )]
-    return []
+    return found
 
 
 def _capital_conditions(state: dict) -> list[Condition]:

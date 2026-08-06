@@ -371,6 +371,36 @@ major is in `lib/ui_contract.py`. `tests/conftest.py` now also points the defaul
 source at an empty credentials directory, so a unit test on a machine with `~/.alpaca/`
 present cannot quietly call a live broker.
 
+## Two things for the morning the keys land, 2026-08-06
+
+**`verify.py` — does the credential actually work.** `preflight.py` answers "is a key
+present", which is a file test. The question a person has after placing one is whether the
+service accepted it, and nothing answered that.
+
+The distinction the command exists for: a key the service **REFUSED** and a service that
+**COULD_NOT_REACH** both leave you without an answer, and only the first is about the key.
+Reporting a timeout as a bad credential sends somebody to regenerate a key that was fine,
+watch the replacement "fail" identically, and conclude the system is broken. A 500 from the
+venue is therefore COULD_NOT_REACH too: their server breaking says nothing about the key.
+
+It costs nothing to run. The Odds API's sports list is free — and it refreshes the quota
+reading as a side effect, so it also tells you what the key has left — and the Alpaca
+account and clock reads are free. The quotes endpoint, the one that spends, is never
+called. No order path is imported at all, and a test asserts that by reading the source.
+`--book` prices the real portfolio holding by holding, which answers the question the
+pricing work could not: how many of the ten a US broker actually carries.
+
+**Credential modes are checked after the script has run.** `setup-credentials.sh` writes
+600 under 700 and argues why; nothing ever looked again, so a key placed by hand, restored
+from a backup that flattened the modes, or copied with `cp` was read without a word. The
+file looks identical either way. `lib/credentials.py` holds the one structured list of
+where secrets live, `preflight.py` reports the loose ones and `alerts.py` raises them as
+ATTENTION.
+
+**It reports and does not block, deliberately.** "Fail toward stopping" is about money and
+about limits that cannot be read; a permission bit is neither, and halting the research
+lanes over one would aim the refusal at the wrong thing.
+
 ## A whole-repository security review, 2026-08-06
 
 `docs/security-review-2026-08-06.md` is the record: what was found, what was fixed, what

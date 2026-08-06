@@ -57,6 +57,19 @@ secret as an argument — an argument is visible in `ps` to every user on the bo
 in `~/.bash_history`, where it outlives any care taken afterwards. `echo "key" > file` has
 the same problem and is the usual way this goes wrong.
 
+Then prove they work, before trusting anything downstream of them:
+
+```bash
+.venv/bin/python verify.py          # a real call per credential; spends nothing
+.venv/bin/python verify.py --book   # and price the portfolio, holding by holding
+```
+
+`preflight.py` answers "is a key present". `verify.py` answers "did the service accept it",
+which is the question you actually have after placing one. It keeps REFUSED apart from
+COULD_NOT_REACH: the first means the key is wrong, the second says nothing about the key,
+and confusing them sends you to regenerate a key that was fine. It also shouts PAPER or
+LIVE, spends no odds credit — the sports list is free — and imports no order path at all.
+
 Alpaca additionally needs **exactly one** of `paper` or `live`. The script asks, defaults
 to paper, and requires you to type `LIVE` in full for the other. A key gives no hint which
 environment it belongs to and the base URLs differ by one word.

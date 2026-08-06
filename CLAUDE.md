@@ -80,6 +80,7 @@ python run.py                # the orchestrator: what is due, what is held
 python preflight.py          # what each lane needs before it can read anything
 python alerts.py             # what is asking for you, and whether anybody was told
 python access.py             # whether this box needs a login, and who can perform one
+python verify.py             # does each credential actually work; --book prices the holdings
 ```
 
 ## Two lanes of work, one repo

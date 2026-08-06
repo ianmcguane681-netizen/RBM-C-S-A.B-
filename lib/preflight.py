@@ -386,6 +386,19 @@ def report(lanes: Sequence[LaneReadiness]) -> str:
     if blocked:
         lines.append(f"BLOCKED:  {', '.join(l.lane for l in blocked)}")
 
+    # Presence is what everything above reports. This is the other half: a credential that
+    # is present and readable by every account on the box. `setup-credentials.sh` writes
+    # 600 and nothing has ever looked again, so a key placed by hand or restored from a
+    # backup that flattened the modes has been accepted without a word.
+    from lib.credentials import exposed
+
+    loose = exposed()
+    if loose:
+        lines.append("")
+        lines.append(f"CREDENTIAL MODES: {len(loose)} file(s) are readable beyond their "
+                     f"owner. Presence is not privacy.")
+        lines += [f"  {finding.describe()}" for finding in loose]
+
     lines.append("")
     lines.append("A lane reading READY means it can retrieve its evidence. It does NOT mean")
     lines.append("a board has been convened, nor that any decision exists. Those are separate")
