@@ -462,9 +462,9 @@ def money_panel(
             breakers, invalid = _controls_for(lane, settings, directory=directory)
             if invalid:
                 lines.append(
-                    f"    UNREADABLE  ring-fence configuration is invalid "
-                    f"({invalid}). Correct {config_path}; an "
-                    f"unknown limit is not a satisfied limit."
+                    f"    INVALID_CONFIGURATION  no ring-fence could be built from "
+                    f"{config_path} ({invalid}). Correct the config; an unknown limit is "
+                    f"not a satisfied limit."
                 )
             else:
                 ring = breakers.ringfence
@@ -553,7 +553,15 @@ def money_state(
         elif settings and settings.get("enabled", True):
             breakers, invalid = _controls_for(lane, settings, directory=directory)
             if invalid:
-                item["breaker"] = {"status": "UNREADABLE", "reason": invalid}
+                # NOT `UNREADABLE`, which this reported until an alert built on it told an
+                # operator to go and inspect `data/breakers-<lane>.json` — a file that does
+                # not exist in this case and never did. Two different facts were sharing
+                # one word: a breaker state file that will not parse, where the loss
+                # history is lost and the fix is to restore it, and a config from which no
+                # ring-fence could be built at all, where nothing is corrupt and the fix is
+                # to finish writing `data/reapers.json`. Both stop the lane. They send a
+                # person to different places, which is what a status is for.
+                item["breaker"] = {"status": "INVALID_CONFIGURATION", "reason": invalid}
             else:
                 item["balance"] = breakers.ringfence.starting_balance
                 item["currency"] = breakers.ringfence.currency

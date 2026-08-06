@@ -95,8 +95,9 @@ printf 'PROVENA_VIEW_KEY=%s\nPROVENA_COMMAND_KEY=%s\n' \
 chmod 600 /etc/provena/api.env          # the unit file is world-readable; this is not
 
 cp /home/provena/RBM-C-S-A.B-/deploy/*.service /etc/systemd/system/
+cp /home/provena/RBM-C-S-A.B-/deploy/*.timer   /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now provena-worker provena-web
+systemctl enable --now provena-worker provena-web provena-alerts.timer
 systemctl status provena-worker --no-pager
 ```
 
@@ -121,6 +122,40 @@ journalctl -u provena-worker -f
 `SCHEDULER` is the first tile on the dashboard for a reason. Every other figure describes
 what the lanes found; that one says whether they are being asked at all. If it reads
 `STALE`, nothing is running whatever the cadences say.
+
+## 6b. Being told, rather than having to look
+
+Everything in step 6 requires you to go and look. `provena-alerts.timer` is the part that
+does not: every fifteen minutes it assesses the same state the dashboard shows and posts
+what is asking for you.
+
+```bash
+su - provena
+mkdir -p ~/.provena && chmod 700 ~/.provena
+printf '%s\n' 'https://ntfy.sh/your-private-topic-name' > ~/.provena/alert_webhook
+chmod 600 ~/.provena/alert_webhook
+
+cd RBM-C-S-A.B- && .venv/bin/python alerts.py     # see what it would say, now
+```
+
+Any endpoint that takes a POST will do — ntfy, a Slack or Discord incoming hook. The URL is
+a secret: anyone holding it can post as this system, so it lives in a 600 file and never in
+the repository.
+
+**Without a webhook the check still runs and still refuses to look healthy.** It exits 2,
+which systemd records as a failed unit, and `alerts.py` says in as many words that the
+conditions are real and nobody has been told them. An unconfigured channel is never
+reported as a quiet system.
+
+**Why this is its own timer and not part of the worker.** A supervisor cannot report its own
+death. The heartbeat going still is the most consequential thing on the page, and if the
+check ran inside the process being checked, the one failure that most needs announcing would
+be the one that also stops the announcing.
+
+```bash
+systemctl list-timers provena-alerts.timer --no-pager   # when it last ran, when it next will
+journalctl -u provena-alerts -n 30                      # what it said
+```
 
 ## 7. Before the arb lane can reach READY
 

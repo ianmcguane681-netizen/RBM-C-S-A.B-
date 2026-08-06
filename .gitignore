@@ -67,3 +67,7 @@ data/journal.sqlite3-shm
 # The supervisor's heartbeat: a pid, two timestamps and a tick count. No subject and no
 # stake, but it belongs to one running machine and changes every minute.
 data/heartbeat.json
+
+# What has already been announced. Its keys name lanes and controls rather than subjects,
+# but it is per-box operational state and the receipt beside it carries the counts.
+data/alerts.json

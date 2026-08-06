@@ -1,0 +1,32 @@
+[Unit]
+# Assess the system and announce what is asking for a person.
+#
+# Deliberately NOT part of provena-worker. A supervisor cannot report its own death, and a
+# stopped worker is the most consequential thing this checks — if the check lived inside the
+# process being checked, the one failure that most needs announcing is the one that also
+# stops the announcing. Separate unit, separate timer, so the checker is not the thing being
+# checked.
+Description=Provena alert check
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=provena
+WorkingDirectory=/home/provena/RBM-C-S-A.B-
+ExecStart=/home/provena/RBM-C-S-A.B-/.venv/bin/python alerts.py
+
+# Exit 2 means conditions were raised and NOBODY WAS TOLD; exit 3 means nothing could be
+# checked at all. Both are failures of the alerting itself, so systemd records them as unit
+# failures and `systemctl list-units --failed` shows them. Exit 1 is the system working:
+# something was wrong and a person has been told, which is not a failed check.
+SuccessExitStatus=0 1
+
+# ProtectHome is deliberately NOT set: the webhook URL lives in ~/.provena/, and hiding it
+# would leave every run reporting "no channel configured" for a reason nothing states.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/home/provena/RBM-C-S-A.B-/data
+
+[Install]
+WantedBy=multi-user.target

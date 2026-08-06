@@ -371,6 +371,59 @@ major is in `lib/ui_contract.py`. `tests/conftest.py` now also points the defaul
 source at an empty credentials directory, so a unit test on a machine with `~/.alpaca/`
 present cannot quietly call a live broker.
 
+## Nothing told anybody, 2026-08-06
+
+`operations.alerts` has been in `migrations/0002` since the operator backend landed and
+**nothing ever wrote to it** — the journal's schema-with-no-writer defect, in the one table
+whose job is to interrupt a person. Every consequential state was *visible*: a TRIPPED
+breaker, a supervisor stopped three days ago, an unreadable ledger, an odds key at its
+floor. All of them render correctly on a dashboard, and a dashboard reports nothing to
+somebody who is not looking at it. A system that has quietly stopped and a system with
+nothing to say make the same silence.
+
+`lib/alerting.py` assesses; `alerts.py` announces. Three states at each layer —
+RAISED/CLEAR/INDETERMINATE, ASSESSED/COULD_NOT_ASSESS,
+DELIVERED/UNDELIVERABLE/NOT_CONFIGURED — and the exit codes keep the last one visible: **1**
+is raised and delivered, **2** is raised and nobody was told, **3** is nothing was checked
+at all. A code that merged 1 and 2 would file the failure of the alerting under the alerting
+working.
+
+**It derives from `status.as_json()` rather than re-reading the state files.** A second
+reader of the breaker files would eventually contradict the first, and then there are two
+answers to "is this lane stopped". Prices are the one thing deliberately not consulted: a
+broker call inside a check that runs on a timer is a rate limit waiting to happen, and
+nothing here alerts on a valuation.
+
+**Two orderings, both deliberate.** The send happens before the store is written, so a crash
+between them re-announces something already seen rather than marking an alert delivered that
+never left the machine. And an unreadable alert store makes everything *due* rather than
+nothing — being a nuisance is the acceptable failure; going silent because the file that
+remembers what was said will not open is the failure this module exists to prevent.
+
+**The structural point, in `deploy/provena-alerts.timer`.** A supervisor cannot report its
+own death. If the check ran inside `run.py --serve`, the one failure that most needs
+announcing would be the one that also stops the announcing. Separate unit, separate timer,
+`SuccessExitStatus=0 1` so exits 2 and 3 show up in `systemctl list-units --failed`.
+
+**A defect found by running it.** `status.py` reported a lane whose *config* has no balance
+as `breaker: UNREADABLE` — the same word it uses for a breaker state file that will not
+parse. The alert built on it duly told an operator to inspect `data/breakers-stocks.json`,
+a file that has never existed. Two facts sharing one word, and only one of them has anything
+to repair: `INVALID_CONFIGURATION` is now its own status, and the schema is 1.2.
+
+### Still open on alerting
+
+- **The webhook is the only channel.** Email would need SMTP credentials, and one channel
+  that works beats two that are half-configured. `Channel` is a protocol; a second one is an
+  argument, not a rewrite.
+- **Nothing writes to `operations.alerts` yet.** This stores locally, in `data/alerts.json`,
+  the way every other store here does. Postgres remains the record, not the source of truth,
+  and moving it there is a copy rather than a translation.
+- **No condition covers a lane failing every run.** The journal has the history and
+  `_reap_history` already reads it; deciding what counts as "failing" — three consecutive,
+  a day of them — is a judgement nobody has made, and inventing a threshold here would be
+  the sizing ramp mistake in a different module.
+
 ## What was found and deliberately not done
 
 - **The dashboard still shows CAPITAL AT COST and does not render the priced value.** The

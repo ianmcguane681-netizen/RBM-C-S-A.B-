@@ -1,0 +1,15 @@
+[Unit]
+Description=Run the Provena alert check regularly
+
+[Timer]
+# Every fifteen minutes. The check reads local files only — no broker call, no odds credit —
+# so the cost is trivial, and the interval bounds how long a stopped worker or a tripped
+# breaker can sit unannounced. It is not a lane cadence and has nothing to do with one.
+OnBootSec=5min
+OnUnitActiveSec=15min
+# Fire the missed run after a reboot rather than waiting a full interval: the state most
+# worth hearing about is often the reason the box restarted.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

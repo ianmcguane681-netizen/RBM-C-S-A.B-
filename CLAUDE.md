@@ -78,6 +78,7 @@ python run.py --manual "why" # take the wheel: lanes keep running, you place
 python positions.py          # what is open; --settle feeds the breakers
 python run.py                # the orchestrator: what is due, what is held
 python preflight.py          # what each lane needs before it can read anything
+python alerts.py             # what is asking for you, and whether anybody was told
 ```
 
 ## Two lanes of work, one repo

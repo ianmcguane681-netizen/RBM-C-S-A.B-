@@ -41,6 +41,13 @@ for an unrecognised status was always to show it rather than to assume PRICED, w
 what a reader that coerces the unknown to "fine" gets wrong in the flattering direction.
 Anything rendering `value_status` as a label is unaffected.
 
+**1.2 — a lane's breaker gained `INVALID_CONFIGURATION`.** It previously reported
+`UNREADABLE` both for a breaker state file that will not parse and for a config from which
+no ring-fence could be built. Two facts, one word, and the second one has no file to repair:
+an alert built on this told an operator to inspect `data/breakers-stocks.json`, which had
+never existed. Minor for the same reason 1.1 was — a new value in an enum, where the correct
+handling of an unrecognised status was always to show it rather than assume the lane is fine.
+
 **What the version does not buy.** It says the shape is stable, not that the numbers are
 present. Every payload keeps the third states the rest of this repository is built on:
 `NOT_CONFIGURED`, `UNREADABLE` and a real zero are different values, and a monetary field
@@ -53,7 +60,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 
 
 def serialise(value: Any) -> Any:

@@ -16,7 +16,7 @@ Deterministic rules must decide.
 
 ## Current state — 6 August 2026
 
-**1347 tests, 2 skipped.** Two things live here: the **review board engine** (the original
+**1377 tests, 2 skipped.** Two things live here: the **review board engine** (the original
 project, five methodology profiles, three published and ratified decisions) and the
 **reaper lanes** built on top of it, which run the same gates without convening a board.
 
@@ -49,6 +49,7 @@ project, five methodology profiles, three published and ratified decisions) and 
 | **modes** | `AUTONOMOUS` / owner-operating / halted, per lane, switchable from a file | — |
 | **cadence** | arb 8 h (set by the odds quota, not the odds), crypto 6 h, stocks 24 h, under the queue throttle | — |
 | **supervisor** | `run.py --serve` runs the lanes on those cadences; a stopped one reports STALE rather than looking idle | — |
+| **alerting** | `alerts.py` on its own timer posts what is asking for you; an unconfigured channel exits 2 and says nobody was told, rather than looking healthy | needs a webhook URL at `~/.provena/alert_webhook` |
 | **pricing** | holdings value at the bid with an explicit staleness ceiling; STALE, MARKET_CLOSED and UNPRICED are four different answers, and two currencies produce no total | needs an Alpaca key to price anything; the European ETFs need a second source |
 
 **Picking this up cold?** [`CONTRIBUTING.md`](CONTRIBUTING.md) is the standard of work and
