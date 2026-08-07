@@ -108,6 +108,13 @@ def exposure(host: str | None = None) -> str:
 
     value = (host if host is not None else os.environ.get(BIND_VARIABLE, "")).strip()
     if not value:
+        # `PROVENA_BIND_HOST` is set by the server process, so it does not exist in a
+        # separate command like `access.py` — which therefore reported every box EXPOSED,
+        # contradicting the runbook's own instruction that a loopback deployment needs no
+        # passphrase. `HOST` is what the unit sets and what `backend/__main__` resolves the
+        # bind from, so asking it answers "what would this box bind" rather than guessing.
+        value = os.environ.get("HOST", "").strip()
+    if not value:
         return UNKNOWN
     if value.lower() in _LOOPBACK:
         return LOCAL
@@ -179,7 +186,12 @@ class OperatorCredential:
         )
         # Both compared in constant time, and the username too: a fast rejection on the
         # username tells an attacker which half they got right.
-        return (compare_digest(username.strip(), self.username)
+        #
+        # Encoded first because `compare_digest` on `str` raises TypeError the moment
+        # either side is non-ASCII. An operator called "seán" could be created and could
+        # then never log in — the endpoint returned 500, and because the raise happened
+        # before `record_failure()` the attempts were not even counted.
+        return (compare_digest(username.strip().encode("utf-8"), self.username.encode("utf-8"))
                 & compare_digest(derived, base64.b64decode(self.digest)))
 
     @property
@@ -324,10 +336,16 @@ class AttemptRecord:
                 json.dumps({"failures": self.failures, "updated_at": _stamp()}, indent=2),
                 encoding="utf-8",
             )
-        except OSError:
-            # A failed write must not deny a correct login: the record is a guard, and a
-            # guard that cannot write its diary has not thereby caught anybody.
-            pass
+        except OSError as error:
+            # The first version swallowed this so a failed write could not deny a correct
+            # login. That reasoning was backwards: a lockout that cannot persist is a
+            # lockout that does not exist, so a read-only `data/` silently bought an
+            # attacker unlimited guesses. It now matches the unreadable case — the record
+            # goes INDETERMINATE and the next attempt is refused with the reason named.
+            # Being locked out of your own box while `data/` is unwritable is the correct
+            # direction to fail in, and it is a state `alerts.py` announces.
+            self.readable = False
+            self.reason = f"{type(error).__name__}: {error}"[:120]
 
 
 @dataclass(frozen=True, slots=True)

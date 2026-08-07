@@ -181,7 +181,13 @@ class Position:
             except ValueError:
                 age = -1.0
         status = PRICED
-        if stale_after_seconds >= 0 and age >= 0 and age > stale_after_seconds:
+        if stale_after_seconds >= 0 and (age < 0 or age > stale_after_seconds):
+            # An age that could not be established is STALE, not fresh. The first version
+            # required `age >= 0` to mark anything stale, so a quote carrying no usable
+            # timestamp — which `AlpacaBroker.quote()` can return, since it reads
+            # `str(row.get("t") or "")` — was called PRICED and summed into the book total
+            # a caller had explicitly asked to be time-limited. Asking for a ceiling and
+            # being handed an unmeasurable price is exactly when the stricter word is owed.
             status = STALE
         return Valuation(
             status, self.asset, self.quantity, unit_price, currency or self.currency,

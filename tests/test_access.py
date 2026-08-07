@@ -20,6 +20,7 @@ import json
 import pytest
 
 from lib.access import (
+    AttemptRecord,
     EXPIRED,
     EXPOSED,
     INDETERMINATE,
@@ -30,7 +31,6 @@ from lib.access import (
     NOT_CONFIGURED,
     UNKNOWN,
     VALID,
-    AttemptRecord,
     OperatorCredential,
     exposure,
     issue_session,
@@ -312,3 +312,95 @@ class TestTheApiEnforcesIt:
         assert payload["login_required"] is True
         assert payload["operator_credential"] == "CONFIGURED"
         assert "ian" not in json.dumps(payload)
+
+
+class TestWhatTheReviewFound:
+    """Nine defects, found by running this branch rather than reading it. Four are here.
+
+    Each is the same shape: a guard that looked correct and did not engage. A username the
+    comparison could not handle, a lockout that vanished when its file could not be written,
+    a command that could not see what the server bound, and an environment variable that
+    outranked the fact it was meant to report.
+    """
+
+    def test_a_non_ascii_username_can_log_in(self, tmp_path):
+        """`compare_digest` raises TypeError on `str` the moment either side is non-ASCII.
+
+        An operator called "seán" could be created and could then never authenticate: the
+        endpoint returned 500, and because the raise happened before `record_failure()` the
+        attempts were not even counted toward the lockout.
+        """
+
+        made = OperatorCredential.create("seán", PASSPHRASE)
+
+        assert made.verify("seán", PASSPHRASE) is True
+        assert made.verify("sean", PASSPHRASE) is False
+
+    def test_a_lockout_that_cannot_be_written_denies_rather_than_disappears(self, tmp_path):
+        """A read-only `data/` silently bought an attacker unlimited guesses.
+
+        The write failure was swallowed so that it could not deny a correct login. That is
+        the permissive direction: a lockout that cannot persist is a lockout that does not
+        exist, and the unreadable case had always denied.
+        """
+
+        # A directory where the file should be, rather than a chmod: this suite runs as
+        # root in the container, where a read-only directory is not read-only.
+        blocked = tmp_path / "attempts.json"
+        blocked.mkdir()
+        record = AttemptRecord(blocked)
+
+        record.record_failure()
+
+        assert record.readable is False
+        assert record.state() == INDETERMINATE
+
+    def test_a_command_outside_the_server_still_sees_a_loopback_bind(self, monkeypatch):
+        """`access.py` reported every box EXPOSED and exited 1 on a loopback deployment.
+
+        `PROVENA_BIND_HOST` exists only inside the server process, so a separate command
+        never saw it and the runbook's own instruction — that a tunnelled box needs no
+        passphrase — was contradicted by the tool that reports the posture.
+        """
+
+        monkeypatch.delenv("PROVENA_BIND_HOST", raising=False)
+        monkeypatch.setenv("HOST", "127.0.0.1")
+
+        assert exposure() == LOCAL
+        assert login_required() is False
+
+    def test_a_stale_bind_variable_does_not_outrank_what_was_bound(self, monkeypatch):
+        """`setdefault` let a leftover `127.0.0.1` report LOCAL beside `HOST=0.0.0.0`.
+
+        That reopens the money view on the static view key, which is the one outcome the
+        whole module exists to prevent.
+        """
+
+        import backend.__main__ as entry
+
+        monkeypatch.setenv("PROVENA_BIND_HOST", "127.0.0.1")
+        monkeypatch.setenv("HOST", "0.0.0.0")
+        host, _ = entry.server_address()
+        import os
+
+        os.environ["PROVENA_BIND_HOST"] = host
+
+        assert exposure() == EXPOSED
+
+
+def test_the_session_header_survives_a_cross_origin_preflight():
+    """The login shipped without adding its own header to the CORS allow list.
+
+    A dashboard on the default `http://localhost:3000` would log in successfully and then
+    fail every read at the preflight, which presents as a broken session rather than as a
+    missing entry in a list — the kind of fault a person debugs in the wrong module.
+    """
+
+    from backend.app import create_app
+
+    app = create_app()
+    cors = [m for m in app.user_middleware if "CORS" in str(m)][0]
+    allowed = cors.kwargs["allow_headers"]
+
+    assert "X-Provena-Session" in allowed
+    assert "X-Provena-View-Key" in allowed

@@ -549,7 +549,13 @@ def money_state(
         }
 
         if config_error:
-            item["breaker"] = {"status": "UNREADABLE", "reason": config_error}
+            # The same two-facts-one-word defect as the branch below, left behind
+            # when that one was fixed: nothing is wrong with the breaker file here,
+            # `data/reapers.json` will not parse. The alert built on this was still
+            # sending an operator to inspect data/breakers-<lane>.json, and the text
+            # panel at money_panel() already named the config correctly, so the two
+            # views of one state disagreed.
+            item["breaker"] = {"status": "INVALID_CONFIGURATION", "reason": config_error}
         elif settings and settings.get("enabled", True):
             breakers, invalid = _controls_for(lane, settings, directory=directory)
             if invalid:

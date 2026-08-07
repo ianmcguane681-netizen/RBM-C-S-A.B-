@@ -49,7 +49,13 @@ def run(*, quiet: bool = False, repeat_after: float = REPEAT_AFTER_SECONDS) -> t
 
     store = AlertStore(STORE)
     cleared = ()
-    if store.readable:
+    if store.readable and assessment.look != COULD_NOT_ASSESS:
+        # Only a look that actually happened may clear anything. A COULD_NOT_ASSESS run
+        # produces an empty condition list for the same reason a clean run does, so
+        # clearing against it wiped the whole dedup store and then saved the wipe — after
+        # which a breaker that had been tripped for days was announced again as news. The
+        # module's own rule, applied to itself: an empty list from a failed look is not a
+        # report that nothing is wrong.
         cleared = store.cleared([c.key for c in assessment.conditions])
 
     if quiet:

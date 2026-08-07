@@ -24,7 +24,11 @@ if __name__ == "__main__":
     # and `lib.access` treats an unstated bind as exposed — so this is not a convenience,
     # it is the difference between a loopback server demanding a login it does not need
     # and an exposed one being reported as safe because nobody said otherwise.
-    os.environ.setdefault("PROVENA_BIND_HOST", host)
+    # Assigned, not `setdefault`. A stale PROVENA_BIND_HOST left in the environment
+    # would otherwise outrank the address actually bound — a leftover `127.0.0.1`
+    # beside `HOST=0.0.0.0` reported LOCAL and reopened the money view on the static
+    # view key. What was bound is a fact; the variable is only its messenger.
+    os.environ["PROVENA_BIND_HOST"] = host
 
     from lib.access import describe_posture
 

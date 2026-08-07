@@ -224,7 +224,11 @@ def create_app() -> FastAPI:
         # combination that lets any page in the browser read this API as the operator.
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-Provena-View-Key", "X-Provena-Command-Key"],
+        allow_headers=["Content-Type", "X-Provena-View-Key", "X-Provena-Command-Key",
+                       # Added with the login. Without it a cross-origin dashboard
+                       # logs in successfully and then fails every read on preflight,
+                       # which looks like a broken session rather than a CORS list.
+                       "X-Provena-Session"],
     )
     app.mount("/assets", StaticFiles(directory=_static), name="assets")
 

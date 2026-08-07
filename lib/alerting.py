@@ -580,12 +580,18 @@ def deliver(
     if assessment.look == COULD_NOT_ASSESS:
         # A failed look is itself worth announcing: silence is what it would otherwise
         # produce, and silence is the thing being fixed.
-        due = [Condition(
+        failed = Condition(
             "assessment-failed", STOP, "alerting",
             f"The alert check could not read the system state: {assessment.reason}",
             "Run `python alerts.py` by hand and read the traceback. Nothing was checked, "
             "so no control below has been confirmed.",
-        )] + due
+        )
+        # Through the same cooldown as everything else. Prepending it unconditionally
+        # meant a state read that stays broken posted every fifteen minutes for as long
+        # as it stayed broken — the notification flood `REPEAT_AFTER_SECONDS` exists to
+        # prevent, arriving through the one path that skipped it.
+        if store.due(failed, repeat_after=repeat_after):
+            due = [failed] + due
 
     if not due:
         return Delivery(DELIVERED, channel.name if channel else "none", ())

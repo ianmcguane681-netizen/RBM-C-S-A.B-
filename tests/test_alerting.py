@@ -338,3 +338,64 @@ class TestTheExitCodesTellTheFailuresApart:
         _, code = self._run(monkeypatch, tmp_path, None, reason="ImportError")
 
         assert code == 3
+
+
+class TestTheReviewsFindingsInTheAnnouncer:
+    """Two ways this module defeated its own rules, both found by running it.
+
+    A failed look produces an empty condition list for the same reason a clean run does —
+    the distinction this module is built on — and the clearing step read that empty list as
+    "nothing is wrong any more" and wiped the memory of everything standing. And the one
+    condition the module raises about itself skipped the cooldown every other condition
+    goes through, so a state read that stayed broken posted every fifteen minutes.
+    """
+
+    def test_a_failed_look_does_not_clear_what_is_still_true(self, monkeypatch, tmp_path):
+        import alerts
+        import lib.alerting as alerting
+
+        store_path = tmp_path / "alerts.json"
+        monkeypatch.setattr(alerting, "STORE", store_path)
+        monkeypatch.setattr(alerts, "STORE", store_path)
+        channel = FakeChannel()
+        monkeypatch.setattr(alerts, "WebhookChannel", lambda: channel)
+
+        tripped = state(money_lanes=[lane(breaker={"status": "TRIPPED"})])
+        monkeypatch.setattr(alerts, "gather_state", lambda: (tripped, ""))
+        alerts.run()
+        assert channel.sent == [("breaker-tripped:arb",)]
+
+        # The state read now fails. The breaker is still tripped; nothing has cleared.
+        monkeypatch.setattr(alerts, "gather_state", lambda: (None, "ImportError: status"))
+        alerts.run()
+
+        # Back to a working read, well inside the cooldown.
+        monkeypatch.setattr(alerts, "gather_state", lambda: (tripped, ""))
+        alerts.run()
+
+        assert channel.sent.count(("breaker-tripped:arb",)) == 1
+
+    def test_the_alerting_reporting_its_own_failure_respects_the_cooldown(self, tmp_path):
+        store = AlertStore(tmp_path / "alerts.json")
+        channel = FakeChannel()
+        failed = assess(None, reason="ImportError: status")
+
+        deliver(failed, store, channel)
+        deliver(failed, store, channel)
+
+        assert channel.sent == [("assessment-failed",)]
+
+    def test_a_lane_whose_config_will_not_parse_is_not_sent_to_the_breaker_file(self):
+        """`status.py` still emitted UNREADABLE for an unparseable `data/reapers.json`.
+
+        The sibling branch had been fixed and this one had not, so the alert kept sending
+        an operator to `data/breakers-<lane>.json` for a fault in a different file — while
+        the text panel named the config correctly. Two views of one state, disagreeing.
+        """
+
+        found = assess(state(money_lanes=[lane(
+            breaker={"status": "INVALID_CONFIGURATION", "reason": "JSONDecodeError: line 3"}
+        )])).conditions
+
+        assert found[0].key == "lane-misconfigured:arb"
+        assert "reapers.json" in found[0].action

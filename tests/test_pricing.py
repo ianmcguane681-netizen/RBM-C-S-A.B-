@@ -432,3 +432,45 @@ class TestValuingABookDoesNotSleepIntoARateLimit:
         source = alpaca_prices("/tmp/no-such-alpaca-directory")
 
         assert source._broker._opener is not retrying_urlopen
+
+
+class TestAnAgeNobodyCouldMeasureIsNotFreshness:
+    """`AlpacaBroker.quote()` reads `str(row.get("t") or "")` — an empty stamp is possible.
+
+    The staleness test required a measurable age before it would mark anything STALE, so a
+    price with no usable timestamp came back PRICED and was summed into a book total the
+    caller had explicitly asked to be time-limited. Asking for a ceiling and being handed a
+    price whose age cannot be established is precisely when the stricter word is owed.
+    """
+
+    def test_a_price_with_no_timestamp_is_stale_when_a_ceiling_was_asked_for(self):
+        book = book_of(("NET", 40, 96.10))
+        source = FakeSource({"NET": Price(104.55, "USD", "", "fake")})
+
+        assert value_book(book.positions(), source).valuations[0].status == STALE
+
+    def test_a_price_with_an_unparseable_timestamp_is_stale_too(self):
+        book = book_of(("NET", 40, 96.10))
+        source = FakeSource({"NET": Price(104.55, "USD", "yesterday afternoon", "fake")})
+
+        assert value_book(book.positions(), source).valuations[0].status == STALE
+
+    def test_an_unmeasurable_age_is_kept_out_of_the_total(self):
+        book = book_of(("NET", 40, 96.10))
+        source = FakeSource({"NET": Price(104.55, "USD", "", "fake")})
+
+        exposure = book.exposure(value_book(book.positions(), source).valuations)
+
+        assert exposure.stale_assets == ("NET",)
+        assert exposure.is_complete is False
+
+    def test_a_caller_asking_for_no_ceiling_still_gets_a_priced_holding(self):
+        """`stale_after_seconds=-1.0` means the caller did not ask about age at all.
+
+        Nothing in this repository should use that default for a live price, but it is a
+        different question from the one above and must keep its own answer.
+        """
+
+        book = book_of(("NET", 40, 96.10))
+
+        assert book.positions()[0].value_at(104.55, source="manual").status == PRICED
