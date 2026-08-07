@@ -122,6 +122,15 @@ class Pricing:
 
     def describe(self) -> str:
         if self.look == COULD_NOT_LOOK:
+            # Two ways to reach COULD_NOT_LOOK and they want different sentences. The
+            # single wording said "nothing was asked" directly beneath the reason "every
+            # request to the price source failed", and never named which holdings failed.
+            if self.unreachable:
+                return (
+                    f"PRICES  COULD_NOT_LOOK via {self.source or 'no source'}: {self.reason}. "
+                    f"Every request failed — {', '.join(self.unreachable)} — so every holding "
+                    f"below is UNPRICED for want of an answer, not for want of a listing."
+                )
             return (
                 f"PRICES  COULD_NOT_LOOK via {self.source or 'no source'}: {self.reason} "
                 f"Every holding below is UNPRICED because nothing was asked, which is not "
@@ -216,7 +225,13 @@ def value_book(
             stale_after_seconds=stale_after_seconds,
             currency=price.currency,
         )
-        if valuation.status == STALE and market == CLOSED:
+        if valuation.status == STALE and market == CLOSED and valuation.age_seconds >= 0:
+            # `age_seconds < 0` means the age could not be established at all, and the
+            # previous fix made that STALE precisely so it would leave the total. Relabelling
+            # it MARKET_CLOSED here put it straight back in, because a shut market's last
+            # price legitimately counts — so every evening and weekend a quote with no usable
+            # timestamp reported PRICED and complete. A shut venue explains an OLD price. It
+            # explains nothing about a price whose age is unknown.
             valuation = replace(valuation, status=MARKET_CLOSED)
         valuations.append(valuation)
 
@@ -268,11 +283,17 @@ class AlpacaPrices:
         return OPEN if open_now else CLOSED
 
     def price(self, asset: str) -> Price | None:
+        import http.client
+
         from lib.http_retry import TransientRetrievalError
 
         try:
             quote = self._broker.quote(asset)
-        except (TransientRetrievalError, OSError, ValueError) as error:
+        # `http.client.HTTPException` — IncompleteRead, BadStatusLine — is not an OSError,
+        # so one malformed response from the venue escaped this handler entirely and came
+        # out of `/api/v1/overview` as a 500. A bad response is the ordinary unreachable
+        # case and belongs in the same bucket as a reset connection.
+        except (TransientRetrievalError, OSError, ValueError, http.client.HTTPException) as error:
             raise PriceSourceError(f"{type(error).__name__}: {error}"[:120]) from error
         if quote is None:
             return None

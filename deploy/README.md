@@ -146,7 +146,7 @@ lane data at all rather than falling back to the key.
 ```bash
 su - provena
 cd RBM-C-S-A.B-
-.venv/bin/python access.py                      # what this box is and what it requires
+.venv/bin/python access.py --host 127.0.0.1     # what this box is and what it requires
 .venv/bin/python access.py --set-operator ian   # prompts twice, echo off, writes 600
 ```
 

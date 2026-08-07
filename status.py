@@ -314,6 +314,7 @@ def _capital_state(book, positions, exposure, pricing=None) -> dict:
         "is_complete": False,
         "unpriced_assets": [],
         "stale_assets": [],
+        "priced_currency": None,
         "by_currency": {},
         "by_lane_cost": {},
         "positions": [],
@@ -335,6 +336,12 @@ def _capital_state(book, positions, exposure, pricing=None) -> dict:
     valuations = {v.asset: v for v in (pricing.valuations if pricing else ())}
     return {
         "priced_value": exposure.priced_value if exposure.is_complete else None,
+        # The unit the VALUE came back in, which is not the unit the book records cost in.
+        # `currency` is EUR because that is what was paid; a complete valuation of US
+        # holdings is USD, and publishing that figure under the EUR label — beside a EUR
+        # `cost_basis`, with `is_complete: true` — invited exactly the subtraction that has
+        # no answer. The prose panel had always said this; the JSON had no field for it.
+        "priced_currency": next(iter(exposure.by_currency), None),
         "value_status": _value_status(exposure),
         "currency": exposure.currency,
         "cost_basis": sum(p.cost_basis for p in positions),

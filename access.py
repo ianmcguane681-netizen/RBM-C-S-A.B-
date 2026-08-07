@@ -3,6 +3,7 @@
     python access.py                      what the posture is and what it requires
     python access.py --set-operator ian   create or replace the operator credential
     python access.py --json               the same posture, for a script
+    python access.py --host 127.0.0.1     state the bind this box serves on
 
 The credential is a username and a passphrase hashed with scrypt into
 `~/.provena/operator.json`, mode 600. The passphrase itself is never written down, never
@@ -55,6 +56,25 @@ def set_operator(username: str) -> int:
     return 0
 
 
+def _stated_host(argv: list[str]) -> str | None:
+    """`--host <address>` when given, otherwise let the environment answer.
+
+    The environment usually cannot. `PROVENA_BIND_HOST` exists only inside the server
+    process and `HOST` lives in the systemd unit rather than in the shell the runbook tells
+    you to run this from, so a correctly tunnelled box reported EXPOSED — this command
+    contradicting the deployment it is meant to describe. It still resolves to UNKNOWN when
+    nobody says, because guessing loopback is the assumption that disables the check; what
+    is new is that a person can state it and be believed.
+    """
+
+    if "--host" in argv:
+        try:
+            return argv[argv.index("--host") + 1]
+        except IndexError:
+            return None
+    return None
+
+
 def main(argv: list[str]) -> int:
     if "--set-operator" in argv:
         try:
@@ -64,17 +84,18 @@ def main(argv: list[str]) -> int:
             return 2
         return set_operator(username)
 
+    host = _stated_host(argv)
     credential = OperatorCredential.load()
     if "--json" in argv:
         print(json.dumps({
-            "exposure": exposure(),
-            "login_required": login_required(),
+            "exposure": exposure(host),
+            "login_required": login_required(host),
             "operator_credential": "CONFIGURED" if credential else "NOT_CONFIGURED",
             "credential_path": str(CREDENTIAL),
         }, indent=2))
     else:
         print("ACCESS")
-        print(f"  {describe_posture()}")
+        print(f"  {describe_posture(host)}")
         print()
         if credential is None:
             print("  No operator credential on this box. `python access.py --set-operator "
@@ -82,7 +103,7 @@ def main(argv: list[str]) -> int:
         else:
             print(f"  Operator '{credential.username}', created {credential.created_at}.")
     # 0 when this posture needs nothing; 1 when it is exposed with nobody able to log in.
-    return 1 if login_required() and credential is None else 0
+    return 1 if login_required(host) and credential is None else 0
 
 
 if __name__ == "__main__":

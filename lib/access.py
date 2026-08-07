@@ -413,8 +413,9 @@ def describe_posture(host: str | None = None, *,
             "ssh tunnel rather than by opening the port."
         )
     unknown_note = (
-        " The bind address was not stated, and an unknown exposure is treated as an "
-        "exposed one." if where == UNKNOWN else ""
+        " The bind address was not stated — `PROVENA_BIND_HOST` exists only inside the "
+        "server process — so this is UNKNOWN, and an unknown exposure is treated as an "
+        "exposed one. Pass `--host 127.0.0.1` to state it." if where == UNKNOWN else ""
     )
     if credential is None:
         return (

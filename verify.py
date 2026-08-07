@@ -186,6 +186,13 @@ def price_the_book() -> tuple[str, dict]:
 
     book = Portfolio(Path(BOOK))
     positions = book.positions()
+    if book.status.state in {"LOST", "UNREADABLE"}:
+        # The founding defect, one command further out: a book that vanished produces no
+        # positions, and reporting that as "the portfolio holds nothing" says the holder
+        # owns nothing, confidently, on the strength of a file that would not open.
+        return (f"The portfolio book reads {book.status.state}: {book.status.describe()} "
+                f"Nothing was priced, and this is NOT a report that nothing is held."), {
+            "holdings": None, "store_state": book.status.state}
     if not positions:
         return ("The portfolio holds nothing, so there is nothing to price. This is an "
                 "empty book, not a valuation of zero."), {"holdings": 0}

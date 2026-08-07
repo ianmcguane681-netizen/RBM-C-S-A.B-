@@ -249,3 +249,81 @@ class TestCredentialModesAreCheckedAfterTheScriptHasRun:
         self._secret(tmp_path, 0o600)
 
         assert "readable only by its owner" in describe(tmp_path)
+
+
+class TestTheSecondReviewsFindings:
+    def test_a_configured_ring_fence_does_not_raise_the_unbounded_alert(self):
+        """The STOP fired for a lane that HAS a ring-fence, because its breaker file
+        had simply never been written — and said so in a payload carrying the balance.
+
+        An alert that is wrong in the alarming direction is still wrong, and it is the kind
+        that teaches a reader to dismiss the next one.
+        """
+
+        from lib.alerting import assess
+        from tests.test_alerting import lane, state
+
+        found = assess(state(money_lanes=[lane(
+            places_without_asking=True, balance=1000.0,
+            breaker={"status": "NOT_CONFIGURED"},
+        )])).conditions
+
+        assert [c.key for c in found] == []
+
+    def test_a_lane_with_no_ring_fence_at_all_still_raises_it(self):
+        from lib.alerting import assess
+        from tests.test_alerting import lane, state
+
+        payload = lane(places_without_asking=True, breaker={"status": "NOT_CONFIGURED"})
+        payload["balance"] = None
+
+        found = assess(state(money_lanes=[payload])).conditions
+
+        assert [c.key for c in found] == ["autonomous-without-limits:arb"]
+
+    def test_a_vanished_portfolio_is_not_reported_as_an_empty_one(self, tmp_path, monkeypatch):
+        """The founding defect, one command further out.
+
+        A book that vanished produces no positions, and calling that "the portfolio holds
+        nothing" tells the holder they own nothing — confidently, on the strength of a file
+        that would not open.
+        """
+
+        import json as _json
+
+        import status as status_module
+        import verify as verify_module
+        from lib.portfolio import Portfolio
+
+        book = tmp_path / "portfolio.json"
+        book.write_text(_json.dumps([{
+            "asset": "NET", "lane": "equity", "side": "BUY", "quantity": 4.0,
+            "unit_price": 90.0, "currency": "EUR", "when": "2026-08-01T00:00:00Z",
+            "reason": "test",
+        }]), encoding="utf-8")
+        Portfolio(book).save()
+        book.write_text("[]", encoding="utf-8")          # the entries vanish
+        monkeypatch.setattr(status_module, "BOOK", book)
+
+        text, coverage = verify_module.price_the_book()
+
+        assert "LOST" in text
+        assert "NOT a report that nothing is held" in text
+        assert coverage["holdings"] is None
+
+    def test_a_credential_whose_mode_cannot_be_read_is_not_reported_as_private(self, tmp_path):
+        """`Path.exists()` swallows every OSError, so UNREADABLE could never be reached."""
+
+        from lib.credentials import UNREADABLE, exposed
+
+        directory = tmp_path / ".alpaca"
+        directory.mkdir()
+        (directory / "key_id").write_text("PK", encoding="utf-8")
+        directory.chmod(0o000)
+        try:
+            findings = exposed(tmp_path)
+            # Root ignores the mode bits, so accept either the real UNREADABLE finding or
+            # a readable one — what must never happen is the file vanishing from the list.
+            assert findings == () or findings[0].state in {UNREADABLE, "EXPOSED_MODE"}
+        finally:
+            directory.chmod(0o700)

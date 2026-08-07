@@ -404,3 +404,21 @@ def test_the_session_header_survives_a_cross_origin_preflight():
 
     assert "X-Provena-Session" in allowed
     assert "X-Provena-View-Key" in allowed
+
+
+def test_a_stated_bind_is_believed_when_the_environment_cannot_answer(monkeypatch):
+    """`--host` exists because neither variable reaches the operator's shell.
+
+    `PROVENA_BIND_HOST` is set inside the server process and `HOST` lives in the systemd
+    unit, so `access.py` reported EXPOSED on a correctly tunnelled box — the command
+    contradicting the deployment it describes. Unstated is still UNKNOWN and still strict;
+    what changed is that a person may state it.
+    """
+
+    import access
+
+    monkeypatch.delenv("PROVENA_BIND_HOST", raising=False)
+    monkeypatch.delenv("HOST", raising=False)
+
+    assert access.main(["--host", "127.0.0.1"]) == 0
+    assert access.main([]) == 1

@@ -225,7 +225,13 @@ def _lane_conditions(lane: dict) -> list[Condition]:
     # A lane permitted to place with no limits configured. Neither half is an alert on its
     # own — plenty of lanes sit unconfigured, and plenty place under a ring-fence — and the
     # combination is a lane that can spend with nothing bounding what it spends.
-    if lane.get("places_without_asking") and breaker == "NOT_CONFIGURED":
+    # `balance is None` is what "no ring-fence" actually looks like in this payload.
+    # Keying on the breaker alone was wrong: `money_state` reports NOT_CONFIGURED until
+    # `data/breakers-<lane>.json` is first written, so a properly ring-fenced lane raised a
+    # STOP saying "nothing bounds what it can put at risk" in a payload carrying
+    # `balance: 1000.0`. An alert that is wrong in the alarming direction is still wrong,
+    # and it is the kind that gets the next one ignored.
+    if lane.get("places_without_asking") and lane.get("balance") is None:
         found.append(Condition(
             f"autonomous-without-limits:{name}", STOP, name,
             f"{name} places without asking and has no breaker configured, so nothing bounds "

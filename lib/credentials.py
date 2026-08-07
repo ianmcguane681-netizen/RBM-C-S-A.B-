@@ -94,11 +94,17 @@ def inspect_modes(home: str | Path | None = None) -> tuple[ModeFinding, ...]:
     for secret in SECRETS:
         path = Path(secret.path)
         resolved = path if path.is_absolute() else root / path
-        if not resolved.exists():
-            continue
         try:
             mode = resolved.stat().st_mode
+        except FileNotFoundError:
+            # Not placed. Preflight already reports that and names the fix.
+            continue
         except OSError as error:
+            # `Path.exists()` swallows every OSError and returns False, so a credential
+            # whose directory denies traversal read as "not present" and this module's own
+            # UNREADABLE state could never be reached — `describe()` then said every secret
+            # on the box was private. Statting first is what makes absent and unreadable
+            # two different answers, which is the whole point of the state existing.
             findings.append(ModeFinding(resolved, UNREADABLE, type(error).__name__, secret.what))
             continue
         octal = oct(stat.S_IMODE(mode))

@@ -474,3 +474,68 @@ class TestAnAgeNobodyCouldMeasureIsNotFreshness:
         book = book_of(("NET", 40, 96.10))
 
         assert book.positions()[0].value_at(104.55, source="manual").status == PRICED
+
+
+class TestASecondReviewsFindings:
+    """The fix for one defect built the next one, which is why it is reviewed twice.
+
+    Marking an unmeasurable age STALE kept it out of the total — and the shut-market
+    relabel, sitting one line later, put it straight back in. A closed venue explains an
+    OLD price. It explains nothing about a price whose age was never established, and the
+    relabel applied to both, so every evening and weekend an unmeasurable price reported
+    PRICED and the book reported complete.
+    """
+
+    def test_a_shut_market_does_not_launder_a_price_with_no_timestamp(self):
+        book = book_of(("NET", 40, 96.10))
+        source = FakeSource({"NET": Price(104.55, "USD", "", "fake")}, market=CLOSED)
+
+        valuation = value_book(book.positions(), source).valuations[0]
+
+        assert valuation.status == STALE
+        assert valuation.status != MARKET_CLOSED
+
+    def test_the_unmeasurable_price_stays_out_of_the_total_at_the_weekend(self):
+        book = book_of(("NET", 40, 96.10))
+        source = FakeSource({"NET": Price(104.55, "USD", "", "fake")}, market=CLOSED)
+
+        exposure = book.exposure(value_book(book.positions(), source).valuations)
+
+        assert exposure.is_complete is False
+        assert exposure.stale_assets == ("NET",)
+
+    def test_a_genuinely_old_price_at_a_shut_market_is_still_credited(self):
+        """The behaviour the relabel exists for, which the fix must not remove."""
+
+        book = book_of(("NET", 40, 96.10))
+        source = FakeSource({"NET": Price(104.55, "USD", _stamp(86_400), "fake")},
+                            market=CLOSED)
+
+        assert value_book(book.positions(), source).valuations[0].status == MARKET_CLOSED
+
+    def test_a_malformed_response_does_not_escape_as_a_five_hundred(self):
+        """`http.client.HTTPException` is not an OSError, so it left `price()` entirely.
+
+        One IncompleteRead from the venue came out of `/api/v1/overview` as a server error
+        rather than as the unreachable holding it is.
+        """
+
+        import http.client
+
+        class Broker:
+            is_configured = True
+
+            def quote(self, symbol):
+                raise http.client.IncompleteRead(b"")
+
+        with pytest.raises(PriceSourceError):
+            AlpacaPrices(Broker()).price("NET")
+
+    def test_every_request_failing_names_the_holdings_rather_than_claiming_nothing_was_asked(self):
+        book = book_of(("NET", 40, 96.10), ("MOD", 20, 88.00))
+        source = FakeSource(failing={"NET", "MOD"})
+
+        text = value_book(book.positions(), source).describe()
+
+        assert "MOD" in text and "NET" in text
+        assert "nothing was asked" not in text
