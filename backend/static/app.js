@@ -10,8 +10,11 @@ const laneGlyphs = {stocks:"S",crypto:"₿",arb:"A"};
 const titleCase = (id) => String(id ?? "").replace(/[-_]/g," ").replace(/\b\w/g,c=>c.toUpperCase());
 const laneName = (id) => laneLabels[id] || titleCase(id) || "UNKNOWN LANE";
 const laneIcon = (id) => laneGlyphs[id] || (String(id ?? "?")[0] || "?").toUpperCase();
-const offlineOverview = {generated_at:"OFFLINE PREVIEW",capital:{cost_basis:null,currency:"EUR",value_status:"NO LIVE API",is_complete:false},decisions:{open:null,limit:12,items:[]},engines:[{lane:"stocks",status:"NOT_CONNECTED"},{lane:"crypto",status:"NOT_CONNECTED"},{lane:"arb",status:"NOT_CONNECTED"}],money_lanes:["stocks","crypto","arb"].map(lane=>({lane,balance:null,currency:"EUR",breaker:{status:"UNKNOWN"},positions:{open:null}})),recent_runs:[]};
-const offlineConnectors = {lanes:["stocks","crypto","arb"].map(lane=>({lane,status:"NOT_CONNECTED",missing:["Start the operator API for live state"]}))};
+// The two fabricated-state constants that used to live here are gone. They invented
+// NOT_CONNECTED lane statuses and UNKNOWN breaker states so the page had something to
+// draw when it could not read the API, in the same vocabulary the measured ones use --
+// so a page that had asked nothing looked exactly like one reporting three dead lanes.
+// The gate below replaces them: no answer, nothing drawn.
 
 function divisionCard(engine, moneyLane) {
   const status = engine?.status || "NOT_CONFIGURED";
@@ -191,46 +194,109 @@ function askForViewKey() {
   return true;
 }
 
-function keyPrompt(message) {
-  $("connection").className = "connection error";
-  $("connection").innerHTML = `<span></span> ${safe(message)} · <a href="#" id="enter-key">enter view key</a>`;
-  $("enter-key").onclick = (event) => { event.preventDefault(); if (askForViewKey()) boot(); };
+// The gate, and the rule it enforces: NOTHING below it renders until the API has answered.
+//
+// The page used to fill its tiles from a hardcoded preview whenever it could not read
+// the API — manufacturing `NOT_CONNECTED` lane statuses and `UNKNOWN` breaker states in the
+// same vocabulary the real ones use. An unauthenticated dashboard was therefore
+// indistinguishable from an authenticated one reporting three dead lanes and an unarmed
+// breaker, which are opposite facts. That is this repository's founding defect rendered in
+// CSS: a value meaning "I never asked" displayed as a value meaning "I asked and there is
+// nothing there".
+function showGate({title, reason, askKey = false, eyebrow = "OPERATOR CONTROL CENTRE"}) {
+  $("nexus").hidden = true;
+  $("gate").hidden = false;
+  $("gate-eyebrow").textContent = eyebrow;
+  $("gate-title").textContent = title;
+  $("gate-reason").textContent = reason;
+  $("gate-form").hidden = !askKey;
+  $("gate-warning").hidden = !askKey;
+  if (askKey) $("gate-key").focus();
+}
+
+function showDashboard() {
+  $("gate").hidden = true;
+  $("nexus").hidden = false;
 }
 
 async function boot() {
   if (location.protocol === "file:") {
-    renderOverview(offlineOverview); renderConnectors(offlineConnectors);
-    $("connection").className = "connection error";
-    $("connection").innerHTML = "<span></span> Offline layout preview · start python -m backend for live state";
+    // Opened as a file, so there is no API to ask and never was. Say that, and do not
+    // draw a dashboard: a layout preview populated with invented states is the thing
+    // this gate exists to stop.
+    showGate({
+      eyebrow: "NO SERVER",
+      title: "This page was opened as a file",
+      reason: "There is no operator API to read, so no state is shown. Run " +
+              "`python -m backend` and open http://127.0.0.1:8000 instead.",
+    });
     return;
   }
+
+  // Asked before fetching: without a key the answer is already known, and firing a request
+  // that can only be refused just to learn that is noise in the server log.
+  if (!viewKey()) {
+    showGate({
+      title: "This view needs the read-only key",
+      reason: "The operator API serves your portfolio, each lane's ring-fence and its " +
+              "unsettled exposure. That is behind a key even on your own machine, because " +
+              "every other tab in this browser can reach 127.0.0.1 too.",
+      askKey: true,
+    });
+    return;
+  }
+
   try {
     const options = {headers: authed()};
     const [overview, connectors] = await Promise.all([fetch("/api/v1/overview",options),fetch("/api/v1/connectors",options)]);
-    // 503 and 401 are not "no API". The lane data is behind a key, and a page reporting a
-    // running server as offline sends its reader to restart a service that is already up.
-    // Name the actual cause; the refusal has a thing a person can go and do.
+
+    // 503 and 401 are not "no API", and neither is "no data". A page reporting a running
+    // server as offline sends its reader to restart a service that is already up.
     if (overview.status === 503 || connectors.status === 503) {
-      renderOverview(offlineOverview); renderConnectors(offlineConnectors);
-      $("connection").className = "connection error";
-      $("connection").innerHTML = "<span></span> API is running · no key is set on the server, so no lane data is served. Set PROVENA_VIEW_KEY";
+      showGate({
+        eyebrow: "SERVER HAS NO KEY",
+        title: "The API is running and serving nothing",
+        reason: "Neither PROVENA_VIEW_KEY nor PROVENA_COMMAND_KEY is set on the server, so " +
+                "lane data is withheld. Unset never means open. Set PROVENA_VIEW_KEY and " +
+                "restart `python -m backend`.",
+      });
       return;
     }
     if (overview.status === 401 || connectors.status === 401) {
       sessionStorage.removeItem(VIEW_KEY);
-      renderOverview(offlineOverview); renderConnectors(offlineConnectors);
-      keyPrompt("API is running · this view needs the read-only key");
+      showGate({
+        eyebrow: "KEY REFUSED",
+        title: "That key was not accepted",
+        reason: "The API is running and rejected the key this tab was holding. It has been " +
+                "discarded. Check PROVENA_VIEW_KEY on the server and enter it again.",
+        askKey: true,
+      });
       return;
     }
     if (!overview.ok || !connectors.ok) throw new Error(`API returned ${overview.status}/${connectors.status}`);
+
     renderOverview(await overview.json()); renderConnectors(await connectors.json());
+    showDashboard();
     $("connection").className = "connection online"; $("connection").innerHTML = "<span></span> Operator API connected";
   } catch (error) {
-    // Static hosts have no Python API. Render a truthful layout rather than leaving loading
-    // skeletons forever; zero is never substituted for state that could not be retrieved.
-    renderOverview(offlineOverview); renderConnectors(offlineConnectors);
-    $("connection").className = "connection error";
-    $("connection").innerHTML = `<span></span> Offline layout preview · ${safe(error.message)}`;
+    // Unreachable is its own state, and distinct from refused: one wants a server started,
+    // the other wants a key. Merging them sends the reader to the wrong remedy.
+    showGate({
+      eyebrow: "NO ANSWER",
+      title: "The operator API did not answer",
+      reason: `Nothing was read, so nothing is shown. Is \`python -m backend\` running? ` +
+              `(${error.message})`,
+    });
   }
 }
+
+$("gate-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const entered = $("gate-key").value.trim();
+  if (!entered) return;
+  sessionStorage.setItem(VIEW_KEY, entered);
+  $("gate-key").value = "";
+  boot();
+});
+
 boot();

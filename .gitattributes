@@ -12,9 +12,19 @@ docs/rbe-001/CODEX_REVIEW_INSTRUCTIONS.md text eol=lf
 tests/test_rbe001_package.py text eol=lf
 
 # Methodology profiles. Each is a controlled package with a hashed manifest.
+#
+# EVERY profile in controlled_authority.profiles.PROFILES needs a line here. RBM-004 and
+# RBM-005 were added without one and nobody noticed, because the consequence is invisible
+# on Linux: `git clone` on Windows rewrote their controlled text to CRLF, the manifest
+# hashes stopped matching, and nine tests failed with "the controlled RBE or RBM package
+# failed validation" on a checkout that was byte-for-byte correct in the repository.
+# tests/test_gitattributes_covers_every_profile.py derives the list from the registry so
+# a sixth profile cannot repeat it.
 docs/review-board/** text eol=lf
 docs/engineering-board/** text eol=lf
 docs/crypto-board/** text eol=lf
+docs/stocks-board/** text eol=lf
+docs/arb-board/** text eol=lf
 tests/test_rbm001_package.py text eol=lf
 
 # Runtime, board front door, and the shared guards

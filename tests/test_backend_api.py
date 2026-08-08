@@ -176,11 +176,61 @@ def test_standalone_asset_routes_support_the_same_dashboard_document():
 
     assert css_status == js_status == 200
     assert "command-map" in css
-    assert "offlineOverview" in script
+    # The dashboard no longer ships a fabricated offline state. It used to invent
+    # NOT_CONNECTED lane statuses and UNKNOWN breaker states to have something to draw when
+    # it could not read the API — in the same words the measured ones use — so a page that
+    # had asked nothing was indistinguishable from one reporting three dead lanes and an
+    # unarmed breaker. Ian saw exactly that and said the key should be needed before entry.
+    assert "offlineOverview" not in script
+    assert "offlineConnectors" not in script
+    assert "showGate" in script
+
+
+def test_the_dashboard_body_is_hidden_until_the_api_has_answered():
+    """Nothing may render before the key, and the four reasons must stay distinguishable.
+
+    `hidden` on `<main>` is what makes "I have not asked" visually different from "I asked
+    and the lanes are down". Serving the document with the body already visible would put
+    the fabricated-state defect straight back, since the tiles ship with placeholder text.
+    """
+
+    _, document = request(create_app(), "GET", "/")
+
+    assert 'id="nexus" hidden' in document.replace("  ", " ")
+    assert 'id="gate"' in document
+    assert document.index('id="gate"') < document.index('id="nexus"')
+
+
+def test_the_hidden_attribute_is_not_defeated_by_a_display_rule():
+    """A one-line CSS bug that hid nothing, found by screenshotting the unlocked page.
+
+    `hidden` is a UA-stylesheet `display:none`, so ANY author `display` beats it. `.gate`
+    sets `display:grid` to centre its card, which silently un-hid the gate: the unlocked
+    dashboard rendered with the key prompt still sitting above it. Reading the diff did not
+    show this and could not have.
+    """
+
+    _, css = request(create_app(), "GET", "/styles.css")
+
+    assert "[hidden]{display:none!important}" in css.replace(" ", "")
 
 
 def test_connector_projection_preserves_missing_as_missing(monkeypatch):
+    """A missing connector must project as missing, and the test must MAKE it missing.
+
+    This asserted crypto was BLOCKED without removing `QUICKNODE_ETHEREUM_URL`, so it
+    passed only on machines that had never configured the lane it was testing. The first
+    person to set that variable — the intended outcome of the deployment runbook — got a
+    red suite for doing the thing the documentation told them to do. A suite that goes red
+    when you configure the system is one people stop believing, which costs far more than
+    the assertion is worth.
+
+    The endpoint reads the real environment by design, so the test owns its preconditions
+    rather than inheriting whatever the developer's machine happens to hold.
+    """
+
     monkeypatch.setenv("PROVENA_COMMAND_KEY", "test-key")
+    monkeypatch.delenv("QUICKNODE_ETHEREUM_URL", raising=False)
 
     response_status, response = request(
         create_app(), "GET", "/api/v1/connectors",
@@ -190,6 +240,39 @@ def test_connector_projection_preserves_missing_as_missing(monkeypatch):
     crypto = next(row for row in response["lanes"] if row["lane"] == "crypto")
     assert crypto["status"] == "BLOCKED"
     assert crypto["requirements"][0]["status"] == "NOT_CONFIGURED"
+
+
+def test_a_configured_chain_endpoint_projects_as_ready(monkeypatch):
+    """The other half, which nothing asserted: a lane that IS configured says so.
+
+    Without this the suite only ever checked the unconfigured case, so the projection
+    could have reported BLOCKED unconditionally and stayed green.
+    """
+
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "test-key")
+    monkeypatch.setenv("QUICKNODE_ETHEREUM_URL", "https://example.invalid/abc123")
+
+    response_status, response = request(
+        create_app(), "GET", "/api/v1/connectors",
+        headers={"X-Provena-Command-Key": "test-key"})
+
+    assert response_status == 200
+    crypto = next(row for row in response["lanes"] if row["lane"] == "crypto")
+    assert crypto["status"] == "READY"
+
+
+def test_the_connector_projection_never_carries_the_endpoint_secret(monkeypatch):
+    """A QuickNode URL embeds its auth token in the path, and this endpoint is reachable
+    from a browser. Reporting the lane as configured must not report WITH WHAT."""
+
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "test-key")
+    monkeypatch.setenv("QUICKNODE_ETHEREUM_URL", "https://example.invalid/s3cr3t-token")
+
+    _, response = request(
+        create_app(), "GET", "/api/v1/connectors",
+        headers={"X-Provena-Command-Key": "test-key"})
+
+    assert "s3cr3t-token" not in json.dumps(response)
 
 
 def test_reaper_command_is_unavailable_when_server_has_no_command_key(monkeypatch):
