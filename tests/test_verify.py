@@ -327,3 +327,114 @@ class TestTheSecondReviewsFindings:
             assert findings == () or findings[0].state in {UNREADABLE, "EXPOSED_MODE"}
         finally:
             directory.chmod(0o700)
+
+
+class TestTheThirdReviewsFindings:
+    """Four of these are in code the branch never touched, reached because it reads them."""
+
+    def test_the_free_sports_list_is_not_gated_by_the_spending_floor(self, tmp_path):
+        """At the floor, `verify.py` called a perfectly good odds key COULD_NOT_REACH.
+
+        The floor keeps a reserve of credits. The sports list costs none, so refusing it
+        protected nothing and made the one command whose job is confirming a key report
+        that the key could not be reached — and tell the operator to check their network.
+        """
+
+        import json as _json
+
+        from connectors.oddsapi import OddsApiCredentials, OddsApiSource
+
+        usage = tmp_path / "usage.json"
+        usage.write_text(_json.dumps(
+            {"remaining": 3, "used": 497, "last": 2, "observed_at": "2026-08-07T00:00:00Z"}),
+            encoding="utf-8")
+
+        calls = []
+
+        class Response:
+            headers = {"x-requests-remaining": "3", "x-requests-used": "497",
+                       "x-requests-last": "0"}
+
+            def read(self):
+                return b'[{"key": "soccer_epl", "active": true}]'
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        def opener(request):
+            calls.append(request.full_url)
+            return Response()
+
+        source = OddsApiSource(OddsApiCredentials("k"), usage_path=usage, opener=opener)
+
+        assert source.sports() == ("soccer_epl",)
+        assert len(calls) == 1
+
+    def test_a_run_refused_before_it_started_still_reaches_the_journal(self, tmp_path):
+        """The history froze at the last run that worked.
+
+        Both early refusals returned before the journal write, so a lane refusing every run
+        for a week answered "what has this been doing" with the state of the last Tuesday
+        it succeeded — and the REFUSED status the payload promises could never reach a row.
+        """
+
+        from lib.journal import Journal
+        from lib.reaping import reap
+
+        journal = tmp_path / "journal.sqlite3"
+        config = tmp_path / "reapers.json"
+        config.write_text("{ this will not parse", encoding="utf-8")
+
+        result = reap(config_path=config, directory=tmp_path, journal_path=journal)
+
+        assert result.refusal
+        assert Journal(journal).counts()["reaper_runs"] == 1
+
+    def test_an_unknown_lane_is_journalled_too(self, tmp_path):
+        from lib.journal import Journal
+        from lib.reaping import reap
+
+        journal = tmp_path / "journal.sqlite3"
+        config = tmp_path / "reapers.json"
+        config.write_text("{}", encoding="utf-8")
+
+        reap(lanes=("flipper",), config_path=config, directory=tmp_path,
+             journal_path=journal)
+
+        assert Journal(journal).counts()["reaper_runs"] == 1
+
+    def test_an_unreadable_ledger_does_not_report_that_nothing_has_settled(
+        self, tmp_path, monkeypatch
+    ):
+        """The realised tile said "Nothing has settled" for a P&L that would not open."""
+
+        import json as _json
+
+        import status
+
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data").mkdir()
+        (tmp_path / "data" / "reapers.json").write_text(_json.dumps(
+            {"arb": {"enabled": True, "balance": 500.0, "currency": "EUR"}}), encoding="utf-8")
+        (tmp_path / "data" / "outcomes.json").write_text("{ broken", encoding="utf-8")
+
+        lanes = {l["lane"]: l for l in status.money_state(
+            config_path=tmp_path / "data" / "reapers.json",
+            directory=tmp_path / "data",
+            ledger_path=tmp_path / "data" / "outcomes.json")}
+
+        assert lanes["arb"]["realised"]["status"] == "UNREADABLE"
+        assert lanes["arb"]["realised"]["realised_profit"] is None
+
+    def test_a_non_ascii_api_key_header_is_refused_rather_than_crashing(self, monkeypatch):
+        """`compare_digest` on `str` raises on non-ASCII: a 500 where a 401 belongs."""
+
+        from backend.app import _matches
+
+        monkeypatch.setenv("PROVENA_VIEW_KEY", "a-real-key")
+
+        assert _matches("kéy-with-an-accent", "a-real-key") is False
+        assert _matches("a-real-key", "a-real-key") is True

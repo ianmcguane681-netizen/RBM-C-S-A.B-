@@ -60,7 +60,10 @@ function renderRealised(lanes) {
   const contributing = lanes.filter(l => typeof l.realised?.realised_profit === "number");
   const unreadable = lanes.some(l => l.realised?.status === "UNREADABLE");
   const partial = lanes.some(l => l.realised?.status === "PARTIAL");
-  const currencies = new Set(contributing.map(l => l.realised.currency || l.currency || "EUR"));
+  // A null currency is NOT euro. Coercing it here defeated the mixed-currency guard on
+  // the next line: a lane whose ring-fence config is broken emits a realised figure with
+  // currency null, and calling that EUR is how two units get added under one label.
+  const currencies = new Set(contributing.map(l => l.realised.currency ?? l.currency ?? "UNKNOWN"));
 
   if (unreadable || !contributing.length) {
     $("realised-total").textContent = "—";
@@ -118,7 +121,10 @@ function renderHistory(history) {
   }
   $("reap-history").innerHTML = runs.map(r => {
     const blind = r.status === "COULD_NOT_LOOK";
-    return `<div class="run-row"><span>${safe(laneName(r.lane) || "all lanes")}` +
+    // `laneName` ends in `|| "UNKNOWN LANE"`, so the `|| "all lanes"` after it was dead
+    // and every all-lanes run rendered as an unknown one. A run across all lanes is a
+    // known thing, not a missing label.
+    return `<div class="run-row"><span>${safe(r.lane ? laneName(r.lane) : "all lanes")}` +
            `<small class="${blind ? "down" : ""}">${safe(r.status)}` +
            `${r.reason ? " · " + safe(r.reason) : ""}</small></span>` +
            `<time>${safe(r.at)}</time></div>`;

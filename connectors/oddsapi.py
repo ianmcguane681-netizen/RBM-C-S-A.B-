@@ -315,9 +315,14 @@ class OddsApiSource:
                 f"there so a scan you run deliberately still works."
             )
 
-    def _get(self, path: str, params: dict[str, str]) -> Any:
+    def _get(self, path: str, params: dict[str, str], *, spends: bool = True) -> Any:
         assert self.credentials is not None
-        self._spendable()
+        # `spends=False` for the endpoints the API serves free. The floor exists to keep a
+        # reserve of *credits*, and gating a call that costs none of them protected nothing
+        # while making a good key look broken: at the floor, `verify.py` reported a working
+        # key as COULD_NOT_REACH and told the operator to check their network.
+        if spends:
+            self._spendable()
         query = urllib.parse.urlencode({**params, "apiKey": self.credentials.key})
         request = urllib.request.Request(f"{BASE}{path}?{query}")
         with self._opener(request) as response:
@@ -343,7 +348,8 @@ class OddsApiSource:
         if not self.is_configured:
             return ()
         return tuple(
-            str(row["key"]) for row in self._get("/sports", {}) if row.get("active")
+            str(row["key"]) for row in self._get("/sports", {}, spends=False)
+            if row.get("active")
         )
 
     def quotes(self, sport: str, *, market: str = H2H) -> tuple[Quote, ...]:

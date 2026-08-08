@@ -468,19 +468,38 @@ def reap(
     from lib.operating import modes_for
     from lib.outcomes import OutcomeLedger
 
+    def _journalled(reaping: "Reaping") -> "Reaping":
+        """Record and return. The early refusals used to bypass the journal entirely.
+
+        A run refused for an unreadable config wrote nothing, so the history stayed frozen
+        at the last run that worked — "what has this lane been doing" answered with the
+        state of a Tuesday, while every run since had refused. `Reaping.to_dict()` promises
+        a REFUSED status that could never reach a row.
+        """
+
+        destination = JOURNAL if journal_path is _DEFAULT else journal_path
+        if destination is not None:
+            from lib.journal import Journal
+
+            Journal(destination).record(
+                reaping, lane=lanes[0] if lanes and len(lanes) == 1 else "",
+                dry_run=not place,
+            )
+        return reaping
+
     config, unreadable = load_config(config_path)
     if unreadable:
-        return Reaping(refusal=(
+        return _journalled(Reaping(refusal=(
             f"{config_path} could not be read ({unreadable}). Running anyway would treat "
             f"every lane as unconfigured, which is a confident answer assembled out of a "
-            f"parse error."))
+            f"parse error.")))
 
     selected = tuple(lanes) if lanes is not None else LANES
     unknown = set(selected) - set(LANES)
     if unknown:
-        return Reaping(refusal=(
+        return _journalled(Reaping(refusal=(
             f"unknown reaper lane(s): {', '.join(sorted(unknown))}. Choose from "
-            f"{', '.join(LANES)}."))
+            f"{', '.join(LANES)}.")))
 
     assemblies = tuple(
         assembly for assembly in assemble(
@@ -520,16 +539,9 @@ def reap(
     # turns on. `Journal.record` never raises: a reap that placed an order and then could
     # not write its diary has still placed the order, and losing the run over the note
     # would fail in the expensive direction.
-    # Resolved here rather than in the signature, so JOURNAL is read at call time.
-    destination = JOURNAL if journal_path is _DEFAULT else journal_path
-    if destination is not None:
-        from lib.journal import Journal
-
-        Journal(destination).record(
-            reaping, lane=lanes[0] if lanes and len(lanes) == 1 else "",
-            dry_run=not place,
-        )
-    return reaping
+    # Resolved inside the helper, so JOURNAL is read at call time and every exit from this
+    # function — refusal or completed run — goes through one write rather than two.
+    return _journalled(reaping)
 
 
 def _place(harvests, modes, ledger, brokers) -> tuple[Any, ...]:

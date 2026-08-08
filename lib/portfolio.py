@@ -178,7 +178,10 @@ class Position:
             try:
                 stamp = datetime.fromisoformat(priced_at.replace("Z", "+00:00"))
                 age = (datetime.now(timezone.utc) - stamp).total_seconds()
-            except ValueError:
+            except (ValueError, TypeError):
+                # TypeError is the naive-datetime case: subtracting an offset-naive stamp
+                # from an aware one raises, and a price source that omits the zone would
+                # have taken `/api/v1/overview` down rather than producing an unknown age.
                 age = -1.0
         status = PRICED
         if stale_after_seconds >= 0 and (age < 0 or age > stale_after_seconds):

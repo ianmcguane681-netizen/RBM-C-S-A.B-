@@ -108,7 +108,12 @@ def _matches(provided: str | None, expected: str) -> bool:
     oracle needs, and a constant-time compare costs nothing to use.
     """
 
-    return bool(expected) and provided is not None and compare_digest(provided, expected)
+    # Encoded first. `compare_digest` raises TypeError on `str` the moment either side
+    # leaves ASCII, so a header carrying one non-ASCII character came back 500 instead of
+    # 401 — an error page where a refusal belongs, and a way to tell a scanner that the
+    # value it sent was unusual. `lib/access.py` documents the same fix.
+    return (bool(expected) and provided is not None
+            and compare_digest(provided.encode("utf-8"), expected.encode("utf-8")))
 
 
 def _require_command_key(provided: str | None) -> None:

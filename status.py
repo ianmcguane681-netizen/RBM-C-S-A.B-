@@ -617,6 +617,14 @@ def money_state(
                     "status": "UNREADABLE", "reason": ledger.reason,
                     "open": None, "unsettled_exposure": None, "stale_open": None,
                 }
+                # The realised block was left at its NOT_CONFIGURED default, so the tile
+                # read "Nothing has settled" for a P&L record that would not open — the
+                # founding defect in the one figure that counts money already banked.
+                item["realised"] = {
+                    "status": "UNREADABLE", "reason": ledger.reason,
+                    "realised_profit": None, "settled": None,
+                    "covers_the_whole_book": False, "currency": item["currency"],
+                }
 
         # Only the arb lane buys its evidence by the request, so only it carries a quota.
         # Absent on the others rather than nulled, because a lane with no metered source

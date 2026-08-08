@@ -156,7 +156,15 @@ def main(sport: str, *, as_json: bool, books: Sequence[str] = ()) -> int:
         return 2
 
     if not sport:
-        available = source.sports()
+        # Inside its own guard: this listing is free, but a quota reading recorded at the
+        # floor used to raise here before the endpoint was ever called, and the traceback
+        # exited 1 — which is `arb-scan`'s findings code, so a crash read as a scan.
+        try:
+            available = source.sports()
+        except QuotaFloorReached as stopped:
+            print(str(stopped))
+            print("\nNOTHING was listed. This is not a finding that no sport is in season.")
+            return 2
         print(f"{len(available)} sport(s) in season. Quota: {source.usage.describe()}\n")
         for key in available:
             print(f"  {key}")
