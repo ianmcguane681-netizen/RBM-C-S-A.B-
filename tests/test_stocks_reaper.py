@@ -66,16 +66,37 @@ def closes(count=30, step=1.004, start=100.0):
     return tuple(prices)
 
 
-def quote(bid=99.98, ask=100.02, ask_size=1000.0):
-    return Quote(TICKER, bid, 1000.0, ask, ask_size, "2026-08-02T15:00:00Z")
+def quote(bid=99.98, ask=100.02, ask_size=1000.0, observed_at=None):
+    """A quote that is current when the test runs.
+
+    It used to carry a fixed 2026-08-02 timestamp, which was harmless until the lane
+    started measuring how old a price is — at which point every end-to-end test would have
+    been screening a quote that got older every day, and would have begun failing on a
+    date nobody chose. Freshness is now a property of the fixture rather than an accident
+    of when the suite is run.
+    """
+
+    stamp = observed_at or datetime.now(timezone.utc).isoformat(
+        timespec="microseconds").replace("+00:00", "Z")
+    return Quote(TICKER, bid, 1000.0, ask, ask_size, stamp)
 
 
 def subject(*, filings=None, **kw):
+    """A subject under ordinary conditions: filings read, a fresh quote, venue open.
+
+    `market_open` defaults to True here so that tests about the OTHER stages screen what
+    they mean to. It is not a convenience: leaving it unset means None, which is the
+    "session unknown" third state and correctly refuses, and every one of these tests
+    would then be asserting about a cascade that stopped before reaching its subject.
+    Freshness has its own file — tests/test_quote_freshness.py.
+    """
+
     return Subject(
         TICKER,
         {"revenue": Series(), "net income": Series()} if filings is None else filings,
         quote=kw.pop("quote", quote()),
         closes=kw.pop("closes", closes()),
+        market_open=kw.pop("market_open", True),
         **kw,
     )
 
@@ -333,15 +354,29 @@ class TestTheLaneEndToEnd:
             return Series(revised=self.revised)
 
     class Desk:
-        def __init__(self, priced=True, history=True):
+        def __init__(self, priced=True, history=True, market_open=True):
             self.priced = priced
             self.history = history
+            self.market_open = market_open
 
         def quote(self, _symbol):
             return quote() if self.priced else None
 
         def daily_closes(self, _symbol, days=30):
             return closes() if self.history else None
+
+        def clock(self):
+            """An open venue, so these tests screen the thing they mean to.
+
+            `market_open=None` models a broker whose clock could not be reached, which is
+            the third state and refuses — see tests/test_quote_freshness.py.
+            """
+
+            from connectors.alpaca import MarketClock
+
+            if self.market_open is None:
+                return None
+            return MarketClock(is_open=self.market_open, next_open="2026-08-10T13:30:00Z")
 
     def _breakers(self, tmp_path, balance=200_000.0):
         from lib.breakers import Breakers, Ringfence

@@ -74,6 +74,12 @@ AUTOMATION_PREFIXES = ("agent:", "ai:", "model:", "automation:", "bot:", "system
 #: price is materially worse than the screen price.
 MAX_SPREAD_PCT = 1.0
 
+#: How old a quote may be, during market hours, and still be sized against. Fifteen
+#: minutes is generous for a liquid name and deliberately not "a session" — outside market
+#: hours the age is not what disqualifies the price, the closed venue is, and those are
+#: reported as different facts.
+MAX_QUOTE_AGE_SECONDS = 900.0
+
 #: A one-day move of this size should cost no more than the tolerated fraction of balance.
 TOLERATED_MOVE_PCT = 2.0
 
@@ -192,6 +198,11 @@ class Subject:
     quote: Any = None
     closes: tuple[float, ...] | None = None
     reason: str = ""
+    #: Whether the venue was open when this was read, asked of the venue. `None` means the
+    #: clock could not be reached, which is NOT "closed" and NOT "open" — see `_freshness`.
+    market_open: bool | None = None
+    #: When the venue next opens, so a refusal on a Saturday can say when to try again.
+    next_open: str = ""
 
     @property
     def subject(self) -> str:
@@ -209,7 +220,8 @@ class Reading:
 
 
 def screen_subject(
-    subject: Subject, *, criterion: Criterion, max_spread_pct: float = MAX_SPREAD_PCT
+    subject: Subject, *, criterion: Criterion, max_spread_pct: float = MAX_SPREAD_PCT,
+    max_quote_age_seconds: float = MAX_QUOTE_AGE_SECONDS,
 ) -> Candidate:
     """Cheapest and most fatal first: unreadable filings before an unreadable price."""
 
@@ -248,7 +260,24 @@ def screen_subject(
     stages.append(Stage(criterion.name, verdict, detail=detail, disqualifying=True))
 
     stages.append(_comparability(subject))
-    stages.append(_price(subject, max_spread_pct))
+    # Before the spread, because a stale quote's spread is not a fact about the market. On
+    # the Saturday this was written, IEX's last quote of Friday was 10% wide on three
+    # liquid names — market makers pull their books at the bell — and the spread gate
+    # refused all three. It was right, and it was right by accident: had Friday's closing
+    # quote been tight, a live order would have been sized against a price twenty hours
+    # dead, and every line of the output would have read normally.
+    currency_of_price = _freshness(subject, max_quote_age_seconds)
+    if currency_of_price is not None:
+        stages.append(currency_of_price)
+    # The spread is only evaluated on a price that is current, because a spread taken from
+    # a book nobody is maintaining is not a measurement of anything. On the Saturday this
+    # was written, Friday's closing quotes were ~10% wide and the spread stage REFUSED all
+    # three — and REFUSED outranks INDETERMINATE, so the output led with "the spread is
+    # 9.72%" and buried the fact that the market was shut. A reader goes looking for
+    # liquidity that was never missing. The cause is the answer, so the consequence is not
+    # computed.
+    if currency_of_price is None or currency_of_price.verdict == PASSED:
+        stages.append(_price(subject, max_spread_pct))
     stages.append(_volatility(subject))
     return Candidate(subject.ticker, tuple(stages))
 
@@ -275,6 +304,101 @@ def _comparability(subject: Subject) -> Stage:
     return Stage(
         "figures are comparable", PASSED, disqualifying=True,
         detail="one unit per series and no history split across tags.",
+    )
+
+
+def quote_age_seconds(quote: Any, *, now: datetime | None = None) -> float | None:
+    """How old the quote is, or None when that cannot be established.
+
+    None on every failure path — no quote, no timestamp, an unparseable one — because the
+    caller turns None into "cannot tell" and a zero into "brand new", and sizing a live
+    order against a price whose age is unknown is the thing this exists to prevent.
+    """
+
+    stamp = str(getattr(quote, "observed_at", "") or "").strip()
+    if not stamp:
+        return None
+    try:
+        observed = datetime.fromisoformat(stamp)
+    except ValueError:
+        return None
+    if observed.tzinfo is None:
+        # A bare timestamp is assumed UTC rather than local. Assuming local would make the
+        # measured age depend on the reader's clock, so the same quote would be fresh in
+        # Dublin and stale in Sydney.
+        observed = observed.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    return (current - observed).total_seconds()
+
+
+def _freshness(subject: Subject, max_age_seconds: float) -> Stage | None:
+    """Is this price current — and if not, say WHICH not.
+
+    Three different facts, deliberately not merged, because a reader responds to each
+    differently:
+
+        the market is shut      the last price genuinely IS the last price. Nothing is
+                                broken; come back when it opens.
+        the quote is STALE      the market is open and this price is old. Something is
+                                wrong with the feed, and that is worth looking at now.
+        the age is unknown      no timestamp, or the venue clock could not be reached.
+                                Not fresh, not stale — unestablished.
+
+    All three disqualify, because you cannot buy at a price you are not being offered. The
+    naming is what differs, and it is the whole point: "STALE" printed on a Sunday would
+    send somebody hunting a feed fault that does not exist.
+    """
+
+    if subject.quote is None:
+        # No stage at all, rather than one reporting "not applicable". With no quote there
+        # is no question of how old it is, and `decided_by` takes the first stage that did
+        # not pass — so any stage emitted here, blocking or not, would take the refusal off
+        # the price stage and hand the reader "there is no quote to age" instead of "no
+        # quote with size on both sides was returned".
+        return None
+
+    age = quote_age_seconds(subject.quote)
+
+    if subject.market_open is False:
+        when = f" The venue next opens at {subject.next_open}." if subject.next_open else ""
+        return Stage(
+            "the quote is current", INDETERMINATE, disqualifying=True,
+            detail=(f"the market is shut, so this price is the last one of the previous "
+                    f"session rather than a stale reading"
+                    + (f" ({age / 3600:.1f} hours old)" if age is not None else "")
+                    + f". Market makers withdraw at the close, so its spread describes an "
+                      f"empty book and not the market.{when}"),
+        )
+
+    if subject.market_open is None:
+        return Stage(
+            "the quote is current", INDETERMINATE, disqualifying=True,
+            detail=("the venue clock could not be reached, so whether the market is open "
+                    "is unknown. An unknown session is not an open one: a price cannot be "
+                    "called current when nothing establishes that trading is happening."),
+        )
+
+    if age is None:
+        return Stage(
+            "the quote is current", INDETERMINATE, disqualifying=True,
+            detail=("the quote carries no readable timestamp, so its age cannot be "
+                    "established. An unmeasured age is not a young one."),
+        )
+
+    if age > max_age_seconds:
+        return Stage(
+            "the quote is current", INDETERMINATE, disqualifying=True,
+            detail=(f"STALE: the market is open and this quote is {age / 60:.1f} minutes "
+                    f"old, over a {max_age_seconds / 60:.0f} minute ceiling. The market is "
+                    f"trading and this price is not keeping up with it."),
+        )
+
+    return Stage(
+        "the quote is current", PASSED, disqualifying=True,
+        detail=(f"the market is open and the quote is {age:.0f}s old, inside the "
+                f"{max_age_seconds / 60:.0f} minute ceiling."),
     )
 
 
@@ -449,6 +573,7 @@ def build_stocks_reaper(
     pct_of_balance: float = 5.0,
     tolerated_move_pct: float = TOLERATED_MOVE_PCT,
     max_spread_pct: float = MAX_SPREAD_PCT,
+    max_quote_age_seconds: float = MAX_QUOTE_AGE_SECONDS,
     currency: str = "USD",
     history_days: int = 30,
 ) -> Reaper:
@@ -485,6 +610,18 @@ def build_stocks_reaper(
 
             desk = AlpacaBroker.from_directory()
 
+        # Once per run, not per ticker: the session is a property of the venue and asking
+        # five times invites five answers. `None` when it could not be asked, which the
+        # freshness stage reports as unestablished rather than guessing either way.
+        # getattr, because a price source that cannot answer "is the venue open" is a real
+        # case — a second connector, a stub, a feed that only quotes — and it must resolve
+        # to "unknown session" rather than an AttributeError that reads as COULD_NOT_LOOK
+        # for the whole lane.
+        ask_clock = getattr(desk, "clock", None) if desk is not None else None
+        clock = ask_clock() if callable(ask_clock) else None
+        market_open = clock.is_open if clock is not None else None
+        next_open = clock.next_open if clock is not None else ""
+
         asked, answered, subjects = len(watchlist), 0, []
         for ticker in watchlist:
             try:
@@ -500,6 +637,7 @@ def build_stocks_reaper(
                 quote=desk.quote(ticker) if desk is not None else None,
                 closes=desk.daily_closes(ticker, days=history_days) if desk is not None
                 else None,
+                market_open=market_open, next_open=next_open,
             ))
 
         if not answered:
@@ -511,7 +649,8 @@ def build_stocks_reaper(
     return Reaper(
         name="stocks", lane="stocks",
         look=look,
-        screen=lambda s: screen_subject(s, criterion=rule, max_spread_pct=max_spread_pct),
+        screen=lambda s: screen_subject(s, criterion=rule, max_spread_pct=max_spread_pct,
+                                        max_quote_age_seconds=max_quote_age_seconds),
         gates=lambda s: gates_for(s, portfolio=portfolio),
         thesis_for=lambda s: theses.current(s.ticker),
         size=lambda s, permission: size_subject(

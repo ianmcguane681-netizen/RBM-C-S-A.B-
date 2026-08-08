@@ -160,6 +160,22 @@ class Quote:
 
 
 @dataclass(frozen=True, slots=True)
+class MarketClock:
+    """Whether the venue is open, and when it next changes.
+
+    Exists so that "this price is 20 hours old" and "the market is shut" are answerable
+    as different questions. On a Saturday the last quote of Friday genuinely IS the last
+    price — it is not stale data, and reporting it as stale would send a reader looking
+    for a broken feed. Neither is it tradeable.
+    """
+
+    is_open: bool
+    at: str = ""
+    next_open: str = ""
+    next_close: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class Instruction:
     """A sized, authorised order. Carries the permission that allowed it."""
 
@@ -281,6 +297,32 @@ class AlpacaBroker:
         if not self.is_configured:
             return None
         return self._call(f"{self.credentials.base}/v2/account")
+
+    def clock(self) -> "MarketClock | None":
+        """Whether the venue is open, asked of the venue. None when it could not be asked.
+
+        Asked rather than computed. A calendar in this repository would have to know US
+        market holidays, half days and the occasional unscheduled close, and would be
+        wrong silently on exactly the days it mattered. The broker already knows.
+
+        `None` is the third state and callers must not read it as closed OR open: an
+        unreachable clock means the question was not answered.
+        """
+
+        if not self.is_configured:
+            return None
+        try:
+            payload = self._call(f"{self.credentials.base}/v2/clock") or {}
+        except (urllib.error.URLError, TransientRetrievalError, ValueError, OSError):
+            return None
+        if "is_open" not in payload:
+            return None
+        return MarketClock(
+            is_open=bool(payload["is_open"]),
+            at=str(payload.get("timestamp", "")),
+            next_open=str(payload.get("next_open", "")),
+            next_close=str(payload.get("next_close", "")),
+        )
 
     def quote(self, symbol: str) -> Quote | None:
         """Latest bid and ask WITH sizes. None when unconfigured or unquoted."""
