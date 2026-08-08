@@ -19,6 +19,7 @@ does not restate the doctrine, because two copies of a rule become two different
 | `docs/next-work.md` | **The live checkpoint.** Current state, open gaps in priority order, what is deliberately absent, and what is blocked on a human. Read before planning anything; update it when you finish something. |
 | `README.md` | What the system is and how to run it. The visitor's view. |
 | `docs/target-functions.md` | The canonical function list and the order that holds. More than three are planned. |
+| `docs/end-state.md` | The autonomy target per function — how far each is meant to run on its own once it exists. Read before changing a lane's ambition. |
 | `docs/ui-integration.md` | The JSON contract any front end reads, and what a UI must never invent. |
 | `docs/standing-authority.md` | What has been delegated, by whom, and its limits. |
 | `docs/reference-system.md` | The worked example the arguments refer back to. |
