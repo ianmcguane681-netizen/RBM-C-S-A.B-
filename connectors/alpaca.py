@@ -61,6 +61,14 @@ PAPER_BASE = "https://paper-api.alpaca.markets"
 LIVE_BASE = "https://api.alpaca.markets"
 DATA_BASE = "https://data.alpaca.markets"
 
+#: The currency every price out of this venue is denominated in. Alpaca lists US equities
+#: and quotes them in dollars; nothing here converts.
+#:
+#: Stated once, here, because it is a fact about the venue rather than a preference of a
+#: caller. It used to be a default argument in two other modules, and on 2026-08-08 those
+#: two defaults disagreed — see `lib.reaping.assemble_stocks`.
+QUOTES_IN = "USD"
+
 SUBMITTED = "SUBMITTED"
 FILLED = "FILLED"
 PART_FILLED = "PART_FILLED"
