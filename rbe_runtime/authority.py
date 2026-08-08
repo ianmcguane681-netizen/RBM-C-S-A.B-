@@ -71,11 +71,18 @@ class AuthorityBundle:
             validate_rbe_package()
             validate_rbm_package(spec)
         except Exception as exc:
+            # The reason travels with the refusal. This used to carry only
+            # `type(exc).__name__`, which turned "Controlled text must use canonical LF
+            # endings: ['STOCKS-REVIEW-METHODOLOGY.md']" — a message naming the file and
+            # the fix — into "PackageValidationError", and a Windows checkout into an
+            # afternoon. A refusal that does not say what a person can go and do about it
+            # trains the reader to skim it.
             raise RBEError(
                 "RBE_AUTHORITY_PACKAGE_INVALID",
-                "The controlled RBE or RBM package failed validation",
+                f"The controlled RBE or RBM package failed validation: {exc}",
                 "RBE-ES-DEC-002",
-                {"error_type": type(exc).__name__},
+                {"error_type": type(exc).__name__, "reason": str(exc)[:500],
+                 "profile_id": spec.profile_id},
             ) from exc
 
         rbe_root = root / "docs" / "rbe-001" / "v1.1.0"
