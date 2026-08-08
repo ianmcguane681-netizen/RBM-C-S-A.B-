@@ -176,3 +176,73 @@ prove or disprove, and tells us whether the expensive parts are worth building.
 3. **The three constraints numerically**: predetermined loss, maximum exposure, exit rule.
 4. **What counts as "abnormal acceleration"** — the thresholds are the strategy, and they
    are his to set, not the system's to infer.
+
+---
+
+## Measured 2026-08-09, and the reason this lane is parked
+
+Both theses above were written before the assets were checked against the chain. They were
+then checked, and what the checks found is why the crypto side is **parked** — not
+abandoned, and not because either thesis is wrong.
+
+### The lane can only see ERC-20 contracts on Ethereum
+
+Every gate is built on `eth_call` against a **token contract address**: `totalSupply`,
+`symbol`, the proxy storage slots, the round-trip probe. That is the whole evidence model,
+and it has a consequence nobody had stated:
+
+| candidate | gateable | why |
+|---|---|---|
+| **Bitcoin** | **no** | different chain. No Ethereum contract, no `eth_call`, nothing to read |
+| **Ethereum (ETH)** | **no** | the *native* asset has no contract address. WETH is a wrapper, not ETH |
+| **Hyperliquid** | **no** | its own L1, not Ethereum mainnet |
+| ERC-20s on Ethereum | yes | the only thing this lane evaluates |
+
+**The assets with the strongest Thesis A case are the ones the lane is least able to
+gate**, and that is not an implementation gap to close. The gates exist to catch a contract
+being swapped under you, a book with no exit, a round trip that costs more than it returns.
+BTC and ETH structurally do not have those risks — there is no admin key and no contract.
+Routing them through this lane would be ceremony, not safety. Hold them directly, as the
+stables are held, and let portfolio valuation cover them once `docs/pricing-design.md` is
+built.
+
+### The proxy gate, run against real candidates
+
+Measured on live chain state at block ~25,713,003 via a public endpoint:
+
+| token | proxy gate | detail |
+|---|---|---|
+| **USDC** | **UPGRADEABLE** | `zeppelinos_admin`, `zeppelinos_implementation` |
+| **AAVE** | **UPGRADEABLE** | `eip1967_implementation` |
+| USDT, DAI, LINK, UNI | INDETERMINATE | **every storage probe unreachable** |
+
+**The four INDETERMINATE results are not findings about those tokens.** The public endpoint
+used (`1rpc.io`, which this repository's own measurements document as unreliable) failed
+every probe. `proxy_finding` correctly refuses to conclude NO_PATTERN_MATCHED from probes
+that never ran — "a measurement over an incomplete numerator" — so the third state is
+working exactly as designed. Re-run on the keyed QuickNode endpoint for real answers.
+
+AAVE being an upgradeable proxy is a real fact about a real candidate, found before any
+money moved. That is the lane earning its keep.
+
+### Stablecoins do not fit Thesis A
+
+Thesis A deploys capital when "long-term expected value materially exceeds current
+valuation". A stablecoin is engineered so that never happens. There is no mechanism by which
+adoption benefits the asset — adoption benefits the *issuer*, who keeps the interest on the
+reserves. USDT, USDC and DAI are **cash**: the settlement asset held between positions.
+Legitimate, and not a holding under this thesis. Do not write one for them.
+
+### Why parked rather than dropped
+
+The lane already does the thing `docs/target-functions.md` said it was for: **the veto and
+the monitor**. It told Ian something true and specific about USDC, and about AAVE. That
+keeps working at zero further cost.
+
+What is deferred is *execution*, which is where all the cost and all the risk are. Nothing
+here needs undoing to restart it, and both theses stay on file as recorded judgement.
+
+**If crypto exposure is wanted meanwhile**, the honest route is the lane that already runs:
+crypto-infrastructure equities — exchanges, custody, tokenisation rails, stablecoin issuers
+— are real businesses with filings, gateable by EDGAR and sizeable today, where a token
+offers contract hygiene and an asserted mechanism.
