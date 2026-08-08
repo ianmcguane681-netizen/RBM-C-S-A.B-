@@ -3,6 +3,50 @@
 Designed 2026-08-09, not yet built. Function 4 of the seven in `docs/target-functions.md`;
 the autonomy target is in `docs/end-state.md`. The next session can pick this up from cold.
 
+## Scope, decided 2026-08-09
+
+**In: graded sports cards and graded video games.** PSA, BGS and SGC for cards; WATA and
+VGA for games. Nothing else in v1.
+
+The axis is not category enthusiasm, it is **matchability** — how exactly an item can be
+tied to the sold comparables that price it. Graded items sit at the top of that scale for
+one reason: the matching key is exact and machine-readable, and two items sharing it are
+genuinely fungible.
+
+    card:  title + set + year + parallel + grade + grader (+ cert number)
+    game:  title + platform + region + seal/box type + grade + grader (+ cert number)
+
+Everything below that line was considered and left out, with the reason recorded so it is
+not relitigated from enthusiasm:
+
+| considered | verdict | why |
+|---|---|---|
+| **sports memorabilia** | **out** | a signed shirt is a unique item. No comparables by definition — value is authentication plus provenance, which is a different discipline, and it is where fakes concentrate |
+| **retro games, loose** | **out** | a loose cart is 10-30 EUR and cannot clear fees at any realistic markup. See the floor below |
+| **retro games, CIB** | **later** | genuinely matchable with effort. A real candidate once v1 proves the sold-data pipeline |
+| **consoles** | **later** | model, region, what is in the box, modded or not. Matchable but messy |
+| **"mispriced anything"** | **a different function** | this is the **opportunity engine** in `docs/end-state.md`, which surfaces candidates with their evidence and never sizes them. Folding it in here would replace exact matching with a fuzzy matcher, and a fuzzy matcher produces confident wrong margins — the failure this whole document exists to prevent |
+
+**Expect games to refuse more often than cards.** WATA took reputational damage in 2021 and
+the sealed retro market corrected hard, so comparable density is far lower. Frequent
+`INDETERMINATE` on games is the comparable floor working, not the lane failing.
+
+## The decided parameters
+
+Set by Ian on 2026-08-09 after the fee arithmetic below was run against his first proposal.
+
+| | value |
+|---|---|
+| minimum buy price | **75 EUR** |
+| URGENT tier | **>= 50% net after fees** |
+| ROUTINE tier | **>= 30% net after fees** |
+| physical capacity | **20 items** |
+| unsold horizon | **50 days**, then off the list |
+| comparable floor | **>= 5 sales within 90 days, matching grade AND grader** |
+
+The 90-day comparable window is deliberately tight. Cards bubbled through 2020-22 and
+corrected; a sale from 2021 is a different market, not an old data point.
+
 ## The one thing to check before writing any code
 
 **Can your eBay account read SOLD listings?**
@@ -43,10 +87,15 @@ fetched, how many sales, over what window, and the spread. `n=3 over 90 days` an
 `n=47 over 14 days` are different facts and must not both render as "sells for £120".
 
 **A minimum comparable count is required before an item is sizeable at all.** Below it the
-verdict is `INDETERMINATE` — not a low estimate, not a wide range, *unestablished*. Ian sets
-the number; a starting proposal is **5 sales within 90 days**.
+verdict is `INDETERMINATE` — not a low estimate, not a wide range, *unestablished*. Set at
+**5 sales within 90 days, matching grade AND grader**.
 
-## Decision 3 — fees before margin, always
+The grade is part of the key, not a modifier on it. The same card raw and at PSA 10 can
+differ by fifty times, so a comparable that does not match on grade and grader is not a
+comparable — it is a different item with the same name. A listing whose grade cannot be
+read reliably is `INDETERMINATE`, never an estimate.
+
+## Decision 3 — fees before margin, always, and there is a floor below which nothing works
 
 Platform commission, payment processing, postage by weight band, and an assumed returns
 rate. Every one of them before a margin is stated, never after.
@@ -55,6 +104,45 @@ These are numbers only Ian has, and they belong in config rather than in code, b
 change and because getting them from the wrong account is how a margin becomes fiction.
 `connectors/chain_costs.py` is the worked precedent — the round trip is costed before the
 opportunity is called one.
+
+### What the arithmetic did to the first proposal
+
+Ian's opening figures were a 200 EUR buy at 40-65% and a 40 EUR buy at 15-25%. Run against
+indicative eBay card-category fees (13.25% of the total plus a 0.30 fixed fee) and tracked
+postage:
+
+| buy | markup | net profit | |
+|---|---|---|---|
+| 40 | 15% | **-5.90** | loss |
+| 40 | 25% | **-2.42** | loss |
+| 40 | 40% | +2.78 | barely |
+| 200 | 25% | +7.57 | thin |
+| 200 | 40% | +33.60 | works |
+| 200 | 65% | +76.98 | works |
+
+**A 40 EUR item needs a 32% markup merely to break even; a 200 EUR item needs 21%.** The
+small tier was inverted — it asked the thinnest margin from the item least able to carry
+one — and the reason is that postage and the fixed fee do not scale down. On a 40 EUR item
+they are about 15% of the sale price before the platform takes 13%.
+
+**So there is a minimum viable item price, exactly as the stocks lane has a minimum viable
+ring-fence.** To net 25 EUR, which is roughly what justifies sourcing, listing, packing and
+posting something:
+
+| markup | minimum buy |
+|---|---|
+| 30% | ~245 EUR |
+| 40% | ~145 EUR |
+| 50% | ~105 EUR |
+| 65% | ~75 EUR |
+
+Below about 75 EUR no realistic markup makes an item worth touching, which is where the
+floor comes from. It also settles the loose-retro-games question on arithmetic rather than
+taste.
+
+**Scale, so nobody is surprised by it:** 20 items at 200 EUR and 40% is about 670 EUR a
+turn on 4,000 EUR deployed. Real, and worth knowing before the lane is built rather than
+after.
 
 ## Decision 4 — two urgency tiers, and the quiet one must stay quiet
 
@@ -70,6 +158,10 @@ the *opportunity*, computed from margin against the comparable distribution — 
 notification setting, so that the same instruction always carries the same urgency wherever
 it is read.
 
+Thresholds decided: **URGENT at 50% or better net of fees, ROUTINE at 30%**, both above the
+75 EUR floor. Stated NET rather than as a markup, because a markup that has not had fees
+taken out of it is the number that made the original 40 EUR tier look viable.
+
 **The failure to design against is tier inflation.** If ROUTINE items start arriving
 frequently, they are read as noise, and the day an URGENT arrives it is skimmed with them.
 So the thresholds are set to keep URGENT rare by construction, and the daily digest —
@@ -82,8 +174,9 @@ indefinitely, so `unsettled_exposure` grows and nothing resolves it.
 
 Two things follow, and neither is optional:
 
-- **A write-down rule.** After how many days unsold is an item marked down, and at what
-  point does it become a realised loss rather than an open position? Ian's number.
+- **A write-down rule.** Set at **50 days unsold, then off the list.** After that it stops
+  counting as an open position at cost, because an item nobody bid on for fifty days is not
+  worth what you paid for it and carrying it at cost overstates the book.
 - **`docs/levelling-design.md` interacts here.** Promotion reads the *pessimistic* book,
   marking every OPEN position as a total loss. A flipper lane with slow stock would never
   clear that bar and would sit permanently at level 1. That is the safe failure — but
@@ -92,9 +185,10 @@ Two things follow, and neither is optional:
 ## Decision 6 — physical capacity is the binding constraint, and no code models it
 
 `max_concurrent_positions` is a risk control for stocks. For the flipper it is **how many
-items fit in your house and how many you can pack and post in a week**. That number is
-Ian's, it is probably tighter than the ring-fence, and a lane that ignores it will suggest a
-fifteenth item while fourteen sit unlisted in a hallway.
+items fit in your house and how many you can pack and post in a week**. Set at **20**. It is
+probably tighter than the ring-fence — 20 items at the 75 EUR floor is 1,500 EUR, and at
+200 EUR each it is 4,000 — and a lane that ignores it will suggest a twenty-first item while
+twenty sit unlisted in a hallway.
 
 Treat it as a hard limit alongside the ring-fence, with the same refusal shape: at capacity,
 the lane reports `AT_CAPACITY` rather than finding nothing.
@@ -204,16 +298,23 @@ Properties, not coverage:
 - Not a listing generator. Selling the item is a separate piece of work — closer to the
   Etsy/Shopify function than to this one.
 
-## Open inputs — Ian's, not the code's
+## Open inputs — what is still Ian's
 
-1. **Does your eBay account reach sold data?** Everything else is moot until this is known.
-2. **Fee structure**: final value fee %, payment processing, postage bands, returns rate.
-3. **Comparable floor**: proposal 5 sales in 90 days.
-4. **The two tier thresholds**, and the ratio between them.
-5. **Physical capacity** — items you can hold and post per week.
-6. **Write-down horizon** for unsold stock.
-7. **The per-item authorisation figure** from Decision 7.
-8. **Categories** you can actually verify. The lane disqualifies; it does not select.
+Most of this document's questions were answered on 2026-08-09. Three remain, and the first
+one decides whether any of the rest matters.
+
+1. **Does the eBay account reach SOLD data?** Unanswered, and everything is moot until it
+   is. See the top of this document.
+2. **The real fee rate.** The arithmetic above uses 13.25% plus a 0.30 fixed fee, which is
+   indicative. A Store subscription changes it materially, and every floor and threshold in
+   this document moves with it. Confirm from the account, not from a help page.
+3. **Whether raw-buy-then-grade is in scope.** It is a different strategy: grading costs
+   15-30 EUR, takes weeks to months, and its outcome is uncertain — which breaks both the
+   fee model and the 50-day horizon. **Assumed OUT** unless Ian says otherwise, because a
+   lane that buys raw and hopes for a grade is making a forecast.
+
+Answered and recorded above: scope, the 75 EUR floor, both tier thresholds, capacity of 20,
+the 50-day horizon, and the comparable floor.
 
 ## Rough size
 
