@@ -22,7 +22,8 @@ does not restate the doctrine, because two copies of a rule become two different
 | `docs/ui-integration.md` | The JSON contract any front end reads, and what a UI must never invent. |
 | `docs/standing-authority.md` | What has been delegated, by whom, and its limits. |
 | `docs/reference-system.md` | The worked example the arguments refer back to. |
-| `docs/pricing-design.md` | The next job, designed and not yet built. |
+| `docs/pricing-design.md` | Portfolio valuation, designed and not yet built. |
+| `docs/levelling-design.md` | Capital earned by performance, designed and not yet built. Answers the sizing-ramp question that stood open for weeks. |
 | `deploy/README.md` | Getting it onto a box that stays on. |
 | `docs/future-lanes.md`, `docs/seven-sectors-plan.md` | Superseded by `target-functions.md`; kept for the reasoning. |
 

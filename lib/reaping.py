@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
 
+from connectors import alpaca
 from lib.ui_contract import SCHEMA_VERSION, serialise
 
 CONFIGURED = "CONFIGURED"
@@ -44,6 +45,18 @@ JOURNAL = Path("data/journal.sqlite3")
 _DEFAULT = object()
 
 LANES = ("arb", "stocks", "crypto")
+
+#: What a lane's ring-fence is denominated in when the config does not say, per lane,
+#: because the answer is a fact about where the money goes rather than a house preference:
+#: arb stakes at UK and Irish books in euro, stocks buys at a venue that quotes dollars.
+#:
+#: **One table, read by everything.** Until 2026-08-08 this default was written twice —
+#: `breakers_for` said EUR and `assemble_stocks` said USD, for the same `currency` key on
+#: the same lane — so an unset key made one number euros to every breaker limit and
+#: dollars to the share arithmetic. `status.py` builds its breakers through the same
+#: function, so a default passed in by each caller would have left the panel and the lane
+#: free to disagree all over again.
+LANE_CURRENCY = {"arb": "EUR", "stocks": alpaca.QUOTES_IN, "crypto": "USD"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,12 +224,21 @@ def load_config(path: Path = CONFIG) -> tuple[dict, str]:
 
 
 def breakers_for(lane: str, settings: dict, *, directory: Path, kill_switch: Path):
+    """The breakers a lane runs under, from that lane's slice of the config.
+
+    The currency default comes from `LANE_CURRENCY` rather than this function, so the
+    panel that describes a lane and the code that runs it cannot end up denominating the
+    same balance differently. An unlisted lane falls back to EUR, which is a guess — but a
+    lane that is not in that table is also not in `PLACERS`, so it cannot spend the money
+    it would be guessing about.
+    """
+
     from lib.breakers import Breakers, Ringfence
     from lib.outcomes import LEDGER, OutcomeLedger
 
     ring = Ringfence(
         lane, float(settings["balance"]),
-        currency=str(settings.get("currency", "EUR")),
+        currency=str(settings.get("currency", LANE_CURRENCY.get(lane, "EUR"))),
         per_position_pct=float(settings.get("per_position_pct", 5.0)),
         daily_loss_pct=float(settings.get("daily_loss_pct", 3.0)),
         max_deployed_pct=float(settings.get("max_deployed_pct", 40.0)),
@@ -288,6 +310,7 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
 
 def assemble_stocks(settings: dict, *, directory: Path, kill_switch: Path,
                     theses_path: Path) -> Assembly:
+    from connectors import alpaca
     from lib.seen import SeenRegister
     from lib.stocks_reaper import build_stocks_reaper
     from lib.thesis import ThesisRegister
@@ -308,11 +331,26 @@ def assemble_stocks(settings: dict, *, directory: Path, kill_switch: Path,
         return Assembly("stocks", UNREADABLE, reason=(
             f"the breaker state would not parse ({breakers.reason})."))
 
+    # Read off the ring-fence rather than the config a second time. One number funds this
+    # lane and that same number sizes its orders, so the two must be in the same units;
+    # asking the settings dict twice is how they came to disagree in the first place.
+    currency = breakers.ringfence.currency
+    if currency != alpaca.QUOTES_IN:
+        # Not a conversion, because there is no rate here and an FX rate is itself a price
+        # that goes stale — see docs/pricing-design.md. Sizing would be wrong by the rate
+        # in whichever direction the rate happened to sit, so the lane stops instead.
+        return Assembly("stocks", REFUSED, reason=(
+            f"the ring-fence is denominated in {currency} and Alpaca quotes in "
+            f"{alpaca.QUOTES_IN}, so sizing would divide {currency} by a "
+            f"{alpaca.QUOTES_IN} ask and buy the wrong number of shares. Nothing here "
+            f"converts between them. Set \"currency\": \"{alpaca.QUOTES_IN}\" on the "
+            f"stocks lane in the config and fund its ring-fence in {alpaca.QUOTES_IN}."))
+
     return Assembly("stocks", CONFIGURED, build_stocks_reaper(
         register=SeenRegister.load(directory / SEEN.name),
         watchlist=tuple(settings.get("watchlist", ())), theses=theses, breakers=breakers,
         free_balance=float(settings.get("free_balance", settings["balance"])),
-        currency=str(settings.get("currency", "USD")),
+        currency=currency,
     ))
 
 

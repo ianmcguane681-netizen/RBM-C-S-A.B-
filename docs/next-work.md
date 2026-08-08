@@ -644,6 +644,37 @@ Noted, not changed:
 - The bind default stays `0.0.0.0` for the preview case, which is defensible now the
   money data behind it needs a key.
 
+## One balance was euros and dollars at once, 2026-08-08
+
+Found while computing the minimum viable ring-fence for the levelling design, which needs
+`balance` to mean one thing before it can mean five.
+
+`settings["currency"]` was read twice for the stocks lane, a hundred lines apart in
+`lib/reaping.py`, with **different defaults** — `breakers_for` said EUR, `assemble_stocks`
+said USD. `free_balance` defaults to `settings["balance"]`, the same number that becomes the
+ring-fence. So with the key unset, one figure was euros to every breaker limit and dollars
+to `shares = int(size.amount // price)`. Setting it to EUR — the natural thing for a euro
+book — made it worse: both halves agreed on a label while the arithmetic still divided
+euros by a dollar ask, and the refusal message printed "EUR" beside a dollar price.
+
+It undersized rather than oversized at prevailing rates, so it was losing nothing and would
+have gone on losing nothing until the rate moved. Nothing in the output disagreed with
+anything else, because both halves were confidently wrong in their own units. The suite was
+green because every test set `currency` explicitly, so the divergent defaults were never
+once exercised.
+
+`LANE_CURRENCY` is now one table beside `LANES`, and the sizing currency is read **off the
+ring-fence** rather than out of the config a second time. That ordering is load-bearing:
+`status.py` builds its breakers through the same `breakers_for`, so a default passed in by
+each caller — the first shape the fix took — would have left the panel describing a euro
+ring-fence for a lane sizing in dollars. The same defect, one move along.
+
+A ring-fence in a currency the venue does not quote now REFUSES the lane, naming the key and
+the value to set. It does not convert: there is no FX rate here, a rate is itself a price
+that goes stale, and `docs/pricing-design.md` already declines to smuggle one in.
+
+`connectors.alpaca.QUOTES_IN` states the venue's currency once, where it is true.
+
 ---
 
 # HANDOFF — read this first if you are picking up cold
@@ -721,9 +752,12 @@ Not started. Recorded so the reasoning is not re-derived.
 
 ## Open questions — decisions, not tasks
 
-- **No sizing ramp.** A lane with zero settled outcomes sizes identically to one with two
-  hundred. Standard practice scales stake with evidence. Ian has been asked for the shape
-  and has not specified one; do not invent it.
+- ~~**No sizing ramp.**~~ **Specified 2026-08-08 — see `docs/levelling-design.md`.** Each
+  lane starts at level 1 with a small ring-fence; settled outcomes earn a level, and a
+  level earned surfaces a recommendation that Ian accepts or declines. The system computes
+  eligibility and never moves the money. Three inputs remain his: level 1 for stocks (the
+  mechanical floor is $1,336, the recommendation $2,000), the top of the ladder, and the
+  bar in settled outcomes and elapsed days.
 - **The Obsidian vault.** One-directional, system → markdown files with YAML frontmatter so
   the Dataview plugin renders a live table. Roughly two hours. Writing BACK from Obsidian
   stays out of scope: the ledger needs validation and atomic writes, and a hand-edited
