@@ -176,7 +176,43 @@ def test_standalone_asset_routes_support_the_same_dashboard_document():
 
     assert css_status == js_status == 200
     assert "command-map" in css
-    assert "offlineOverview" in script
+    # The dashboard no longer ships a fabricated offline state. It used to invent
+    # NOT_CONNECTED lane statuses and UNKNOWN breaker states to have something to draw when
+    # it could not read the API — in the same words the measured ones use — so a page that
+    # had asked nothing was indistinguishable from one reporting three dead lanes and an
+    # unarmed breaker. Ian saw exactly that and said the key should be needed before entry.
+    assert "offlineOverview" not in script
+    assert "offlineConnectors" not in script
+    assert "showGate" in script
+
+
+def test_the_dashboard_body_is_hidden_until_the_api_has_answered():
+    """Nothing may render before the key, and the four reasons must stay distinguishable.
+
+    `hidden` on `<main>` is what makes "I have not asked" visually different from "I asked
+    and the lanes are down". Serving the document with the body already visible would put
+    the fabricated-state defect straight back, since the tiles ship with placeholder text.
+    """
+
+    _, document = request(create_app(), "GET", "/")
+
+    assert 'id="nexus" hidden' in document.replace("  ", " ")
+    assert 'id="gate"' in document
+    assert document.index('id="gate"') < document.index('id="nexus"')
+
+
+def test_the_hidden_attribute_is_not_defeated_by_a_display_rule():
+    """A one-line CSS bug that hid nothing, found by screenshotting the unlocked page.
+
+    `hidden` is a UA-stylesheet `display:none`, so ANY author `display` beats it. `.gate`
+    sets `display:grid` to centre its card, which silently un-hid the gate: the unlocked
+    dashboard rendered with the key prompt still sitting above it. Reading the diff did not
+    show this and could not have.
+    """
+
+    _, css = request(create_app(), "GET", "/styles.css")
+
+    assert "[hidden]{display:none!important}" in css.replace(" ", "")
 
 
 def test_connector_projection_preserves_missing_as_missing(monkeypatch):

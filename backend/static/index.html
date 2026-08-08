@@ -20,7 +20,35 @@
     <div class="profile"><span class="live-dot"></span><span>Founder<small>Operator</small></span><b>F</b></div>
   </header>
 
-  <main id="nexus">
+  <!-- The gate stands in front of the dashboard rather than beside it. Until the API has
+       actually answered, no panel below is rendered at all: an unauthenticated page that
+       fills its tiles with NOT_CONNECTED and UNKNOWN is indistinguishable from an
+       authenticated one reporting three dead lanes, and those are opposite facts. -->
+  <section id="gate" class="gate" hidden>
+    <div class="gate-card">
+      <div class="eyebrow" id="gate-eyebrow">OPERATOR CONTROL CENTRE</div>
+      <h1 id="gate-title">Nothing is shown yet</h1>
+      <p id="gate-reason">Checking whether the operator API is reachable.</p>
+      <form id="gate-form" hidden>
+        <label for="gate-key">Read-only view key</label>
+        <input type="password" id="gate-key" autocomplete="off" spellcheck="false"
+               placeholder="PROVENA_VIEW_KEY from the server">
+        <button type="submit">Unlock the view</button>
+      </form>
+      <p class="gate-warning" id="gate-warning" hidden>
+        This is the <strong>view</strong> key, whose whole power is seeing what
+        <code>status.py</code> already prints. Never paste the command key into a browser —
+        that one runs lanes.
+      </p>
+      <p class="gate-note">
+        No figure is displayed behind this gate. A dashboard that renders
+        <em>unknown</em> and <em>not connected</em> without having asked anything is
+        reporting a system state it never measured.
+      </p>
+    </div>
+  </section>
+
+  <main id="nexus" hidden>
     <section class="hero">
       <div class="eyebrow">OPERATOR CONTROL CENTRE</div>
       <h1>NEXUS <span>HQ</span></h1>
