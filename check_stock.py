@@ -35,14 +35,30 @@ CONCEPTS = {
         "LongTermDebtAndCapitalLeaseObligations",
         "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
     ],
-    # The second is a COVER PAGE fact and lives in the `dei` taxonomy, not `us-gaap`.
-    # Asked under us-gaap it 404s, and the 404 rendered as "Modine does not report a
-    # share count" — a statement about the namespace queried, wearing the clothes of a
-    # statement about the company. Modine reports it in every filing.
-    "shares outstanding": [
-        "CommonStockSharesOutstanding",
-        "dei:EntityCommonStockSharesOutstanding",
-    ],
+    # TWO CONCEPTS, NOT TWO SPELLINGS OF ONE, and they were one entry until 2026-08-08.
+    #
+    # `first_reported` exists for tag MIGRATION: candidates are alternative spellings of a
+    # single fact, so a filer carrying data under two of them has split its history and
+    # neither series alone is the whole of it. That is the right reading for
+    # Revenues / RevenueFromContractWithCustomerExcludingAssessedTax.
+    #
+    # It is the wrong reading here. The us-gaap tag counts shares at the BALANCE SHEET
+    # date; the dei tag counts them on the COVER PAGE, near the filing date. Both are
+    # complete, both are current, and most filers report both — so pairing them made the
+    # split-history check fire on companies that had done nothing wrong. Confirmed against
+    # live EDGAR: Astera Labs and Credo both carry both tags and were refused
+    # INDETERMINATE for it; Cloudflare carries one and passed. The refusal was invisible
+    # for months because the spread gate returned REFUSED, which outranks INDETERMINATE,
+    # and only surfaced once a shut market stopped a spread being computed at all.
+    #
+    # Naming them separately also keeps the original defect fixed. That dei tag was added
+    # because asking us-gaap alone 404'd for Modine and printed "Modine does not report a
+    # share count" — a statement about the namespace, wearing the clothes of a statement
+    # about the company. With both named, NOT_REPORTED against one is true of that one
+    # fact and the other line is right beside it, so no reader concludes there is no
+    # share count.
+    "shares outstanding (balance sheet)": ["CommonStockSharesOutstanding"],
+    "shares outstanding (cover page)": ["dei:EntityCommonStockSharesOutstanding"],
     "diluted shares": ["WeightedAverageNumberOfDilutedSharesOutstanding"],
 }
 
