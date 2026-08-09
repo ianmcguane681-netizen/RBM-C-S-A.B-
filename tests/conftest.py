@@ -28,8 +28,36 @@ def _keep_tests_out_of_the_live_data_directory(tmp_path, monkeypatch):
     """
 
     import connectors.oddsapi
+    import lib.announce
+    import lib.notify
     import lib.reaping
 
     monkeypatch.setattr(lib.reaping, "JOURNAL", tmp_path / "journal.sqlite3")
     monkeypatch.setattr(connectors.oddsapi, "USAGE", tmp_path / "oddsapi-usage.json")
+    monkeypatch.setattr(lib.notify, "LOG", tmp_path / "notifications.json")
+    monkeypatch.setattr(lib.announce, "MEMORY", tmp_path / "announced.json")
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _no_test_ever_messages_a_person(monkeypatch):
+    """`default_announcer()` reads `~/.telegram`, and on a configured machine it sends.
+
+    Every path that announces resolves its channel through that one function, so patching
+    it here means a test that reaches the notifier by accident — through `reap()`, through
+    the supervisor, through a fourth lane written later — gets a silent announcer that
+    reports NOT_CONFIGURED instead of buzzing somebody's phone at three in the morning.
+
+    Redirecting the credentials directory would not do: the failure worth preventing is a
+    test run on the machine where the credentials are real, which is exactly the machine
+    the suite is run on before anything is deployed.
+    """
+
+    import lib.announce
+    import lib.reaping
+
+    monkeypatch.setattr(lib.announce, "default_announcer",
+                        lambda **kw: lib.announce.Announcer(None, **kw))
+    monkeypatch.setattr(lib.reaping, "default_announcer",
+                        lambda: lib.announce.Announcer(None))
     yield

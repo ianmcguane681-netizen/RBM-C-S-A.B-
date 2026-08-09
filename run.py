@@ -46,6 +46,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from lib.orchestrator import HELD, Lane, Orchestrator
 
@@ -250,8 +251,43 @@ def _beat(path: Path, ticks: int, started: str, last_exit: int | None) -> None:
         pass
 
 
+def daily_digest(orchestrator: Orchestrator, *, announcer: Any = None) -> Any:
+    """Send the digest, if today's has not gone. The message whose absence is the alarm.
+
+    It reports every lane, including the ones that ran and found nothing, because a digest
+    listing only findings is indistinguishable from a digest that never sent — and the
+    whole point of a daily line is to make tomorrow's silence mean something.
+
+    The lane states come from the orchestrator rather than from a fresh run: the supervisor
+    already knows when each lane last ran and how it exited, and re-running three lanes to
+    describe them would spend an odds-API allowance on writing a status message.
+
+    `NEVER_RAN` travels as itself. A lane that has never run is not a lane that found
+    nothing, and on a system where nothing is on a cadence yet that is the single most
+    useful line in the message.
+    """
+
+    from lib.announce import Line, default_announcer
+
+    teller = announcer if announcer is not None else default_announcer()
+    lines = []
+    for lane in LANES:
+        run = orchestrator.last_run(lane.name)
+        lines.append(Line(
+            lane.name,
+            getattr(run, "status", "") or "NEVER_RAN",
+            (getattr(run, "at", "") or "") if run is not None else
+            "no record of this lane ever running",
+        ))
+
+    open_decisions = len(orchestrator.open_decisions)
+    extra = (f"{open_decisions} decision(s) waiting for you: python run.py --queue"
+             if open_decisions else "Nothing is waiting for you in the queue.")
+    return teller.announce_heartbeat(lines, extra=extra)
+
+
 def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
-          heartbeat: Path | None = None) -> int:
+          heartbeat: Path | None = None, announcer: Any = None) -> int:
     """Run what is due, forever. The heartbeat this repository did not have.
 
     Every lane carries a cadence and `--go` runs whatever is due — but `--go` is one shot
@@ -291,10 +327,35 @@ def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
             print(f"  TICK FAILED  {type(error).__name__}: {error}")
         ticks += 1
         _beat(path, ticks, started, last_exit)
+        _digest_once(announcer)
         if limit is not None and ticks >= limit:
             break
         time.sleep(interval)
     return 0
+
+
+def _digest_once(announcer: Any) -> None:
+    """Try the daily digest every tick; the announcer decides it is once a day.
+
+    Attempted on every tick rather than on a timer of its own, because a supervisor
+    restarted at 09:00 with a "24 hours since the last one" clock sends nothing until 09:00
+    tomorrow, and a system that keeps restarting sends nothing ever. The date key makes a
+    retry harmless and makes a failed send retryable, which a timer does not.
+
+    Nothing here can end the loop. A supervisor that dies of its own bookkeeping is the
+    failure this whole file exists to prevent, and a messaging outage is a poor reason for
+    the lanes to stop running.
+    """
+
+    try:
+        announcement = daily_digest(Orchestrator(LANES, STATE), announcer=announcer)
+    except Exception as error:  # noqa: BLE001
+        print(f"  DIGEST FAILED  {type(error).__name__}: {error}")
+        return
+    from lib.announce import ALREADY_TOLD
+
+    if announcement.status != ALREADY_TOLD:
+        print(f"  DIGEST  {announcement.status}")
 
 
 def reap(lane: str = "", dry: bool = False, *, as_json: bool = False) -> int:

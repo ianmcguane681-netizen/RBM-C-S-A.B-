@@ -41,6 +41,7 @@ endpoints that carry auth tokens in their path.
 from __future__ import annotations
 
 import json
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -208,11 +209,21 @@ class Telegram:
         return delivery
 
 
-def _redact(text: str) -> str:
-    """A bot token appears in the URL, and error strings quote the URL back at you."""
+#: The token as it appears in a URL path: `/bot<digits>:<secret>/sendMessage`. Matched up
+#: to the next slash so the method name and everything after it survive.
+_TOKEN_IN_URL = re.compile(r"/bot[^/\s]*")
 
-    return "".join(part if "/bot" not in part else "/bot<redacted>"
-                   for part in [text]).replace("api.telegram.org/bot", "api.telegram.org/bot<redacted>@")
+
+def _redact(text: str) -> str:
+    """A bot token appears in the URL, and error strings quote the URL back at you.
+
+    Only the token goes. The first version of this replaced the WHOLE string as soon as it
+    contained `/bot`, which kept the secret out of the log and took the diagnosis with it —
+    and a refusal that does not name what a person can go and do about it is barely a
+    refusal. `HTTP 401 ... /bot<redacted>/sendMessage` says both things at once.
+    """
+
+    return _TOKEN_IN_URL.sub("/bot<redacted>", str(text))
 
 
 # -- what a message says ----------------------------------------------------------------
@@ -254,8 +265,15 @@ def arb_message(slip: Any, *, market: str = "", at: str = "") -> tuple[str, str]
     return f"ARB READY · {len(legs)} legs · {profit:+,.2f}", "\n".join(lines)
 
 
-def stocks_message(order: Any, *, thesis: Any = None) -> tuple[str, str]:
-    """Shares, ticker, price, and the short reason — what it is and why."""
+def stocks_message(order: Any, *, thesis: Any = None,
+                   why_unknown: str = "") -> tuple[str, str]:
+    """Shares, ticker, price, and the short reason — what it is and why.
+
+    `why_unknown` is the third state of the reason. An instruction reaches READY only with
+    a thesis behind it, so "no reasoning attached" and "the register would not open" are
+    different claims, and printing the first when the second is true tells a reader their
+    gates let something through unauthorised when in fact a file failed to parse.
+    """
 
     lines = [
         f"{order.side.upper()}  {order.shares} × {order.ticker}",
@@ -271,6 +289,10 @@ def stocks_message(order: Any, *, thesis: Any = None) -> tuple[str, str]:
         if getattr(thesis, "expires_at", ""):
             lines.append(f"  thesis expires {thesis.expires_at}")
             lines.append("")
+    elif why_unknown:
+        lines += [f"WHY  not shown: {why_unknown}.",
+                  "  The instruction was authorised — this is the reason not being "
+                  "readable, not the reason being absent.", ""]
     else:
         # An instruction with no stated reason is exactly what the thesis gate exists to
         # prevent, so if one reaches here the message says so rather than looking complete.
@@ -278,6 +300,78 @@ def stocks_message(order: Any, *, thesis: Any = None) -> tuple[str, str]:
 
     lines.append(f"READ AT  {getattr(order, 'at', '') or 'time not recorded'}")
     return f"STOCKS READY · {order.shares} {order.ticker} · {order.cash:,.2f} {order.currency}", "\n".join(lines)
+
+
+def chain_message(plan: Any, *, subject: str = "", thesis: Any = None,
+                  why_unknown: str = "") -> tuple[str, str]:
+    """An unsigned swap, and the fact that nothing in this system can sign it.
+
+    The other two lanes send an instruction somebody executes at a venue. This one sends
+    something to sign in a wallet the sender does not have and will never have, so the
+    message says that in the subject line: an operator who reads "CHAIN READY" and waits
+    for a fill is waiting for an event that cannot occur.
+
+    Amounts are raw contract units and are labelled as such. Dividing by the decimals here
+    would need to know them, getting them wrong is a factor of a thousand billion, and a
+    number that might be wrong by that much should not be the one somebody eyeballs.
+    """
+
+    token = subject or getattr(plan, "token_out", "") or "unnamed token"
+    lines = [
+        f"BUY  {token}",
+        f"  pay      {getattr(plan, 'amount_in', 0):,} units of "
+        f"{getattr(plan, 'token_in', '?')}",
+        f"  quoted   {getattr(plan, 'quoted_out', 0):,} units out",
+        f"  at least {getattr(plan, 'min_out', 0):,} units, or the swap reverts "
+        f"({getattr(plan, 'slippage_bps', 0)} bps tolerated)",
+        f"  raw contract units, not decimal-adjusted. Read at block "
+        f"{getattr(plan, 'block_number', 0):,}.",
+        "",
+        f"{len(getattr(plan, 'steps', ()) or ())} transaction(s) to sign, in order.",
+        "",
+    ]
+    reason = (getattr(thesis, "reasoning", "") or "").strip()
+    if reason:
+        short = reason if len(reason) <= 300 else reason[:297].rsplit(" ", 1)[0] + "..."
+        lines += ["WHY (your thesis)", f"  {short}", ""]
+    elif why_unknown:
+        lines += [f"WHY  not shown: {why_unknown}.", ""]
+    else:
+        lines += ["WHY  no thesis reasoning was attached to this instruction.", ""]
+
+    lines += [
+        "NOTHING HERE CAN SIGN THIS. The adapter has no key path, no signing library and",
+        "no send method — sign the steps in a wallet you control, or they do not happen.",
+        f"READ AT  {getattr(plan, 'at', '') or 'time not recorded'}",
+    ]
+    return f"CHAIN READY (UNSIGNED) · {token}", "\n".join(lines)
+
+
+def placement_message(placement: Any) -> tuple[str, str]:
+    """Money that moved, or money that may have. The second is the urgent one.
+
+    `UNRESOLVED` is the most expensive state this system produces: an order went to the
+    broker, nothing came back, and a position is on file that may or may not exist. It
+    leads the subject line because a person reading three words on a lock screen has to
+    get *that* one, and because the wrong reflex — resubmitting — doubles the position.
+    """
+
+    from lib.placing import PLACED, REFUSED, UNRESOLVED
+
+    status = getattr(placement, "status", "")
+    lane = getattr(placement, "lane", "?")
+    subject = getattr(placement, "subject", "") or "unnamed subject"
+    body = placement.describe() if hasattr(placement, "describe") else str(placement)
+
+    if status == UNRESOLVED:
+        return f"⚠ ORDER MAY EXIST · {lane} · {subject}", body
+    if status == PLACED:
+        return f"PLACED · {lane} · {subject}", body
+    if status == REFUSED:
+        return f"NOT PLACED · {lane} · {subject}", body
+    # Any other status still travels rather than being dropped: a placement outcome this
+    # formatter has not been taught is exactly the one worth a person's eyes.
+    return f"{status or 'UNKNOWN PLACEMENT'} · {lane} · {subject}", body
 
 
 def heartbeat_message(lanes: Sequence[Any], *, extra: str = "") -> tuple[str, str]:
