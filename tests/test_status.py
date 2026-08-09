@@ -287,3 +287,54 @@ class TestAMonetaryFigureCarriesItsUnit:
 
         assert lanes["arb"]["realised"]["currency"] == "EUR"
         assert lanes["stocks"]["realised"]["currency"] == "USD"
+
+
+class TestSilenceIsSplitIntoItsCauses:
+    """Two quiet days is either nothing happening or nothing being sent, and from a phone
+    those look identical. The panel exists so the flattering reading is not the only one
+    available."""
+
+    def test_never_sent_is_not_reported_as_a_failure(self):
+        lines = "\n".join(status.notifications_panel())
+
+        assert "NEVER_SENT" in lines
+
+    def test_a_delivery_is_reported_with_its_age(self):
+        import lib.notify
+
+        lib.notify.LOG.write_text(json.dumps([{
+            "status": "SENT", "at": _stamp(hours=2), "subject": "STOCKS READY · 4 ALAB",
+            "reason": ""}]))
+
+        lines = "\n".join(status.notifications_panel())
+
+        assert "LAST DELIVERED" in lines and "ALAB" in lines
+
+    def test_attempts_that_all_failed_are_not_a_delivery(self):
+        """A recorded attempt is not a message somebody read."""
+
+        import lib.notify
+
+        lib.notify.LOG.write_text(json.dumps([{
+            "status": "REFUSED", "at": _stamp(hours=1), "subject": "s",
+            "reason": "chat not found"}]))
+
+        lines = "\n".join(status.notifications_panel())
+
+        assert "NOTHING DELIVERED" in lines
+        assert "REFUSED" in lines
+
+    def test_an_unreadable_log_is_not_an_absence_of_messages(self):
+        import lib.notify
+
+        lib.notify.LOG.write_text("{[")
+
+        lines = "\n".join(status.notifications_panel())
+
+        assert "UNREADABLE" in lines
+        assert "is unknown" in lines
+
+
+def _stamp(*, hours: float) -> str:
+    when = datetime.now(timezone.utc) - timedelta(hours=hours)
+    return when.isoformat(timespec="seconds").replace("+00:00", "Z")

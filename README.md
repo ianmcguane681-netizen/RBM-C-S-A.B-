@@ -380,6 +380,24 @@ Four things hold the boundary:
   including the `amountOutMin` floor that stands between a swap and a sandwich, and an
   exact-amount approval rather than an unlimited one.
 
+### Being told
+
+A lane that reaches `READY` at 16:00 on a Monday and tells nobody has not done its job, so
+the lanes notify — one message per new instruction carrying enough to act on it, one when a
+breaker trips, one when a lane has failed to reach its source three runs running, and one
+short digest a day.
+
+**The digest is the point.** A notifier that only speaks when it finds something has a
+defect built into its quietest state: no message means *nothing was found*, or *the
+supervisor stopped*, or *the token expired*, or *a lane went blind* — four facts and one
+silence, and the flattering reading is the one anybody adopts. A daily line that reports
+the lanes which found nothing makes the next day's silence mean something.
+
+Put a bot token in `~/.telegram/bot_token` and a chat id in `~/.telegram/chat_id`, or skip
+it: with no channel the runs report `NOT_CONFIGURED`, which is not a failure. A standing
+opportunity is re-told every six hours rather than every run, and an order whose outcome
+the broker never confirmed is never deduped away. `--dry` tells nobody, deliberately.
+
 `--reap` exits `2` when **nothing was looked at** — no lane configured, an unparseable
 config, or every configured lane failing to reach its source. A scheduler treating that as
 `0` would read a broken pipeline as a quiet morning, every morning.

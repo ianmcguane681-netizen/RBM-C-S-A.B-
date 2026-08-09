@@ -131,6 +131,55 @@ def evidence_panel() -> list[str]:
     return lines
 
 
+def notifications_panel() -> list[str]:
+    """Whether anything has actually reached you, and when.
+
+    The heartbeat above answers "is the supervisor running". This answers the question a
+    person asks two quiet days later, which is a different one: *have I heard nothing
+    because nothing happened, or because nothing was sent?* Without this the two look
+    identical from a phone, and the flattering reading is the one anybody adopts.
+
+    `NEVER_SENT` is not an error. Somebody who has not set up Telegram has not had a
+    notification fail, and the panel says which of those it is looking at.
+    """
+
+    from lib.notify import LOG
+
+    lines = ["NOTIFICATIONS"]
+    if not LOG.is_file():
+        lines += ["  NEVER_SENT  nothing has ever been sent from this machine.",
+                  "  Either no channel is configured or nothing has yet been worth a "
+                  "message. `python run.py --reap` prints which.", ""]
+        return lines
+
+    try:
+        rows = json.loads(LOG.read_text(encoding="utf-8"))
+        if not isinstance(rows, list):
+            raise ValueError("the notification log is not a list")
+    except (OSError, ValueError) as error:
+        lines += [f"  UNREADABLE  {type(error).__name__}: {error}",
+                  "  Whether anything reached you is unknown, which is not the same as "
+                  "nothing having reached you.", ""]
+        return lines
+
+    delivered = [row for row in rows if row.get("status") == "SENT"]
+    last = delivered[-1] if delivered else None
+    failed = [row for row in rows[-20:] if row.get("status") in {"REFUSED", "UNREACHABLE"}]
+
+    if last is None:
+        lines.append("  NOTHING DELIVERED  attempts are recorded and none of them landed.")
+    else:
+        age = _age_seconds(str(last.get("at") or ""))
+        when = "age unknown" if age is None else f"{age / 3600:.1f}h ago"
+        lines.append(f"  LAST DELIVERED  {last.get('subject', '?')}  ({when})")
+    if failed:
+        lines.append(f"  {len(failed)} of the last 20 attempts did not land. Most recent: "
+                     f"{failed[-1].get('status')} — {str(failed[-1].get('reason', ''))[:70]}")
+    lines += ["", "  A day with no digest means something has stopped, which is the only "
+              "way silence", "  means anything at all.", ""]
+    return lines
+
+
 def _odds_quota(settings: dict) -> dict:
     """What the odds key has left, and what the current cadence will do to it.
 
@@ -658,7 +707,7 @@ def as_json() -> dict:
 
 def main() -> int:
     panels = (capital_panel() + money_panel() + obligations_panel() + evidence_panel()
-              + boards_panel())
+              + notifications_panel() + boards_panel())
     print("\n".join(panels))
     print("=" * 74)
     print("No figure above is a forecast. Nothing here predicts a price, a sale or a")

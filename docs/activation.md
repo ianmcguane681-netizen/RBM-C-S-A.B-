@@ -20,6 +20,7 @@ READY somewhere you can watch it.
 | 1 | **Odds API key** | free tier at the-odds-api.com | the arb lane. The previous key was pasted into a chat and is burned — rotate it |
 | 2 | **Alpaca paper keys** — a key id and a secret | alpaca.markets, Paper Trading | the stocks lane: prices, and placing |
 | 3 | *(optional)* Ethereum RPC URL | any archive-capable node | the crypto lane, which cannot sign and only reads |
+| 4 | *(recommended)* **Telegram bot token and chat id** | `@BotFather` for the token, `@userinfobot` for your id | being told when a lane finds something, and the daily digest whose absence is the alarm |
 
 You do not need all three. Each lane degrades independently and preflight names what is
 missing and what it unlocks.
@@ -41,6 +42,10 @@ missing and what it unlocks.
 | `~/.alpaca/key_id` | 600 | Alpaca key id | never |
 | `~/.alpaca/secret_key` | 600 | Alpaca secret | never |
 | `~/.alpaca/paper` | 600 | empty marker file | never |
+| `~/.telegram/bot_token` | 600 | the notification bot token | never |
+| `~/.telegram/chat_id` | 600 | which chat to send to | never |
+| `data/announced.json` | — | what you have already been told | gitignored |
+| `data/notifications.json` | — | every send and what became of it | gitignored |
 | `data/reapers.json` | — | balances, watchlist, authority | **gitignored** |
 | `data/theses.json` | — | your reasons for each holding | **gitignored** |
 | `data/breakers-*.json` | — | written by the system | gitignored |
@@ -92,7 +97,14 @@ When it asks about Alpaca's environment, answer **`p`** for paper.
 ~/.alpaca/key_id        600
 ~/.alpaca/secret_key    600
 ~/.alpaca/paper         600, an empty marker
+~/.telegram/bot_token   600
+~/.telegram/chat_id     600
 ```
+
+**Telegram is not a lane and skipping it breaks nothing** — every lane still runs and the
+notifier reports `NOT_CONFIGURED`, which is not a failure. What you lose is the point of a
+lane running on a cadence: an instruction that reaches READY at 16:00 on a Monday sits in a
+log until somebody opens a terminal. Two minutes with `@BotFather` is the whole of it.
 
 **Expect** it to print exactly that, with the modes. Verified against a throwaway `HOME`
 today — those modes are what it produces, and both connectors then load what it wrote.
@@ -291,12 +303,26 @@ any mode setting.
 
 A `2` is the one to care about. It means a lane could not reach its evidence.
 
+**Every run ends with a `NOTIFICATIONS` block** saying who was told. `--dry` deliberately
+tells nobody — a flag that promises to send nothing and then messages your phone is a flag
+you cannot trust again — so use a real `--reap` to see the wire work. `python status.py`
+has the same answer for the last few days: whether anything has actually reached you, or
+only been attempted.
+
 ---
 
 ## Step 7 — Only then, autonomy
 
 Run in owner-operating mode until you have seen an instruction you would have placed
 yourself. Then set `autonomous_execution: true` for **stocks and nothing else**.
+
+**What you will actually receive**, once the channel exists: one message per new
+instruction (with the stake, the odds or the shares, and your own thesis reason, so it can
+be acted on without unlocking anything), one when a breaker trips, one when a lane has
+failed to reach its source three runs running, and one short digest a day. A standing
+opportunity is re-told every six hours rather than every run, and the digest reports the
+lanes that found nothing on purpose — **it is the message whose absence is the alarm**, so
+a day without one means something has stopped.
 
 ```bash
 touch data/MANUAL     # take the wheel; research continues, placing stops

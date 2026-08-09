@@ -67,3 +67,8 @@ data/journal.sqlite3-shm
 # The supervisor's heartbeat: a pid, two timestamps and a tick count. No subject and no
 # stake, but it belongs to one running machine and changes every minute.
 data/heartbeat.json
+
+# What you have already been told, and what became of every send. Both are records: the
+# subjects of live opportunities travel through them, so neither belongs in a public repo.
+data/announced.json
+data/notifications.json

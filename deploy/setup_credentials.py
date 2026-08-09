@@ -45,6 +45,12 @@ WANTED = (
     ("~/.alpaca", "key_id", "Alpaca key id",
      "ALPACA  (paper trading keys from alpaca.markets)"),
     ("~/.alpaca", "secret_key", "Alpaca secret key", ""),
+    # Not a lane. It is how a lane reaches you, and a lane that finds something at 16:00
+    # on a Monday and tells nobody has not done its job. Absent, every lane still runs and
+    # `lib.notify` reports NOT_CONFIGURED, which is not a failure.
+    ("~/.telegram", "bot_token", "Telegram bot token",
+     "TELEGRAM  (notifications: talk to @BotFather for a token, @userinfobot for your id)"),
+    ("~/.telegram", "chat_id", "Telegram chat id (not secret; hidden anyway)", ""),
 )
 
 

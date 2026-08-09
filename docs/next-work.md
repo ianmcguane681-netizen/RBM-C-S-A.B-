@@ -1,7 +1,7 @@
 # Next work — checkpoint 2026-08-09
 
-> **1389 tests, 2 skipped.** `main` is at the PR #9 merge; PR #10 carries seven commits on
-> top of it. **8 August was the first day all three money lanes ran against real sources**,
+> **1436 tests, 2 skipped.** `main` is at the PR #9 merge; PR #10 carries the 8-9 August
+> work on top of it, and the notifier is now wired into all three lanes. **8 August was the first day all three money lanes ran against real sources**,
 > on Ian's own Windows machine, and almost everything below came out of that rather than out
 > of reading the code.
 >
@@ -46,12 +46,27 @@ raw-buy-then-grade is in scope (assumed OUT).
 
 ## Engineer
 
-**1. Wire the notifier into the lanes.** `lib/notify.py` is built, tested and its messages
-have been read — and nothing calls it. This is the highest-value unfinished thing, because
-a lane that reaches READY at 16:00 on a Monday and tells nobody has not done its job.
-Needs: a call on READY, on a tripped breaker, on repeated COULD_NOT_LOOK, and the daily
-digest wired to the supervisor. The digest is the piece that makes silence mean something,
-so it is not optional.
+**1. ~~Wire the notifier into the lanes.~~ DONE — `lib/announce.py`.** All four calls are
+in: READY, a tripped breaker, a lane blind three runs running, and the daily digest offered
+by the supervisor on every tick. Two things are worth knowing before changing any of it.
+
+*The wire is in `lib/reaping.reap`, once, for every lane* — the same argument as
+`assemble` looping over `LANES` rather than naming three. A fourth lane is notified by
+existing. It runs after placing, because "a person places it" and "the broker did not
+answer" are different messages about one instruction and only one of them is ever true.
+
+*What is suppressed, and the one place the doctrine inverts.* A standing opportunity is
+re-told every six hours rather than every run, keyed on lane and subject; a trip is told
+once per trip; an unresolved placement is keyed by the order and can never be deduped away
+by the READY message before it. But an unreadable memory suppresses **nothing** — failing
+toward stopping is about money moving, and here stopping means an opportunity nobody hears
+about, which is invisible where a duplicate message is merely a duplicate message.
+
+Still open on this: nothing has been sent to a real chat yet. `~/.telegram/bot_token` and
+`~/.telegram/chat_id` do not exist on Ian's machine, so every run reports NOT_CONFIGURED —
+correctly, and that is the last two minutes of the job (`bash deploy/setup-credentials.sh`,
+or `python deploy/setup_credentials.py` on Windows). Until then `status.py`'s NOTIFICATIONS
+panel says NEVER_SENT, which is the honest reading and not a failure.
 
 **2. Per-lane opportunity panels on the dashboard.** Ian asked for the same detail the
 notifications carry to be visible in the UI, "some sections bigger than others if needs be".
