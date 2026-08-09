@@ -126,13 +126,72 @@ receipt says it held 52 rows on 2026-08-02 and the data is absent, so every comp
 monitor would make is meaningless until it is rebuilt. Either rebuild it or decide the
 monitor is not in use and say so somewhere.
 
+---
+
+# DECIDED 2026-08-09 (evening) — scope, capital, and uptime
+
+Four answers from Ian to the gaps raised that evening. Recorded because three of them change
+the plan and one of them changes what a missing notification means.
+
+**No new lanes until one produces something real.** `docs/target-functions.md` step 4 said
+this before today — *"prove one function produces something real before starting a fourth"* —
+and noted that it is the step that gets skipped. It has now been affirmed rather than
+skipped: flipper, the security engine and everything else stay **planning only**. Not one
+order has been placed in any lane, and that is the thing to change first.
+
+**The notifier work continues, because it is not a lane.** The equity guard is a monitor in
+`monitor.py`'s sense — reads a source, decides nothing, produces no instruction. It closes a
+blindness that exists today and does not add surface to prove.
+
+**Capital returns in full before profit comes out** — `docs/levelling-design.md` Decision 7.
+Per lane, not per position, so a lane sitting on seven unsold items has not "returned the
+capital" because three sold well.
+
+**Uptime is bound to HQ: it runs when the machine is up and stops when it is shut down.**
+That answers "who stops it if you are unavailable" — you do, by closing the lid. It has
+three consequences that are not obvious and are not free:
+
+1. **It changes what a missing digest means.** The heartbeat's whole argument is that
+   silence is the alarm. If the system is *expected* to be off sometimes, a missing digest
+   is ambiguous again — stopped, or simply not running today? The fix is small but real: the
+   digest should carry expected uptime, or the guard should record a clean shutdown so
+   absence-by-choice is distinguishable from absence-by-failure. Until then, silence has
+   gone back to meaning two things.
+2. **The equity guard cannot watch overnight.** A drawdown rule does not care whether the
+   machine is on. If a challenge is ever run, either HQ stays up for its duration or the
+   guard is deployed somewhere that does — and the second contradicts this decision, so it
+   is a choice rather than an oversight.
+3. **`deploy/README.md` describes a droplet that runs continuously**, which this supersedes
+   for now. Cadences fire only while HQ is up, so the arb lane's three looks a day become
+   however many fit inside the hours the machine is on.
+
+## Still open, and Ian's
+
+- **Tax.** Four lanes, four treatments — flipping is trading income, stocks and crypto are
+  CGT disposals, betting generally is not taxed for the punter. None of the arithmetic
+  anywhere accounts for any of it, including the flipper's €75 floor, which was computed
+  from fees alone. To be found out when there is time.
+- **Thematic concentration.** Six AI-infrastructure names, a 5% per-position cap and a 40%
+  deployed cap — so 40% can sit across six holdings that fall on the same news. The breakers
+  count positions and cannot see correlation. To discuss.
+- **Whether the review board is still a product.** It is half this repository and appears in
+  no money-lane plan. Live, dormant, or the thing the lanes were extracted from — worth
+  deciding explicitly rather than leaving quietly there. To discuss.
+- **Nothing measures whether a lane is any good.** The ledger records outcomes; nothing
+  computes hit rate, average return or net position. Levelling proposes to read performance
+  that is not currently calculated, so a lane losing slowly would run indefinitely. To
+  discuss.
+
+---
+
 ## Deliberately not tomorrow
 
 - **Crypto** is parked. `docs/crypto-thesis.md` records both theses and why: the assets with
   the best case (BTC, ETH) are the ones the ERC-20 gates structurally cannot see, AAVE is a
   measured upgradeable proxy, and stablecoins do not fit a value thesis at all. The lane
   still works as a veto and a monitor at zero further cost.
-- **The flipper build**, until the eBay sold-data question is answered.
+- **Every new lane**, per the decision above. The flipper is designed and stays designed;
+  the security engine likewise. Planning continues, building does not.
 - **Levelling** — designed, waiting on three numbers from Ian.
 - **Autonomy on any lane.** Not one order has been placed, manually or otherwise.
 

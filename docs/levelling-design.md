@@ -161,6 +161,42 @@ promotion. Permanently level 1, and — if nothing says so — indistinguishable
 that is simply performing badly. `UNDER_MINIMUM_VIABLE` is its own state, and it names the
 share price that binds.
 
+## Decision 7 — capital returns in full before any profit comes out
+
+Ian's rule, 2026-08-09, and it answers the gap this document had: everything here promotes
+capital *upward* on performance and nothing ever described taking money *off the table*. A
+system that only compounds hands it all back in the drawdown that eventually arrives.
+
+> The stake or capital should always be returned in full before profit is taken out.
+
+Read strictly, and per lane rather than per position. **A lane's withdrawable amount is what
+it holds above its assigned capital, and nothing else:**
+
+```
+withdrawable = max(0, lane_equity - assigned_capital)
+```
+
+Per position would be the flattering reading and is wrong for the usual reason. A lane that
+buys ten items, sells three at a profit and is sitting on seven unsold has "returned the
+capital" on three of them, and paying out against that is paying out of capital while
+calling it profit. The seven are the ones that decide whether the lane made money.
+
+Two consequences worth stating rather than discovering:
+
+- **A loss must be earned back before anything is withdrawable again.** If a lane drops to
+  9,400 against 10,000 assigned, the first 600 of profit is capital repair and not gain.
+  This is a high-water mark against assigned capital, which is the same shape as the
+  pessimistic book above: it errs toward keeping money in the lane.
+- **It composes with promotion rather than fighting it.** Promotion raises `assigned_capital`
+  and therefore *raises the bar* for withdrawal — a lane promoted to a larger level has more
+  capital to keep whole before it pays out. That is the right direction: a lane earning more
+  capital is a lane being asked to hold more, not one being asked to distribute more.
+
+Unresolved, and Ian's: whether withdrawal is a manual act he performs or something the
+system proposes on a cadence, and whether an OPEN position counts against equity at cost or
+at the pessimistic mark used for promotion. The second matters — marking OPEN positions as a
+total loss would make almost nothing withdrawable, which is safe and possibly too safe.
+
 ## Decision 6 — a level earned on paper is not a level
 
 The stocks lane has never met a real broker. Paper fills have no slippage, no partial
