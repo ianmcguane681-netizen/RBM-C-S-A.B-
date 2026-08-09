@@ -37,12 +37,17 @@ honest one.
 Six names now that the shares-outstanding collision is fixed. Expect MOD to refuse — it has
 a genuine split history and that refusal is correct.
 
-**3. The eBay question, whenever there is half an hour.** Can the account read SOLD
-listings? Everything in `docs/flipper-design.md` is moot until this is known, and it is the
-cheapest possible way to find out whether the function exists.
+**3. The eBay question — in flight.** The developer account went for verification on
+08-09 and takes a business day, so the two answers land **Tuesday 08-11**: whether the
+production keys can call SOLD data at all, and the real fee rate from the account rather
+than the published card-category one. Everything in `docs/flipper-design.md` is moot until
+the first one, and every threshold in it moves with the second.
 
-**4. Two numbers still outstanding:** the real eBay fee rate from the account, and whether
-raw-buy-then-grade is in scope (assumed OUT).
+**4. Raw-buy-then-grade: ANSWERED, out.** Scope extended the same evening to graded Pokémon
+alongside graded sports cards, on the same matchability argument. Ungraded games, consoles
+and electronics stay *later* with the criterion now written down — they enter when an exact
+identity key exists and condition has a third state, because "tested, working" in a listing
+is a seller's claim the lane cannot check.
 
 ## Engineer
 

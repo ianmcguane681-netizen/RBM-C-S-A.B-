@@ -3,10 +3,19 @@
 Designed 2026-08-09, not yet built. Function 4 of the seven in `docs/target-functions.md`;
 the autonomy target is in `docs/end-state.md`. The next session can pick this up from cold.
 
-## Scope, decided 2026-08-09
+## Scope, decided 2026-08-09, extended 2026-08-09 (evening)
 
-**In: graded sports cards and graded video games.** PSA, BGS and SGC for cards; WATA and
-VGA for games. Nothing else in v1.
+**In: graded sports cards, graded trading cards (Pokémon), and graded video games.** PSA,
+BGS, SGC and CGC for cards — CGC matters because it grades a large share of TCG and
+omitting it would discard comparables that exist; WATA and VGA for games. Nothing else in
+v1.
+
+**Pokémon was added on the same reasoning that admitted sports cards, not as a second
+category.** The matching key is the same shape and just as exact, and TCG comparable
+density is *higher* than sports for the popular sets, so the comparable floor will refuse
+less often there than anywhere else in the lane. Where it differs is that grade inflation
+between graders is a live argument in TCG — a CGC 9.5 and a PSA 10 are not the same item,
+which is exactly why the comparable floor already requires matching grade **and** grader.
 
 The axis is not category enthusiasm, it is **matchability** — how exactly an item can be
 tied to the sold comparables that price it. Graded items sit at the top of that scale for
@@ -25,7 +34,20 @@ not relitigated from enthusiasm:
 | **retro games, loose** | **out** | a loose cart is 10-30 EUR and cannot clear fees at any realistic markup. See the floor below |
 | **retro games, CIB** | **later** | genuinely matchable with effort. A real candidate once v1 proves the sold-data pipeline |
 | **consoles** | **later** | model, region, what is in the box, modded or not. Matchable but messy |
+| **games/consoles/electronics, ungraded** | **later, and the criterion is written below** | Ian asked on 2026-08-09 whether these come in "if they fit criteria". They fit when an exact matching key exists — and for working electronics one does not, because **whether it works cannot be established from a listing**. See the note under this table |
 | **"mispriced anything"** | **a different function** | this is the **opportunity engine** in `docs/end-state.md`, which surfaces candidates with their evidence and never sizes them. Folding it in here would replace exact matching with a fuzzy matcher, and a fuzzy matcher produces confident wrong margins — the failure this whole document exists to prevent |
+
+**What ungraded hardware would need before it could enter.** A graded item carries its
+condition in its key: the grader looked, and the number is the evidence. A console does not.
+"Tested, working" in a listing is a seller's claim, and the lane would be pricing that claim
+against comparables whose own claims it also cannot check — two unverified assertions
+multiplied together and reported as a margin. So hardware enters only with (a) an identity
+key as exact as a cert number (model + region + revision + box contents), and (b) a third
+state for condition, `CLAIMED_WORKING` beside `TESTED`, which never counts as the same thing
+when comparables are matched. Both are real work rather than a config change, which is why
+this stays *later* rather than becoming a v1 toggle. **CIB retro games are the closer of the
+two** — a sealed or complete-in-box title has a genuine key and no working-order claim to
+verify.
 
 **Expect games to refuse more often than cards.** WATA took reputational damage in 2021 and
 the sealed retro market corrected hard, so comparable density is far lower. Frequent
@@ -303,8 +325,11 @@ Properties, not coverage:
 Most of this document's questions were answered on 2026-08-09. Three remain, and the first
 one decides whether any of the rest matters.
 
-1. **Does the eBay account reach SOLD data?** Unanswered, and everything is moot until it
-   is. See the top of this document.
+1. **Does the eBay account reach SOLD data?** Unanswered. The developer account went in
+   for verification on 2026-08-09 and takes a business day, so **the answer is expected
+   Tuesday 2026-08-11**. Everything below the top of this document is moot until it lands,
+   and a "no" is a real answer that stops the function rather than a setback to work
+   around.
 2. **The real fee rate.** The arithmetic above uses 13.25% plus a 0.30 fixed fee, which is
    indicative. A Store subscription changes it materially, and every floor and threshold in
    this document moves with it. Confirm from the account, not from a help page.
@@ -313,7 +338,8 @@ one decides whether any of the rest matters.
    fee model and the 50-day horizon. **Assumed OUT** unless Ian says otherwise, because a
    lane that buys raw and hopes for a grade is making a forecast.
 
-Answered and recorded above: scope, the 75 EUR floor, both tier thresholds, capacity of 20,
+Answered and recorded above: scope (including Pokémon, and what ungraded hardware would
+need first), raw-buy-then-grade OUT, the 75 EUR floor, both tier thresholds, capacity of 20,
 the 50-day horizon, and the comparable floor.
 
 ## Rough size
