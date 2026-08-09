@@ -62,6 +62,20 @@ by the READY message before it. But an unreadable memory suppresses **nothing** 
 toward stopping is about money moving, and here stopping means an opportunity nobody hears
 about, which is invisible where a duplicate message is merely a duplicate message.
 
+Two things were finished after the first pass, and both were cases of the wire being in
+while the message under-reported. **The digest now says what each lane FOUND**, read from
+the journal, rather than how its process exited — `reap-arb COMPLETED` reported that
+something ran, which is not the claim the daily message exists to make. Three states stay
+apart on the way to a phone: found nothing, did not run, and journal unreadable. And **a
+breaker tripped by `positions.py --apply` is announced there**, not on the next reap: that
+trip happens at a keyboard, and for stocks the next reap is 24 hours away, so a stopped
+lane read as a quiet one for a day.
+
+**Still not wired, and deliberately left:** `monitor.py` (exit 4, a material change means a
+prior review may no longer hold) and `scan_arb.py`. Both produce work for a person rather
+than an instruction, and both would need a message type that does not exist yet — worth
+doing, worth designing rather than bolting on.
+
 Still open on this: nothing has been sent to a real chat yet. `~/.telegram/bot_token` and
 `~/.telegram/chat_id` do not exist on Ian's machine, so every run reports NOT_CONFIGURED —
 correctly, and that is the last two minutes of the job (`bash deploy/setup-credentials.sh`,

@@ -318,8 +318,10 @@ yourself. Then set `autonomous_execution: true` for **stocks and nothing else**.
 
 **What you will actually receive**, once the channel exists: one message per new
 instruction (with the stake, the odds or the shares, and your own thesis reason, so it can
-be acted on without unlocking anything), one when a breaker trips, one when a lane has
-failed to reach its source three runs running, and one short digest a day. A standing
+be acted on without unlocking anything), one when a breaker trips — including one tripped by
+`positions.py --apply` at your keyboard, hours before that lane would next run — one when a
+lane has failed to reach its source three runs running, and one short digest a day saying
+what each lane found. A standing
 opportunity is re-told every six hours rather than every run, and the digest reports the
 lanes that found nothing on purpose — **it is the message whose absence is the alarm**, so
 a day without one means something has stopped.

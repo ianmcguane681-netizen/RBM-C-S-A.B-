@@ -628,7 +628,7 @@ class TestTheSupervisorOffersTheDigestEveryTick:
 
     def test_the_digest_names_every_lane_including_the_ones_that_never_ran(
             self, tmp_path, monkeypatch):
-        """On a system where nothing is on a cadence yet, NEVER_RAN is the most useful
+        """On a system where nothing is on a cadence yet, "did not run" is the most useful
         line in the message — and the one a findings-only digest would omit."""
 
         import run as runner
@@ -641,7 +641,8 @@ class TestTheSupervisorOffersTheDigestEveryTick:
                      announcer=announcer(tmp_path, channel))
 
         body = channel.sent[0][1]
-        assert "reap-arb" in body and "NEVER_RAN" in body
+        assert "arb" in body and "NOT_RUN" in body
+        assert "monitor" in body and "NEVER_RAN" in body
 
     def test_a_broken_digest_does_not_end_the_schedule(self, tmp_path, monkeypatch):
         """A messaging outage is a poor reason for the lanes to stop running."""
@@ -660,3 +661,86 @@ class TestTheSupervisorOffersTheDigestEveryTick:
                      announcer=Exploding())
 
         assert len(ticks) == 3
+
+
+class TestTheDigestSaysWhatTheLanesFound:
+    """`reap-arb COMPLETED` reports that a process exited. The argument for a daily
+    message is that it separates a lane which looked and found nothing from one that never
+    looked — so the digest is built from what the lanes found, and the three kinds of
+    nothing stay apart on the way to a phone."""
+
+    def journal(self, tmp_path, *harvests, dry=False, placements=()):
+        from lib.journal import Journal
+
+        book = Journal(tmp_path / "journal.sqlite3")
+        book.record(reaping(*harvests, placements=placements), dry_run=dry)
+        return book
+
+    def digest(self, tmp_path, channel, monkeypatch):
+        import run as runner
+
+        monkeypatch.setattr(runner, "STATE", tmp_path / "orchestrator.json")
+        runner.daily_digest(runner.Orchestrator(runner.LANES, tmp_path / "orchestrator.json"),
+                            announcer=announcer(tmp_path, channel),
+                            journal_path=tmp_path / "journal.sqlite3")
+        return channel.sent[0][1]
+
+    def test_a_lane_that_looked_and_found_nothing_says_so(self, tmp_path, monkeypatch):
+        """The line that makes tomorrow's silence mean something."""
+
+        self.journal(tmp_path, Harvest("arb", "NOTHING_FOUND"))
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "1×NOTHING_FOUND" in body
+
+    def test_a_lane_that_did_not_run_is_not_a_lane_that_found_nothing(self, tmp_path,
+                                                                     monkeypatch):
+        """Nobody asked it. That is a fact about the scheduler, not about the market."""
+
+        self.journal(tmp_path, Harvest("arb", "NOTHING_FOUND"))
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "stocks   NOT_RUN" in body
+
+    def test_an_unreadable_journal_is_unknown_rather_than_nothing_found(self, tmp_path,
+                                                                       monkeypatch):
+        """The one day the record goes missing is the day a digest must not invent a
+        quiet market for three lanes at once."""
+
+        (tmp_path / "journal.sqlite3").write_text("not a database")
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "UNKNOWN" in body
+        assert "NOTHING_FOUND" not in body
+
+    def test_what_reached_ready_is_named_first(self, tmp_path, monkeypatch):
+        self.journal(tmp_path, ready(lane="stocks"), Harvest("stocks", "NOTHING_FOUND"))
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert body.index("1×READY") < body.index("1×NOTHING_FOUND")
+
+    def test_an_order_the_broker_never_confirmed_reaches_the_digest(self, tmp_path,
+                                                                   monkeypatch):
+        """It was announced when it happened. It is here too, because the digest is what
+        somebody reads when they were asleep for the first message."""
+
+        self.journal(tmp_path, ready(lane="stocks"), placements=(Placement(
+            "stocks", UNRESOLVED, subject="ALAB", position_id="POS-1"),))
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "1 UNRESOLVED" in body
+
+    def test_a_dry_run_is_not_the_system_running(self, tmp_path, monkeypatch):
+        """`--dry` is somebody at a keyboard looking. Counting it would report a person's
+        curiosity as a lane on its cadence."""
+
+        self.journal(tmp_path, Harvest("arb", "NOTHING_FOUND"), dry=True)
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "arb      NOT_RUN" in body

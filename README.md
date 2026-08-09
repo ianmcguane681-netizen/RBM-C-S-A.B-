@@ -390,8 +390,11 @@ short digest a day.
 **The digest is the point.** A notifier that only speaks when it finds something has a
 defect built into its quietest state: no message means *nothing was found*, or *the
 supervisor stopped*, or *the token expired*, or *a lane went blind* — four facts and one
-silence, and the flattering reading is the one anybody adopts. A daily line that reports
-the lanes which found nothing makes the next day's silence mean something.
+silence, and the flattering reading is the one anybody adopts. So the digest reports what
+each lane actually found in the last day, read from the journal — `3×NOTHING_FOUND`, and
+`NOT_RUN` for a lane nobody asked, and `UNKNOWN` when the journal itself could not be read.
+Those three are never merged: a lane that looked and found nothing is the line that makes
+tomorrow's silence mean something, and the other two are not results at all.
 
 Put a bot token in `~/.telegram/bot_token` and a chat id in `~/.telegram/chat_id`, or skip
 it: with no channel the runs report `NOT_CONFIGURED`, which is not a failure. A standing

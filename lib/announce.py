@@ -245,7 +245,7 @@ class Announcer:
         try:
             placed = self._placements(reaping)
             out += [a for a, _ in placed]
-            out += self._breakers(reaping)
+            out += list(self.announce_breakers(getattr(reaping, "assemblies", ())))
             out += self._ready(reaping, told_by_placement={s for _, s in placed})
             out += self._blind(reaping)
         except Exception as error:  # noqa: BLE001 - announcing must not end a run
@@ -339,19 +339,25 @@ class Announcer:
             ))
         return out
 
-    def _breakers(self, reaping: Any) -> list[Announcement]:
+    def announce_breakers(self, assemblies: Sequence[Any]) -> tuple[Announcement, ...]:
         """A tripped breaker, once per trip rather than once per run.
 
         Keyed by when it tripped, so re-arming and tripping again is a second message
         while the same trip sitting there for a week is not seven. The lane has stopped
         placing and does not restart itself, which is exactly the state that looks like a
         quiet market from outside.
+
+        Public and taking assemblies rather than a whole run, because a trip does not only
+        happen during a reap. `positions.py --apply` hands the breakers what settled, and
+        the fourth loss in a row trips one right there — at a keyboard, hours or a day
+        before the lane next runs. Reporting that only on the next reap would leave a
+        stopped lane looking like a quiet one for as long as its cadence is.
         """
 
         from lib.breakers import TRIPPED
 
         out = []
-        for assembly in getattr(reaping, "assemblies", ()):
+        for assembly in assemblies:
             breakers = getattr(getattr(assembly, "reaper", None), "breakers", None)
             state = getattr(breakers, "state", None)
             if state is None or getattr(state, "status", "") != TRIPPED:
@@ -363,7 +369,10 @@ class Announcer:
                 repeat_after=None,
                 already="this trip has already been reported, and it is still tripped",
             ))
-        return out
+        # Saved here rather than only in `announce_reaping`, so a caller that announces
+        # trips alone still records what it said and does not repeat it every invocation.
+        self.memory.save()
+        return tuple(out)
 
     def _blind(self, reaping: Any) -> list[Announcement]:
         """Lanes that did not reach a source, counted across runs rather than within one.

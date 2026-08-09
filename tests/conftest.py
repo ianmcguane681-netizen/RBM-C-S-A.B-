@@ -29,10 +29,15 @@ def _keep_tests_out_of_the_live_data_directory(tmp_path, monkeypatch):
 
     import connectors.oddsapi
     import lib.announce
+    import lib.journal
     import lib.notify
     import lib.reaping
 
     monkeypatch.setattr(lib.reaping, "JOURNAL", tmp_path / "journal.sqlite3")
+    # Two constants, because two modules resolve it: `lib.reaping` writes the diary and
+    # the daily digest READS it to say what each lane found. Patching only the writer
+    # leaves a test summarising the live journal into a message.
+    monkeypatch.setattr(lib.journal, "JOURNAL", tmp_path / "journal.sqlite3")
     monkeypatch.setattr(connectors.oddsapi, "USAGE", tmp_path / "oddsapi-usage.json")
     monkeypatch.setattr(lib.notify, "LOG", tmp_path / "notifications.json")
     monkeypatch.setattr(lib.announce, "MEMORY", tmp_path / "announced.json")
