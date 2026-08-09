@@ -25,6 +25,7 @@ does not restate the doctrine, because two copies of a rule become two different
 | `docs/reference-system.md` | The worked example the arguments refer back to. |
 | `docs/pricing-design.md` | Portfolio valuation, designed and not yet built. |
 | `docs/recording-outcomes.md` | How a result gets from the world into the ledger the breakers read. Designed, not built; carries the venue-fee sequencing decision. |
+| `docs/equity-guard-design.md` | Watching live equity against a declared floor, and the unrealised-drawdown blindness it closes. Designed, not built. |
 | `docs/security-research-design.md` | The security research lane in the five-callable frame, and the scope gate that keeps it lawful. Designed, gated on a check before any code. |
 | `docs/crypto-thesis.md` | Ian's two crypto theses and what each needs. The second is a separate lane, not a mode of the first. |
 | `docs/flipper-design.md` | Function 4, designed and not yet built. Gated on one question: can your eBay account read SOLD listings? |

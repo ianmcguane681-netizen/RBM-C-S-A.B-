@@ -107,12 +107,21 @@ credential to the ledger.
 notifications carry to be visible in the UI, "some sections bigger than others if needs be".
 The gate work is done; this is the panel underneath it.
 
-**4. Portfolio pricing** — `docs/pricing-design.md`, designed and unbuilt. More relevant now
+**4. Unrealised drawdown is invisible to the breakers, and that is a live gap.**
+`profit_today()` sums SETTLED outcomes, so a position drifting badly reaches no limit until
+somebody records it. `status.py` already says open money is "invisible to the daily loss
+limit" and a test asserts the phrase — honest today, and the wrong half of the breakers to
+be missing. `docs/equity-guard-design.md` designs the watcher that closes it: a declared
+floor, four states with UNKNOWN loud rather than quiet, and no execution path at all. Build
+it against Alpaca positions first, where the gap already exists and the source is already
+connected. It came out of Ian's funded-challenge idea but does not depend on it.
+
+**5. Portfolio pricing** — `docs/pricing-design.md`, designed and unbuilt. More relevant now
 that Alpaca answers: it is what turns CAPITAL AT COST from NOT_CONFIGURED into a real book.
 Three decisions already made in that document. Expect roughly six of ten holdings to price
 and the four UCITS ETFs to mark UNPRICED, which is the correct answer and not a gap.
 
-**5. `data/monitor-ledger.json` reports LOST** and has since the machine was set up. The
+**6. `data/monitor-ledger.json` reports LOST** and has since the machine was set up. The
 receipt says it held 52 rows on 2026-08-02 and the data is absent, so every comparison the
 monitor would make is meaningless until it is rebuilt. Either rebuild it or decide the
 monitor is not in use and say so somewhere.
