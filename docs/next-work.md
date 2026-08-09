@@ -20,6 +20,13 @@ other and can run in parallel.
 
 ## Ian
 
+**0. The venue fees, decided 08-09: do not pay them yet.** Smarkets wants £150 one-off for
+API access and Betfair about £299 for a live App Key — ~£450 before a bet goes on, and it
+buys automation rather than opportunity. The odds feed already carries both books, so the
+lane can find these and Ian can place them by hand for nothing. Pay once the lane has shown
+repeatable arbs at a real stake size; what the money then buys is automatic placing and,
+more valuably, automatic settlement from the exchanges' cleared-order APIs.
+
 **1. The arb rulebooks (his stated plan for tomorrow).**
 The method is proven — he read William Hill's and bet365's abandonment and postponement
 pages on 08-08 and found a real divergence. What is left is to do it for a pair the ODDS
@@ -87,16 +94,25 @@ correctly, and that is the last two minutes of the job (`bash deploy/setup-crede
 or `python deploy/setup_credentials.py` on Windows). Until then `status.py`'s NOTIFICATIONS
 panel says NEVER_SENT, which is the honest reading and not a failure.
 
-**2. Per-lane opportunity panels on the dashboard.** Ian asked for the same detail the
+**2. The input surface for outcomes — `docs/recording-outcomes.md`, designed 08-09.**
+Recording is what feeds the breakers, and the only way in is a terminal. Ian asked for a
+place to confirm from a phone: for arb one tap saying both legs went on as sized (the slip
+knows the stakes) and settlement that is never win-or-loss; for the flipper a real form with
+what was paid and what it sold for. Needs a third key scope — `RECORD` appends outcomes and
+can do nothing else, because the command key must never reach browser storage. Telegram
+buttons are assessed and deliberately later: an inbound path makes the bot token a write
+credential to the ledger.
+
+**3. Per-lane opportunity panels on the dashboard.** Ian asked for the same detail the
 notifications carry to be visible in the UI, "some sections bigger than others if needs be".
 The gate work is done; this is the panel underneath it.
 
-**3. Portfolio pricing** — `docs/pricing-design.md`, designed and unbuilt. More relevant now
+**4. Portfolio pricing** — `docs/pricing-design.md`, designed and unbuilt. More relevant now
 that Alpaca answers: it is what turns CAPITAL AT COST from NOT_CONFIGURED into a real book.
 Three decisions already made in that document. Expect roughly six of ten holdings to price
 and the four UCITS ETFs to mark UNPRICED, which is the correct answer and not a gap.
 
-**4. `data/monitor-ledger.json` reports LOST** and has since the machine was set up. The
+**5. `data/monitor-ledger.json` reports LOST** and has since the machine was set up. The
 receipt says it held 52 rows on 2026-08-02 and the data is absent, so every comparison the
 monitor would make is meaningless until it is rebuilt. Either rebuild it or decide the
 monitor is not in use and say so somewhere.

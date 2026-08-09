@@ -24,6 +24,7 @@ does not restate the doctrine, because two copies of a rule become two different
 | `docs/standing-authority.md` | What has been delegated, by whom, and its limits. |
 | `docs/reference-system.md` | The worked example the arguments refer back to. |
 | `docs/pricing-design.md` | Portfolio valuation, designed and not yet built. |
+| `docs/recording-outcomes.md` | How a result gets from the world into the ledger the breakers read. Designed, not built; carries the venue-fee sequencing decision. |
 | `docs/crypto-thesis.md` | Ian's two crypto theses and what each needs. The second is a separate lane, not a mode of the first. |
 | `docs/flipper-design.md` | Function 4, designed and not yet built. Gated on one question: can your eBay account read SOLD listings? |
 | `docs/levelling-design.md` | Capital earned by performance, designed and not yet built. Answers the sizing-ramp question that stood open for weeks. |
