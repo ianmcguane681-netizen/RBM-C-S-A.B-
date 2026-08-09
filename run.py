@@ -44,8 +44,9 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 from lib.orchestrator import HELD, Lane, Orchestrator
 
@@ -250,8 +251,111 @@ def _beat(path: Path, ticks: int, started: str, last_exit: int | None) -> None:
         pass
 
 
+#: How far back the digest looks when summarising what the money lanes found. A day,
+#: because the digest is daily: a shorter window would report "nothing found" about hours
+#: in which the lane was not scheduled to run at all.
+DIGEST_WINDOW_HOURS = 24
+
+
+def _money_lane_lines(activity: dict) -> list[Any]:
+    """One line per reaper lane, saying what it FOUND rather than how it exited.
+
+    Three states no summary may merge. A lane that ran and found nothing is the line that
+    makes tomorrow's silence mean something. A lane that did not run in the window found
+    nothing *because nobody asked it*, which is a fact about the scheduler. And when the
+    journal cannot be read, what the lane found is UNKNOWN — rendering that as "nothing
+    found" would put this repository's founding defect in a message on the one day the
+    record went missing.
+    """
+
+    from lib.announce import Line
+    from lib.reaping import LANES as REAPER_LANES
+
+    lines = []
+    for lane in REAPER_LANES:
+        if activity.get("status") != "READ":
+            lines.append(Line(lane, "UNKNOWN", (
+                f"the journal could not be read ({activity.get('reason', '')[:60]}), so "
+                f"what this lane found is not established")))
+            continue
+
+        seen = activity["lanes"].get(lane)
+        if not seen or not seen.get("runs"):
+            lines.append(Line(lane, "NOT_RUN", f"no run in the last "
+                                               f"{DIGEST_WINDOW_HOURS}h"))
+            continue
+
+        # Ordered by what a person acts on first, not alphabetically or by count.
+        order = ("READY", "INDETERMINATE", "COULD_NOT_LOOK", "REFUSED", "NOTHING_FOUND")
+        counts = seen["harvests"]
+        parts = [f"{counts[status]}×{status}" for status in order if counts.get(status)]
+        parts += [f"{count}×{status}" for status, count in sorted(counts.items())
+                  if status not in order]
+        placements = seen.get("placements") or {}
+        # In front of the harvest counts, not in the detail after them. An order the
+        # broker never confirmed is the one thing in this message that cannot wait for
+        # tomorrow, and the eye reads the status column.
+        unresolved = placements.get("UNRESOLVED") or 0
+        if unresolved:
+            parts.insert(0, f"{unresolved} UNRESOLVED ORDER(S)")
+        placed = placements.get("PLACED") or 0
+        detail = "; ".join(filter(None, [
+            f"{placed} order(s) placed" if placed else "",
+            f"{seen['runs']} run(s), last {seen.get('last_at') or 'unknown'}"]))
+        lines.append(Line(lane, ", ".join(parts) or "ran, no harvest recorded", detail))
+    return lines
+
+
+def daily_digest(orchestrator: Orchestrator, *, announcer: Any = None,
+                 journal_path: Any = None) -> Any:
+    """Send the digest, if today's has not gone. The message whose absence is the alarm.
+
+    It reports lanes that found nothing on purpose. A digest listing only findings is
+    indistinguishable from a digest that never sent, and then silence means four things
+    again.
+
+    Two sources, because there are two questions and one answer would blur them. The money
+    lanes are summarised from the journal — what they actually found in the last day. Every
+    other lane is reported as the orchestrator last saw it, which for `monitor` or
+    `preflight` is the honest answer: they produce work for a person rather than
+    instructions, and their exit code is what there is.
+
+    Neither source runs anything. Re-reaping three lanes to describe them would spend an
+    odds-API allowance on writing a status message, and the allowance is the binding
+    constraint on the arb lane.
+    """
+
+    from lib.announce import Line, default_announcer
+    from lib.journal import JOURNAL, Journal
+    from lib.reaping import LANES as REAPER_LANES
+
+    teller = announcer if announcer is not None else default_announcer()
+    since = (datetime.now(timezone.utc)
+             - timedelta(hours=DIGEST_WINDOW_HOURS)).isoformat(timespec="seconds"
+                                                               ).replace("+00:00", "Z")
+    journal = Journal(JOURNAL if journal_path is None else journal_path)
+    lines = _money_lane_lines(journal.activity_since(since))
+
+    reaper_lanes = {f"reap-{lane}" for lane in REAPER_LANES}
+    for lane in LANES:
+        if lane.name in reaper_lanes:
+            continue
+        run = orchestrator.last_run(lane.name)
+        lines.append(Line(
+            lane.name,
+            getattr(run, "status", "") or "NEVER_RAN",
+            (getattr(run, "at", "") or "") if run is not None else
+            "no record of this lane ever running",
+        ))
+
+    open_decisions = len(orchestrator.open_decisions)
+    extra = (f"{open_decisions} decision(s) waiting for you: python run.py --queue"
+             if open_decisions else "Nothing is waiting for you in the queue.")
+    return teller.announce_heartbeat(lines, extra=extra)
+
+
 def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
-          heartbeat: Path | None = None) -> int:
+          heartbeat: Path | None = None, announcer: Any = None) -> int:
     """Run what is due, forever. The heartbeat this repository did not have.
 
     Every lane carries a cadence and `--go` runs whatever is due — but `--go` is one shot
@@ -291,10 +395,35 @@ def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
             print(f"  TICK FAILED  {type(error).__name__}: {error}")
         ticks += 1
         _beat(path, ticks, started, last_exit)
+        _digest_once(announcer)
         if limit is not None and ticks >= limit:
             break
         time.sleep(interval)
     return 0
+
+
+def _digest_once(announcer: Any) -> None:
+    """Try the daily digest every tick; the announcer decides it is once a day.
+
+    Attempted on every tick rather than on a timer of its own, because a supervisor
+    restarted at 09:00 with a "24 hours since the last one" clock sends nothing until 09:00
+    tomorrow, and a system that keeps restarting sends nothing ever. The date key makes a
+    retry harmless and makes a failed send retryable, which a timer does not.
+
+    Nothing here can end the loop. A supervisor that dies of its own bookkeeping is the
+    failure this whole file exists to prevent, and a messaging outage is a poor reason for
+    the lanes to stop running.
+    """
+
+    try:
+        announcement = daily_digest(Orchestrator(LANES, STATE), announcer=announcer)
+    except Exception as error:  # noqa: BLE001
+        print(f"  DIGEST FAILED  {type(error).__name__}: {error}")
+        return
+    from lib.announce import ALREADY_TOLD
+
+    if announcement.status != ALREADY_TOLD:
+        print(f"  DIGEST  {announcement.status}")
 
 
 def reap(lane: str = "", dry: bool = False, *, as_json: bool = False) -> int:

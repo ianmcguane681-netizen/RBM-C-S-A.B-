@@ -74,8 +74,16 @@ if [ -f "$HOME/.alpaca/key_id" ]; then
     chmod 600 "$HOME"/.alpaca/paper "$HOME"/.alpaca/live 2>/dev/null || true
 fi
 
+# Not a lane. It is how a lane reaches you, and one that finds something at 16:00 on a
+# Monday and tells nobody has not done its job. Absent, everything still runs and the
+# notifier reports NOT_CONFIGURED, which is not a failure.
+printf 'TELEGRAM  (notifications) -> ~/.telegram/{bot_token,chat_id}\n'
+printf '  token from @BotFather, your chat id from @userinfobot\n'
+place "$HOME/.telegram" bot_token "Telegram bot token"
+place "$HOME/.telegram" chat_id "Telegram chat id (not secret; hidden anyway)"
+
 printf 'What is in place now:\n\n'
-find "$HOME/.oddsapi" "$HOME/.alpaca" "$HOME/.betfair" "$HOME/.smarkets" \
+find "$HOME/.oddsapi" "$HOME/.alpaca" "$HOME/.telegram" "$HOME/.betfair" "$HOME/.smarkets" \
      -type f -printf '  %m  %p\n' 2>/dev/null || true
 printf '\nAnything not 600 above is readable by another user. Now run:\n'
 printf '  python preflight.py\n\n'

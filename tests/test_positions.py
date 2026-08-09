@@ -282,3 +282,86 @@ class TestApplyingToTheBreakers:
         place(tmp_path, staked="5")
 
         assert run(tmp_path, "--apply") == 1
+
+
+class TestATripAtAKeyboardIsNotAQuietLane:
+    """A breaker can trip here, hours or a day before the lane it stopped next runs. Until
+    this was wired, that trip was announced on the next reap — so a lane stopped by the
+    fourth losing result looked exactly like a lane finding nothing, for as long as its
+    cadence is. The stocks cadence is 24 hours."""
+
+    class Channel:
+        is_configured = True
+
+        def __init__(self):
+            self.sent = []
+
+        def send(self, subject, body):
+            from lib.notify import SENT, Delivery
+
+            self.sent.append((subject, body))
+            return Delivery(SENT, "now", subject)
+
+    def announcer(self, tmp_path, channel):
+        from lib.announce import Announcer
+
+        return Announcer(channel, memory_path=tmp_path / "announced.json")
+
+    def a_losing_position(self, tmp_path):
+        """One loss past the 3% daily limit on a 1,000 ring-fence."""
+
+        config_file(tmp_path)
+        place(tmp_path, staked="500")
+        run(tmp_path, "--settle", only_position(tmp_path).position_id, "--returned", "0")
+
+    def test_the_trip_is_announced_when_the_outcome_is_applied(self, tmp_path):
+        self.a_losing_position(tmp_path)
+        channel = self.Channel()
+
+        code = positions.apply(tmp_path / "outcomes.json", tmp_path / "reapers.json",
+                               announcer=self.announcer(tmp_path, channel))
+
+        assert code == 1
+        assert channel.sent and "BREAKER TRIPPED" in channel.sent[0][0]
+
+    def test_applying_twice_does_not_report_the_same_trip_twice(self, tmp_path):
+        """It does not reset itself, so it is still tripped every time this is run."""
+
+        self.a_losing_position(tmp_path)
+        channel = self.Channel()
+
+        for _ in range(3):
+            positions.apply(tmp_path / "outcomes.json", tmp_path / "reapers.json",
+                            announcer=self.announcer(tmp_path, channel))
+
+        assert len(channel.sent) == 1
+
+    def test_an_ordinary_apply_says_nothing(self, tmp_path):
+        """Nothing tripped. A message here would teach the reader to ignore the one that
+        matters."""
+
+        config_file(tmp_path)
+        place(tmp_path, staked="5")
+        run(tmp_path, "--settle", only_position(tmp_path).position_id, "--returned", "6")
+        channel = self.Channel()
+
+        positions.apply(tmp_path / "outcomes.json", tmp_path / "reapers.json",
+                        announcer=self.announcer(tmp_path, channel))
+
+        assert not channel.sent
+
+    def test_a_notifier_that_fails_does_not_change_what_was_applied(self, tmp_path, capsys):
+        """The outcomes reached the breakers before anything was sent. A messaging fault
+        must not make a correct application look like a failed command."""
+
+        self.a_losing_position(tmp_path)
+
+        class Exploding:
+            def announce_breakers(self, _assemblies):
+                raise RuntimeError("the notifier broke")
+
+        code = positions.apply(tmp_path / "outcomes.json", tmp_path / "reapers.json",
+                               announcer=Exploding())
+
+        assert code == 1
+        assert "could not be notified" in capsys.readouterr().out

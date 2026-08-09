@@ -33,7 +33,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from lib.outcomes import (
     BROKER,
@@ -183,7 +183,14 @@ def resolve(path: Path, action: str, identifier: str, *,
     return 1
 
 
-def apply(path: Path, config_path: Path, *, as_json: bool = False) -> int:
+#: "the caller said nothing" as against "the caller said None", where None means tell
+#: nobody. Same idiom as `lib.reaping`, and for the same reason: a default that resolved a
+#: live channel at import would message somebody from a test.
+_DEFAULT = object()
+
+
+def apply(path: Path, config_path: Path, *, as_json: bool = False,
+          announcer: Any = _DEFAULT) -> int:
     """Every configured lane's breakers, told what settled since the last time.
 
     Assembles the lanes exactly as `run.py --reap` does rather than building breakers
@@ -236,6 +243,14 @@ def apply(path: Path, config_path: Path, *, as_json: bool = False) -> int:
             print()
         tripped = tripped or bool(application.tripped_by)
 
+    if tripped:
+        # A trip that happens HERE happens at a keyboard, and the lane it stopped may not
+        # run again for a day. Waiting for the next reap to mention it would leave a
+        # stopped lane looking like a quiet one for exactly as long as its cadence is —
+        # and the person who typed the fourth losing result is the person who most needs
+        # to know the fourth one was the last.
+        _announce_trips(assemblies, announcer, as_json=as_json)
+
     if as_json:
         _emit({
             "status": ("UNREADABLE" if not book.readable else
@@ -252,6 +267,42 @@ def apply(path: Path, config_path: Path, *, as_json: bool = False) -> int:
         print("A breaker tripped. It does not reset itself — clearing it is a human act "
               "and is recorded with a reason.")
     return 1 if (tripped or book.live()) else 0
+
+
+def _announce_trips(assemblies: Sequence[Any], announcer: Any, *, as_json: bool) -> None:
+    """Tell somebody a breaker tripped, and never let that failure reach the exit code.
+
+    Applying outcomes is bookkeeping that has already happened by the time this runs. A
+    notifier that raises must not turn a correct application into a command that looks as
+    though it failed, so everything here is reported and nothing is propagated.
+    """
+
+    from lib.announce import ANNOUNCED
+
+    try:
+        if announcer is None:
+            return
+        teller = _default_announcer() if announcer is _DEFAULT else announcer
+        told = teller.announce_breakers(assemblies)
+    except Exception as error:  # noqa: BLE001 - the outcomes were applied regardless
+        if not as_json:
+            print(f"  The trip could not be notified ({type(error).__name__}: {error}). "
+                  f"It is on this screen and nowhere else.")
+        return
+
+    if as_json or not told:
+        return
+    for announcement in told:
+        if announcement.status != ANNOUNCED:
+            print(f"  {announcement.describe()}")
+
+
+def _default_announcer() -> Any:
+    """Imported at call time so a test can replace it before anything is constructed."""
+
+    from lib.announce import default_announcer
+
+    return default_announcer()
 
 
 def main(argv: list[str]) -> int:

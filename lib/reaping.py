@@ -95,6 +95,12 @@ class Reaping:
     modes: tuple[Any, ...] = field(default_factory=tuple)
     #: What was actually submitted. Empty when nothing was, which is the usual case.
     placements: tuple[Any, ...] = field(default_factory=tuple)
+    #: Who was told, and what became of the telling. Empty on a dry run, which is the one
+    #: case where nobody is notified on purpose — see `reap`.
+    announcements: tuple[Any, ...] = field(default_factory=tuple)
+    #: Why nothing was announced, when that was a decision rather than an absence of
+    #: findings. A run that told nobody because it was dry is not a run with nothing to say.
+    silence: str = ""
 
     @property
     def ready(self) -> tuple[str, ...]:
@@ -134,6 +140,10 @@ class Reaping:
                 "No lane was configured, so NOTHING was looked at. This is not a report "
                 "that there was nothing to find."
             )
+            # Printed on this path too. A run where every lane is unconfigured is one of
+            # the states worth a message, so "was anybody told" must not be a line that
+            # only appears when there were harvests to tell them about.
+            lines += ["", self._describe_announcements()]
             return "\n".join(lines)
 
         lines.append(f"HARVESTS from {len(self.ready)} lane(s): "
@@ -147,6 +157,9 @@ class Reaping:
 
             lines.append(describe_placements(self.placements))
             lines.append("")
+
+        lines.append(self._describe_announcements())
+        lines.append("")
 
         ready = [h for h in self.harvests if h.status == "READY"]
         placed = [p for p in self.placements if p.status == "PLACED"]
@@ -164,6 +177,38 @@ class Reaping:
             )
         else:
             lines.append("Nothing reached READY. Every lane's reason is stated above.")
+        return "\n".join(lines)
+
+    def _describe_announcements(self) -> str:
+        """Who was told, always printed — including when the answer is nobody.
+
+        A run that found something and could not tell anybody looks, in the terminal,
+        exactly like a run that found something and told them. The operator reading this
+        on a screen already knows; the point is the person who is not reading it, and
+        whether they are about to find out.
+        """
+
+        from lib.announce import ANNOUNCED, NOT_CONFIGURED as NO_CHANNEL, UNTOLD
+
+        if self.silence:
+            return f"NOTIFICATIONS\n  {self.silence}"
+        if not self.announcements:
+            return ("NOTIFICATIONS\n  Nothing in this run was worth a message. That is a "
+                    "judgement about the findings, not a channel that failed.")
+
+        lines = ["NOTIFICATIONS"]
+        lines += [f"  {a.describe()}" for a in self.announcements]
+        untold = [a for a in self.announcements if a.status == UNTOLD]
+        unheard = [a for a in self.announcements if a.status == NO_CHANNEL]
+        if untold:
+            lines.append(f"  {len(untold)} message(s) DID NOT GO OUT. What they were "
+                         f"about is above, and nobody has been told about it.")
+        elif unheard:
+            lines.append("  No channel is configured, so these are in this report and "
+                         "nowhere else. Set one up: docs/activation.md.")
+        elif any(a.status == ANNOUNCED for a in self.announcements):
+            lines.append("  Sent. A silent day now means something is wrong, which is the "
+                         "only way silence means anything at all.")
         return "\n".join(lines)
 
     def to_dict(self) -> dict[str, Any]:
@@ -206,6 +251,11 @@ class Reaping:
             "applications": [serialise(item) for item in self.applications],
             "harvests": [serialise(item) for item in self.harvests],
             "placements": [serialise(item) for item in self.placements],
+            "notifications": {
+                "status": "NOT_ATTEMPTED" if self.silence else "ATTEMPTED",
+                "reason": self.silence or None,
+                "announcements": [serialise(item) for item in self.announcements],
+            },
         }
 
 
@@ -495,12 +545,26 @@ def reap(
     place: bool = True,
     brokers: Any = None,
     journal_path: Any = _DEFAULT,
+    announcer: Any = _DEFAULT,
 ) -> Reaping:
-    """Assemble, apply outcomes, then run every selected lane.
+    """Assemble, apply outcomes, then run every selected lane, and tell somebody.
 
     Applying comes FIRST and that ordering is the point. A breaker that has not been told
     about yesterday's four losses will permit a fifth position perfectly happily, which is
     the failure the breakers exist to prevent and the reason `lib/outcomes` was written.
+
+    **Announcing happens here, once, for all three lanes**, rather than inside each reaper.
+    Every lane's findings pass through this function, so a fourth lane is notified by
+    existing — which is the same reason `assemble` loops over `LANES` instead of naming
+    three. A per-lane wire would have been three edits and a lane silently unnotified.
+
+    It happens LAST, after placing, because what a person needs to hear depends on whether
+    money moved: "a person places it" and "the broker did not answer" are different
+    messages about the same instruction, and only one of them is true on any given run.
+
+    `announcer=None` sends nothing. A dry run passes None on purpose — `--dry` is for
+    seeing what a live system would do, and a flag that promises to send nothing while
+    messaging somebody's phone is a flag nobody can trust again.
     """
 
     from lib.operating import modes_for
@@ -551,6 +615,7 @@ def reap(
     reaping = Reaping(assemblies, tuple(harvests), applications=applications,
                       modes=tuple(modes[lane] for lane in selected),
                       placements=placements)
+    reaping = _announce(reaping, announcer, dry=not place)
 
     # Recorded AFTER the run, and unable to affect it. Everything a reap produces was
     # printed once and lost, so "what did the arb lane find on Tuesday" had no answer and
@@ -568,6 +633,45 @@ def reap(
             dry_run=not place,
         )
     return reaping
+
+
+def _announce(reaping: Reaping, announcer: Any, *, dry: bool) -> Reaping:
+    """Hand the finished run to the notifier, and never let that end the run.
+
+    The reap has already happened by the time this is called. Everything it established is
+    in the object being passed around, so a notifier that raises must not be able to
+    destroy it — the findings would be lost in the act of trying to report them, which is
+    the most ironic version of this repository's recurring bug.
+
+    A failure here is recorded in `silence` rather than swallowed, because a run that could
+    not tell anybody is a fact about the run.
+    """
+
+    from dataclasses import replace
+
+    if dry:
+        return replace(reaping, silence=(
+            "This was a dry run, so nobody was notified. Anything above is on this screen "
+            "and nowhere else."))
+    if announcer is None:
+        return replace(reaping, silence=(
+            "Announcing was switched off for this run, so nobody was told what is above."))
+
+    try:
+        resolved = default_announcer() if announcer is _DEFAULT else announcer
+        return replace(reaping, announcements=resolved.announce_reaping(reaping))
+    except Exception as error:  # noqa: BLE001 - reporting a run must not lose the run
+        return replace(reaping, silence=(
+            f"The notifier itself failed ({type(error).__name__}: {error}), so nobody was "
+            f"told. The run above still happened and still stands."[:300]))
+
+
+def default_announcer() -> Any:
+    """The production announcer, imported at call time so a test can replace it."""
+
+    from lib.announce import default_announcer as build
+
+    return build()
 
 
 def _place(harvests, modes, ledger, brokers) -> tuple[Any, ...]:

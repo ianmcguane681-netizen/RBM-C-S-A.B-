@@ -1,23 +1,148 @@
-# Next work — checkpoint 2026-08-03
+# Next work — checkpoint 2026-08-09
 
-> **Updated `7d7b12b`. ALL FIVE GAPS ARE CLOSED.** The checkpoint below is the record of
-> how they were closed, not a plan. Gaps 4 and 5 came from Codex on
-> `codex/request-for-feedback` and were merged at `c6c02ce`.
+> **1436 tests, 2 skipped.** `main` is at the PR #9 merge; PR #10 carries the 8-9 August
+> work on top of it, and the notifier is now wired into all three lanes. **8 August was the first day all three money lanes ran against real sources**,
+> on Ian's own Windows machine, and almost everything below came out of that rather than out
+> of reading the code.
 >
-> The stocks lane runs the whole loop unattended: research → breakers → place at Alpaca →
-> position recorded → settled outcome fed back to the breakers that gate the next one, on a
-> 24h cadence, deduped, with the owner able to take the wheel from a file.
+> **Nothing is running on a cadence.** No supervisor has been started, so no lane has ever
+> run unattended and nothing is being missed while it is not.
 >
-> **Next is not a gap — it is the fourth of the seven functions: the flipper.** See the
-> "After the gaps" section for why it needs a different architecture from these three.
-> Open questions: no sizing ramp (a lane with zero settled outcomes sizes like one with
-> two hundred), and no Obsidian vault. 1187 tests.
+> **Tomorrow's plan is the section immediately below.** The rest of this file is history,
+> kept because the reasoning in it is why the code looks the way it does.
+
+---
+
+# TOMORROW — 2026-08-10
+
+Ordered. Ian's items and the engineer's items are separated because they do not block each
+other and can run in parallel.
+
+## Ian
+
+**0. The venue fees, decided 08-09: do not pay them yet.** Smarkets wants £150 one-off for
+API access and Betfair about £299 for a live App Key — ~£450 before a bet goes on, and it
+buys automation rather than opportunity. The odds feed already carries both books, so the
+lane can find these and Ian can place them by hand for nothing. Pay once the lane has shown
+repeatable arbs at a real stake size; what the money then buys is automatic placing and,
+more valuably, automatic settlement from the exchanges' cleared-order APIs.
+
+**1. The arb rulebooks (his stated plan for tomorrow).**
+The method is proven — he read William Hill's and bet365's abandonment and postponement
+pages on 08-08 and found a real divergence. What is left is to do it for a pair the ODDS
+FEED ACTUALLY CARRIES. bet365 is not carried; 38 books are, including William Hill, Betfair,
+Betfair Sportsbook, Paddy Power, Sky Bet, Smarkets, Ladbrokes, Coral, Pinnacle and
+BoyleSports. Two things to weigh while choosing: Betfair, Paddy Power and Sky Bet are all
+Flutter, so their rules agree BECAUSE they are one company and restriction risk is
+correlated; and two exchanges (Betfair, Smarkets) are the most likely pair to settle alike
+and the least likely to restrict a winning account. Set `arb.enabled` true, run
+`run.py --reap arb --dry` to get the exact declaration key, then write the declaration with
+the divergences recorded rather than omitted. `docs/crypto-thesis.md` shows the shape of an
+honest one.
+
+**2. Monday, not tomorrow: the stocks lane during market hours.** 15:30-22:00 Irish time.
+Six names now that the shares-outstanding collision is fixed. Expect MOD to refuse — it has
+a genuine split history and that refusal is correct.
+
+**3. The eBay question — in flight.** The developer account went for verification on
+08-09 and takes a business day, so the two answers land **Tuesday 08-11**: whether the
+production keys can call SOLD data at all, and the real fee rate from the account rather
+than the published card-category one. Everything in `docs/flipper-design.md` is moot until
+the first one, and every threshold in it moves with the second.
+
+**4. Raw-buy-then-grade: ANSWERED, out.** Scope extended the same evening to graded Pokémon
+alongside graded sports cards, on the same matchability argument. Ungraded games, consoles
+and electronics stay *later* with the criterion now written down — they enter when an exact
+identity key exists and condition has a third state, because "tested, working" in a listing
+is a seller's claim the lane cannot check.
+
+## Engineer
+
+**1. ~~Wire the notifier into the lanes.~~ DONE — `lib/announce.py`.** All four calls are
+in: READY, a tripped breaker, a lane blind three runs running, and the daily digest offered
+by the supervisor on every tick. Two things are worth knowing before changing any of it.
+
+*The wire is in `lib/reaping.reap`, once, for every lane* — the same argument as
+`assemble` looping over `LANES` rather than naming three. A fourth lane is notified by
+existing. It runs after placing, because "a person places it" and "the broker did not
+answer" are different messages about one instruction and only one of them is ever true.
+
+*What is suppressed, and the one place the doctrine inverts.* A standing opportunity is
+re-told every six hours rather than every run, keyed on lane and subject; a trip is told
+once per trip; an unresolved placement is keyed by the order and can never be deduped away
+by the READY message before it. But an unreadable memory suppresses **nothing** — failing
+toward stopping is about money moving, and here stopping means an opportunity nobody hears
+about, which is invisible where a duplicate message is merely a duplicate message.
+
+Two things were finished after the first pass, and both were cases of the wire being in
+while the message under-reported. **The digest now says what each lane FOUND**, read from
+the journal, rather than how its process exited — `reap-arb COMPLETED` reported that
+something ran, which is not the claim the daily message exists to make. Three states stay
+apart on the way to a phone: found nothing, did not run, and journal unreadable. And **a
+breaker tripped by `positions.py --apply` is announced there**, not on the next reap: that
+trip happens at a keyboard, and for stocks the next reap is 24 hours away, so a stopped
+lane read as a quiet one for a day.
+
+**Still not wired, and deliberately left:** `monitor.py` (exit 4, a material change means a
+prior review may no longer hold) and `scan_arb.py`. Both produce work for a person rather
+than an instruction, and both would need a message type that does not exist yet — worth
+doing, worth designing rather than bolting on.
+
+Still open on this: nothing has been sent to a real chat yet. `~/.telegram/bot_token` and
+`~/.telegram/chat_id` do not exist on Ian's machine, so every run reports NOT_CONFIGURED —
+correctly, and that is the last two minutes of the job (`bash deploy/setup-credentials.sh`,
+or `python deploy/setup_credentials.py` on Windows). Until then `status.py`'s NOTIFICATIONS
+panel says NEVER_SENT, which is the honest reading and not a failure.
+
+**2. The input surface for outcomes — `docs/recording-outcomes.md`, designed 08-09.**
+Recording is what feeds the breakers, and the only way in is a terminal. Ian asked for a
+place to confirm from a phone: for arb one tap saying both legs went on as sized (the slip
+knows the stakes) and settlement that is never win-or-loss; for the flipper a real form with
+what was paid and what it sold for. Needs a third key scope — `RECORD` appends outcomes and
+can do nothing else, because the command key must never reach browser storage. Telegram
+buttons are assessed and deliberately later: an inbound path makes the bot token a write
+credential to the ledger.
+
+**3. Per-lane opportunity panels on the dashboard.** Ian asked for the same detail the
+notifications carry to be visible in the UI, "some sections bigger than others if needs be".
+The gate work is done; this is the panel underneath it.
+
+**4. Portfolio pricing** — `docs/pricing-design.md`, designed and unbuilt. More relevant now
+that Alpaca answers: it is what turns CAPITAL AT COST from NOT_CONFIGURED into a real book.
+Three decisions already made in that document. Expect roughly six of ten holdings to price
+and the four UCITS ETFs to mark UNPRICED, which is the correct answer and not a gap.
+
+**5. `data/monitor-ledger.json` reports LOST** and has since the machine was set up. The
+receipt says it held 52 rows on 2026-08-02 and the data is absent, so every comparison the
+monitor would make is meaningless until it is rebuilt. Either rebuild it or decide the
+monitor is not in use and say so somewhere.
+
+## Deliberately not tomorrow
+
+- **Crypto** is parked. `docs/crypto-thesis.md` records both theses and why: the assets with
+  the best case (BTC, ETH) are the ones the ERC-20 gates structurally cannot see, AAVE is a
+  measured upgradeable proxy, and stablecoins do not fit a value thesis at all. The lane
+  still works as a veto and a monitor at zero further cost.
+- **The flipper build**, until the eBay sold-data question is answered.
+- **Levelling** — designed, waiting on three numbers from Ian.
+- **Autonomy on any lane.** Not one order has been placed, manually or otherwise.
+
+---
+
+# HISTORY BELOW THIS LINE
+
+Everything from here down is earlier checkpoints, kept because the reasoning is why the code
+looks the way it does. **The figures in it are historical and no longer current** — where an
+old section says 992 or 1187 tests, the number today is 1389. Read it for the arguments, not
+for the state.
+
+---
 
 Written to be picked up cold, by a session that has none of the conversation behind it.
 Read this, then `README.md`'s "Running the lanes without a board" section, and you have
 enough.
 
-**State at this checkpoint:** 992 tests, 2 skipped, `main` at `ba01517`. All three reaper
+**State at the 2026-08-03 checkpoint (historical):** 992 tests, 2 skipped, `main` at `ba01517`. All three reaper
 lanes reach `READY`. `python run.py --reap` runs them.
 
 ---

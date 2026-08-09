@@ -1,0 +1,103 @@
+[
+  {
+    "subject": "ALAB",
+    "declared_by": "Ian McGuane",
+    "reasoning": "Astera Labs sits in the data-movement layer of AI infrastructure: the connectivity and signal integrity between accelerators, rather than the accelerators themselves. The thesis is that spending on interconnect scales with the size of the compute build-out regardless of which model or which chip vendor wins, so this is exposure to the buildout rather than a bet on a winner. Bought as part of the AI-infrastructure sleeve, which is the higher-risk return engine and is deliberately separate from the stable index and gold holdings.",
+    "considered": [
+      "the price can fall a long way while the thesis stays intact, and that is not a reason to add",
+      "interconnect standards move: a shift in what hyperscalers adopt can strand a product line",
+      "customer concentration means a single hyperscaler slowing its orders is most of the revenue",
+      "high realised volatility means the volatility bound will often size this below the risk limit"
+    ],
+    "declared_at": "2026-08-08T00:00:00Z",
+    "expires_at": "2027-01-01T00:00:00Z",
+    "max_exposure": 500.0,
+    "currency": "USD",
+    "self_granted": true
+  },
+
+  {
+    "subject": "NET",
+    "declared_by": "Ian McGuane",
+    "reasoning": "Cloudflare is the networking layer of the thesis: the movement and protection of traffic at the edge, and increasingly compute placed close to where requests originate. The argument is that inference pushes work outward from central data centres, and the network that already terminates a large share of internet traffic is positioned to carry it. Infrastructure exposure rather than a model bet.",
+    "considered": [
+      "the price can fall while the thesis stays intact",
+      "it is priced on growth continuing, so a slowdown costs more than the slowdown itself",
+      "edge compute is contested by the large clouds, who can subsidise it",
+      "the filings can be restated later"
+    ],
+    "declared_at": "2026-08-08T00:00:00Z",
+    "expires_at": "2027-01-01T00:00:00Z",
+    "max_exposure": 500.0,
+    "currency": "USD",
+    "self_granted": true
+  },
+
+  {
+    "subject": "CRDO",
+    "declared_by": "Ian McGuane",
+    "reasoning": "Credo is the second data-movement holding: high-speed connectivity inside and between racks, where power efficiency per bit is the binding constraint as clusters grow. Held alongside Astera Labs deliberately rather than instead of it, because the two address different parts of the same problem — but see the concentration risk below, which is the cost of that choice.",
+    "considered": [
+      "the price can fall while the thesis stays intact",
+      "concentration: ALAB and CRDO are one bet on interconnect wearing two tickers, and correlated drawdowns should be expected",
+      "customer concentration is high and disclosed",
+      "a technology transition can arrive faster than the product cycle can follow"
+    ],
+    "declared_at": "2026-08-08T00:00:00Z",
+    "expires_at": "2027-01-01T00:00:00Z",
+    "max_exposure": 500.0,
+    "currency": "USD",
+    "self_granted": true
+  },
+
+  {
+    "subject": "RBRK",
+    "declared_by": "Ian McGuane",
+    "reasoning": "Rubrik is the enterprise data-infrastructure holding: recovery and resilience for data that is now both the training input and the thing most worth stealing. The thesis is that as more enterprise data becomes operationally load-bearing, the cost of not being able to restore it rises faster than the cost of protecting it. Infrastructure spend that follows data volume rather than model adoption.",
+    "considered": [
+      "the price can fall while the thesis stays intact",
+      "recently public, so there is little filing history to gate against and the restatement check has less to work with",
+      "backup and recovery is a crowded market with incumbents who bundle",
+      "growth is bought with sales spend, which can stop converting"
+    ],
+    "declared_at": "2026-08-08T00:00:00Z",
+    "expires_at": "2027-01-01T00:00:00Z",
+    "max_exposure": 500.0,
+    "currency": "USD",
+    "self_granted": true
+  },
+
+  {
+    "subject": "MOD",
+    "declared_by": "Ian McGuane",
+    "reasoning": "Modine is the cooling holding, and the least fashionable part of the thesis: rack density is rising faster than air can carry heat away, so thermal management becomes a constraint on how much compute can physically be deployed. An old industrial company with a real order book rather than a story, which is the point — the AI-infrastructure sleeve should not be six versions of the same risk.",
+    "considered": [
+      "the price can fall while the thesis stays intact",
+      "the legacy automotive and HVAC business is most of the revenue and does not participate in the thesis",
+      "an industrial cost base means margins move with input prices, not with demand",
+      "data-centre cooling has well-funded specialist competitors"
+    ],
+    "declared_at": "2026-08-08T00:00:00Z",
+    "expires_at": "2027-01-01T00:00:00Z",
+    "max_exposure": 500.0,
+    "currency": "USD",
+    "self_granted": true
+  },
+
+  {
+    "subject": "S",
+    "declared_by": "Ian McGuane",
+    "reasoning": "SentinelOne is the cybersecurity holding: endpoint and workload protection for infrastructure that is being built out faster than it is being secured. The thesis is that security spend is the least discretionary line in an infrastructure budget, and that autonomous detection scales where staffed detection does not. Held for the sleeve's exposure to the buildout rather than for any view on the security market's winner.",
+    "considered": [
+      "the price can fall while the thesis stays intact",
+      "it competes with a much larger incumbent that can price aggressively",
+      "the platform is bought on displacement, and displacement cycles are long and can stall",
+      "the filings can be restated later"
+    ],
+    "declared_at": "2026-08-08T00:00:00Z",
+    "expires_at": "2027-01-01T00:00:00Z",
+    "max_exposure": 500.0,
+    "currency": "USD",
+    "self_granted": true
+  }
+]

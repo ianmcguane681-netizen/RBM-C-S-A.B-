@@ -194,6 +194,64 @@ class Journal:
             for r in rows
         )
 
+    def activity_since(self, since: str) -> dict[str, Any]:
+        """What each lane actually FOUND in a window, per lane, for the daily digest.
+
+        `recent_runs` answers "what happened lately" for a reader with a screen. This
+        answers the narrower question a digest needs: for each lane, how many times it ran,
+        what its harvests were, and what became of anything placed — because a digest
+        saying `reap-arb COMPLETED` reports that a process exited, and the whole argument
+        for a daily message is that it distinguishes a lane which looked and found nothing
+        from one which never looked at all.
+
+        **Unreadable is a status, not an empty result.** A journal that will not open
+        returns `UNREADABLE` with no lanes, and the caller must render that as "what these
+        lanes found is unknown". Returning empty counts would put "found nothing" in a
+        message on the day the record went missing, which is the founding defect delivered
+        to a phone.
+
+        Dry runs are excluded. `--dry` is somebody at a keyboard looking, and counting it
+        would report a person's curiosity as the system running on its cadence.
+        """
+
+        if not self.readable:
+            return {"status": "UNREADABLE", "reason": self.reason, "lanes": {}}
+        try:
+            with self._connect() as connection:
+                totals = connection.execute(
+                    "SELECT h.lane, COUNT(DISTINCT h.run_id), MAX(h.observed_at) "
+                    "FROM harvests h JOIN reaper_runs r ON h.run_id = r.run_id "
+                    "WHERE r.dry_run = 0 AND r.started_at >= ? GROUP BY h.lane",
+                    (since,),
+                ).fetchall()
+                found = connection.execute(
+                    "SELECT h.lane, h.status, COUNT(*) "
+                    "FROM harvests h JOIN reaper_runs r ON h.run_id = r.run_id "
+                    "WHERE r.dry_run = 0 AND r.started_at >= ? GROUP BY h.lane, h.status",
+                    (since,),
+                ).fetchall()
+                placed = connection.execute(
+                    "SELECT e.lane, e.status, COUNT(*) "
+                    "FROM executions e JOIN reaper_runs r ON e.run_id = r.run_id "
+                    "WHERE r.dry_run = 0 AND r.started_at >= ? GROUP BY e.lane, e.status",
+                    (since,),
+                ).fetchall()
+        except (OSError, sqlite3.Error) as error:
+            return {"status": "UNREADABLE", "reason": f"{type(error).__name__}: {error}",
+                    "lanes": {}}
+
+        lanes: dict[str, dict[str, Any]] = {
+            row[0]: {"runs": row[1], "last_at": row[2], "harvests": {}, "placements": {}}
+            for row in totals
+        }
+        for lane, status, count in found:
+            lanes[lane]["harvests"][status] = count
+        for lane, status, count in placed:
+            lanes.setdefault(
+                lane, {"runs": 0, "last_at": None, "harvests": {}, "placements": {}}
+            )["placements"][status] = count
+        return {"status": "READ", "reason": "", "lanes": lanes}
+
     def placements_for(self, run_id: str) -> tuple[dict, ...]:
         if not self.readable:
             return ()
