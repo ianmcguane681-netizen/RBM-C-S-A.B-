@@ -110,18 +110,40 @@ the arb slip makes when it prints stakes to the penny instead of a percentage.
 opportunity and wrong here. Deterioration is news every single time it deteriorates.
 
 So the guard escalates in bands, and **crossing into a worse band always sends, whatever was
-said before**:
+said before**. Ian chose the four levels on 2026-08-09:
 
-```
-2.0% used   informational   you are being watched, and here is where you are
-3.5% used   urgent          the headroom in money, and the move that ends it
-4.5% used   unmissable      and every band crossing below this point re-sends
-UNKNOWN     urgent          nothing is watching your positions right now
-```
+| used | delivery | why this one is not a push |
+|---|---|---|
+| **1.0%** | recorded, carried in the heartbeat | see below |
+| **2.0%** | push, informational | where you are, and the headroom in money |
+| **3.0%** | push, urgent | the move in your own position that reaches the floor |
+| **4.5%** | push, unmissable | and every band crossing below this re-sends |
+| `UNKNOWN` | push, urgent | nothing is watching your positions right now |
 
-Within a band the ordinary window applies, so a position bumping along at 3.6% does not
-buzz every minute. Improving is never urgent — recovering from 4% to 2% is good news and can
-wait for the heartbeat.
+**1% is a band and not a buzz, and that is a decision rather than an oversight.** Crypto
+moves 1% several times a day, so on any position of size that level is ordinary noise. A
+phone that reports it is a phone that reports nothing — and then the 4.5% arrives and is
+skimmed with the rest. This is the failure `docs/flipper-design.md` Decision 4 already named
+and already answered: the digest carries the routine finds instead of pushing each one. So
+1% is visible every time the heartbeat lands and silent in between. If it should push, that
+is a one-line change and Ian's call to make.
+
+Within a band the ordinary window applies, so a position bumping along at 3.6% does not buzz
+every minute. Improving is never urgent — recovering from 4% to 2% is good news and can wait
+for the heartbeat.
+
+### Hysteresis, because a boundary is a place a price sits
+
+Four bands make a defect visible that three hid. An equity drifting across 2.0% — down,
+up, down again over ten minutes — crosses the band four times and, on a naive reading of
+"crossing always sends", sends four times. That is the noise problem arriving through the
+mechanism built to prevent it.
+
+So **a band re-arms only after the equity recovers clear of it by 0.5%**, not the instant it
+ticks back above. Crossing 2.0% sends; wandering between 1.9% and 2.1% does not send again;
+recovering to 1.5% and later falling back through 2.0% is a genuinely new deterioration and
+does send. The margin is stated here rather than tuned in code, because it is the number
+that decides whether the guard is trusted or muted.
 
 ## The capability it does not have
 
@@ -182,6 +204,8 @@ new guard at once.
 ## What must not happen
 
 - **A silent guard.** `UNKNOWN` is loud, and the heartbeat runs even when the news is good.
+- **A band that fires on oscillation.** Re-arming needs 0.5% of recovery, or the guard
+  teaches its reader to mute it.
 - **A guard that trades.** No trade permission on the key, and no flatten-at-the-floor.
 - **A machine-read rulebook.** The parameters are declared by a named person and dated.
 - **An assumed-permissive default.** An unstated rule resolves to the strictest reading, and
