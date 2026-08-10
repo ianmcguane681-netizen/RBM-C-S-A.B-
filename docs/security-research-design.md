@@ -1,16 +1,22 @@
 # The security research engine, designed
 
-Designed 2026-08-09, not built, and not to be built until the check at the bottom of this
-document is answered. One of the functions beyond the original seven in
-`docs/target-functions.md`; its autonomy target and the line it must not cross are stated in
-`docs/end-state.md` and are not reopened here — this document is how it would *work* if it
-is built at all.
+Designed 2026-08-09, reviewed the same day, **not built and not next**. Two gates stand in
+front of it: the scope check at the bottom of this document, and the 2026-08-09 decision in
+`docs/next-work.md` that no new lane is built until an existing one produces something real.
+Either alone is enough to keep this on paper. One of the functions beyond the original
+seven in `docs/target-functions.md`; its autonomy target and the line it must not cross are
+stated in `docs/end-state.md` and are not reopened here — this document is how it would
+*work* if it is built at all.
 
 Ian's framing was "a bounty-hunter AI for security issues in apps, code, websites or
 anything that may be worth money to someone if found, run autonomously." The legitimate
 version of that is real and valuable. The illegitimate version is a crime, and the
 difference between them is a single input this lane treats the way the arb lane treats a
 settlement declaration.
+
+One thing this document does not model, flagged on review for the same reason the flipper
+now flags it: **bounty income is taxable**, and "a way the system could earn" is a pre-tax
+statement everywhere below.
 
 ## The one thing that is decided, not designed
 
@@ -56,9 +62,12 @@ size()        a report written against the program's submission format. NOT an e
 
 ### `look()` reads programs, not the open internet
 
-Candidates come from the bug-bounty platforms you are enrolled in — HackerOne, Intigriti and
-the like all expose the enrolled-program list and its scope over an API — plus assets you own
-outright. A candidate is never a hostname on its own; it is a target *and* the rules that
+Candidates come from the bug-bounty platforms you are enrolled in, plus assets you own
+outright. **Whether those platforms expose scope over an API in a form your account can read
+is precisely the open question at the bottom of this document, and it is not assumed here.**
+An earlier draft of this paragraph asserted that they all do; that assertion was removed on
+review because it quietly answered the one question the whole design is gated on, and a
+reader who believed it would skip the check. A candidate is never a hostname on its own; it is a target *and* the rules that
 say what may be done to it. A lane that fetched targets and looked their scope up separately
 is a lane one refactor away from testing a target whose scope failed to load, which is the
 `SCOPE_UNKNOWN` failure wearing a plausible disguise.

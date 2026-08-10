@@ -1,7 +1,8 @@
 # The flipper, designed
 
-Designed 2026-08-09, not yet built. Function 4 of the seven in `docs/target-functions.md`;
-the autonomy target is in `docs/end-state.md`. The next session can pick this up from cold.
+Designed 2026-08-09, reviewed 2026-08-09, **not yet built and not next**. Function 4 of the
+seven in `docs/target-functions.md`; the autonomy target is in `docs/end-state.md`. The next
+session can pick this up from cold.
 
 ## Scope, decided 2026-08-09, extended 2026-08-09 (evening)
 
@@ -131,7 +132,10 @@ opportunity is called one.
 
 Ian's opening figures were a 200 EUR buy at 40-65% and a 40 EUR buy at 15-25%. Run against
 indicative eBay card-category fees (13.25% of the total plus a 0.30 fixed fee) and tracked
-postage:
+postage — **5.50 EUR on the 40 EUR tier and 9.00 EUR on the 200 EUR tier**, a graded slab
+going insured. Those two postage figures are stated here because the table below cannot be
+checked without them, and a fee model a reader cannot reproduce is one nobody will notice
+going wrong:
 
 | buy | markup | net profit | |
 |---|---|---|---|
@@ -162,9 +166,23 @@ Below about 75 EUR no realistic markup makes an item worth touching, which is wh
 floor comes from. It also settles the loose-retro-games question on arithmetic rather than
 taste.
 
+**Two caveats on the arithmetic above, found on review 2026-08-09 and worth more than the
+figures themselves.**
+
+*The two tables do not use the same postage.* The profit table above charges 9.00 EUR on the
+200 EUR rows; the minimum-buy table charges 5.50 EUR throughout. On the heavier assumption
+the floor is about **80 EUR rather than 75**, and the 30% row moves from ~245 to ~270. The
+decision does not change — 75 and 80 are the same decision — but the precision implied by
+"~245" is not there, and a later reader recomputing it would be right to be confused.
+
+*Neither table carries a returns provision*, though Decision 3 above requires one in the
+model. So every break-even here is **optimistic by the returns rate**, whatever it turns out
+to be. On a 40 EUR item, which needs a 32% markup to break even before returns, that matters
+more than on a 200 EUR one.
+
 **Scale, so nobody is surprised by it:** 20 items at 200 EUR and 40% is about 670 EUR a
-turn on 4,000 EUR deployed. Real, and worth knowing before the lane is built rather than
-after.
+turn on 4,000 EUR deployed, where a turn is bounded by the 50-day horizon rather than being
+a month. Real, and worth knowing before the lane is built rather than after.
 
 ## Decision 4 — two urgency tiers, and the quiet one must stay quiet
 
@@ -199,10 +217,16 @@ Two things follow, and neither is optional:
 - **A write-down rule.** Set at **50 days unsold, then off the list.** After that it stops
   counting as an open position at cost, because an item nobody bid on for fifty days is not
   worth what you paid for it and carrying it at cost overstates the book.
-- **`docs/levelling-design.md` interacts here.** Promotion reads the *pessimistic* book,
-  marking every OPEN position as a total loss. A flipper lane with slow stock would never
-  clear that bar and would sit permanently at level 1. That is the safe failure — but
-  without a write-down rule it is also a permanent one.
+- **`docs/levelling-design.md` interacts here, in two places now.** Promotion reads the
+  *pessimistic* book, marking every OPEN position as a total loss. A flipper lane with slow
+  stock would never clear that bar and would sit permanently at level 1 — the safe failure,
+  and without a write-down rule a permanent one. Levelling **Decision 7** then bites
+  separately: capital returns in full before profit comes out, per lane, so twenty items
+  half-sold means nothing is withdrawable however well the sold three did. Slow stock is
+  therefore expensive twice, which is the honest shape of this function.
+- **`docs/recording-outcomes.md` is the input surface**, and the flipper is the lane it was
+  mostly written for: two real numbers typed in, plus the write-down as a state of its own
+  that is neither a sale nor a loss.
 
 ## Decision 6 — physical capacity is the binding constraint, and no code models it
 
@@ -322,8 +346,8 @@ Properties, not coverage:
 
 ## Open inputs — what is still Ian's
 
-Most of this document's questions were answered on 2026-08-09. Three remain, and the first
-one decides whether any of the rest matters.
+Most of this document's questions were answered on 2026-08-09. **Three remain** — the eBay
+question, the fee rate and tax — and the first decides whether any of the rest matters.
 
 1. **Does the eBay account reach SOLD data?** Unanswered. The developer account went in
    for verification on 2026-08-09 and takes a business day, so **the answer is expected
@@ -333,10 +357,15 @@ one decides whether any of the rest matters.
 2. **The real fee rate.** The arithmetic above uses 13.25% plus a 0.30 fixed fee, which is
    indicative. A Store subscription changes it materially, and every floor and threshold in
    this document moves with it. Confirm from the account, not from a help page.
-3. **Whether raw-buy-then-grade is in scope.** It is a different strategy: grading costs
-   15-30 EUR, takes weeks to months, and its outcome is uncertain — which breaks both the
-   fee model and the 50-day horizon. **Assumed OUT** unless Ian says otherwise, because a
-   lane that buys raw and hopes for a grade is making a forecast.
+3. ~~**Whether raw-buy-then-grade is in scope.**~~ **ANSWERED 2026-08-09: OUT**, by Ian,
+   confirming rather than merely accepting the provisional reading. Grading costs 15-30 EUR,
+   takes weeks to months, and its outcome is uncertain, which breaks both the fee model and
+   the 50-day horizon. A lane that buys raw and hopes for a grade is making a forecast, and
+   a forecast needs a named human under `lib/stocks_reaper.Criterion`.
+4. **Tax, which nothing in this document accounts for.** Every figure below is **pre-tax**.
+   Flipping is trading income rather than a CGT disposal, so the floor and both tier
+   thresholds move once the rate is known — and they move in the direction that makes
+   marginal items worse. Raised 2026-08-09 and recorded in `docs/next-work.md` as open.
 
 Answered and recorded above: scope (including Pokémon, and what ungraded hardware would
 need first), raw-buy-then-grade OUT, the 75 EUR floor, both tier thresholds, capacity of 20,
@@ -346,3 +375,9 @@ the 50-day horizon, and the comparable floor.
 
 The wiring is a day once the decisions are made. The comparable-distribution work and the
 fee model are most of it. **None of it is worth starting before question 1 is answered.**
+
+**And no lane gets built before one existing lane produces something real** — decided
+2026-08-09 and recorded in `docs/next-work.md`, restating step 4 of
+`docs/target-functions.md`, which that document already observed is the step that always
+gets skipped. Not one order has been placed in any lane. So this stays designed, and a
+"yes" on Tuesday does not by itself start the build.
