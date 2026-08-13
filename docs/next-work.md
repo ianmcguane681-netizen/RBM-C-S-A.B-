@@ -1,3 +1,38 @@
+# Next work — checkpoint 2026-08-13
+
+> **1527 tests, 2 skipped.** A review of the merged PR #10 found eight things and all eight
+> are fixed. The one worth reading about is first.
+>
+> **Two of the five named human acts accepted two of the six automation prefixes.**
+> `lib/arb.EquivalenceDeclaration` and `rbe_runtime.profile.is_agent_actor` each listed
+> four, so `EquivalenceDeclaration(declared_by="bot: scanner")` constructed and
+> `board verify --by "system: importer"` was accepted as a human ratification. Those are the
+> two most consequential guards here: declaring settlement equivalence is the single
+> judgement that turns an arb from INDETERMINATE into something placeable, and `board
+> verify` is what publishes a decision. Neither list looked short — four plausible prefixes
+> read exactly as complete as six — and both fired convincingly for `agent:`, which is the
+> prefix anyone checking reaches for first. `guards/human_acts.py` now holds the one list
+> and every guard imports it; `tests/test_human_acts.py` walks every act against every
+> prefix, because a test written per-guard against that guard's own idea of the list would
+> have passed throughout.
+>
+> The other seven were in the notifier and the digest, which is to say in the message that
+> will appear on a phone the moment the Telegram token is placed. The digest reported every
+> lane `NEVER_RAN` and the queue empty when `data/orchestrator.json` would not parse — the
+> most reassuring message this system can send, on the morning it had stopped. A lane
+> refused before it was assembled reported as `NOT_RUN`, blaming the scheduler for a broken
+> config file, because the journal query reached the runs table only through a join from
+> harvests. A failed send retried every sixty seconds and pushed every successful delivery
+> off the end of a 200-row log, after which `status.py` said nothing had ever landed. An
+> exhausted 429 was recorded as REFUSED, sending somebody to rotate a token that was never
+> wrong. And `first_reported` synthesised its refusal without a taxonomy, so a `dei`-only
+> query printed "does not report … under the us-gaap taxonomy — cover-page facts live in
+> `dei`", contradicting itself in one sentence.
+>
+> **Nothing below has changed.** No key was placed, no lane ran, and no order exists.
+
+---
+
 # Next work — checkpoint 2026-08-09
 
 > **1436 tests, 2 skipped.** `main` is at the PR #9 merge; PR #10 carries the 8-9 August

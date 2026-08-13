@@ -164,12 +164,17 @@ class ConceptSeries:
 
     def describe(self) -> str:
         if self.status == NOT_REPORTED:
+            # The pointer to `dei` is only useful when `dei` is not what was asked. Printing
+            # it after a `dei` query tells a reader to go and do the thing just done, which
+            # reads as a bug in the message and makes the real sentence harder to trust.
+            hint = "" if "dei" in self.taxonomy.split(" / ") else (
+                " The same quantity may be reported under a different tag or a different "
+                "taxonomy — cover-page facts live in `dei`, not `us-gaap`."
+            )
             return (
                 f"{self.entity or self.cik} does not report {self.concept} under the "
                 f"{self.taxonomy} taxonomy. This is a statement about the filer's tagging "
-                f"AND about which namespace was asked, NOT a value of zero. The same "
-                f"quantity may be reported under a different tag or a different taxonomy "
-                f"— cover-page facts live in `dei`, not `us-gaap`."
+                f"AND about which namespace was asked, NOT a value of zero." + hint
             )
         if self.status == INDETERMINATE:
             return (
@@ -317,8 +322,10 @@ class EdgarClient:
 
         blocked: ConceptSeries | None = None
         found: list[ConceptSeries] = []
+        asked: list[ConceptSeries] = []
         for name in concepts:
             series = self.concept(cik, name, taxonomy=taxonomy)
+            asked.append(series)
             if series.status == REPORTED:
                 found.append(series)
             elif series.status == INDETERMINATE and blocked is None:
@@ -326,7 +333,20 @@ class EdgarClient:
         if blocked is not None and not found:
             return blocked
         if not found:
-            return ConceptSeries(NOT_REPORTED, cik, " / ".join(concepts))
+            # Built from the namespaces actually queried, not from this function's default.
+            # Synthesising the refusal without a taxonomy meant it fell back to `us-gaap`,
+            # so a `dei`-only candidate list produced "does not report
+            # dei:EntityCommonStockSharesOutstanding under the us-gaap taxonomy — cover
+            # page facts live in `dei`", which contradicts itself in one sentence and is
+            # the exact defect the split into two candidate lists was made to fix.
+            namespaces = sorted({series.taxonomy for series in asked})
+            return ConceptSeries(
+                NOT_REPORTED, cik,
+                # The namespace is stated separately, so it is not repeated in the tag.
+                " / ".join(name.rpartition(":")[2] for name in concepts),
+                entity=next((s.entity for s in asked if s.entity), ""),
+                taxonomy=" / ".join(namespaces) or taxonomy,
+            )
 
         def recency(series: ConceptSeries) -> str:
             return max((d.period_end for d in series.datapoints), default="")

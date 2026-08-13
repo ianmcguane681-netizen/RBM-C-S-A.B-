@@ -267,3 +267,54 @@ class TestTheTaxonomyIsPartOfTheQuestion:
         assert series.status == REPORTED
         assert series.taxonomy == "dei"
         assert any("/us-gaap/" in url for url in seen)
+
+
+class TestASynthesisedRefusalNamesTheNamespaceItActuallyAsked:
+    """`concept` carries its taxonomy through correctly; `first_reported` used to throw it
+    away. When no candidate answered it built a fresh `ConceptSeries` without one, so the
+    field fell back to its `us-gaap` default and a `dei`-only query printed "does not
+    report dei:EntityCommonStockSharesOutstanding under the us-gaap taxonomy — cover-page
+    facts live in `dei`". One sentence contradicting itself, and the same statement about
+    the query wearing the clothes of a statement about the company that the split into two
+    candidate lists was made to stop."""
+
+    def refused(self, concepts):
+        client = EdgarClient("test test@example.com", opener=responder(status=404))
+        return client.first_reported("0000067347", concepts)
+
+    def test_a_dei_only_query_is_refused_under_dei(self):
+        series = self.refused(["dei:EntityCommonStockSharesOutstanding"])
+
+        assert series.status == NOT_REPORTED
+        assert series.taxonomy == "dei"
+        assert "under the dei taxonomy" in series.describe()
+
+    def test_it_does_not_tell_a_dei_query_to_go_and_look_in_dei(self):
+        """A refusal must name what a person can go and do. Naming the thing just done
+        reads as a bug in the message and spends the reader's trust in the real sentence."""
+
+        described = self.refused(["dei:EntityCommonStockSharesOutstanding"]).describe()
+
+        assert "cover-page facts live in `dei`" not in described
+
+    def test_a_us_gaap_query_still_gets_the_pointer_to_dei(self):
+        """The hint is the whole reason the taxonomy is on the message — it must survive
+        for the query that was actually pointed at the wrong namespace."""
+
+        described = self.refused(["CommonStockSharesOutstanding"]).describe()
+
+        assert "under the us-gaap taxonomy" in described
+        assert "cover-page facts live in `dei`" in described
+
+    def test_a_query_spanning_two_namespaces_names_both(self):
+        """Picking one would make the refusal true of half of what was asked."""
+
+        series = self.refused(
+            ["CommonStockSharesOutstanding", "dei:EntityCommonStockSharesOutstanding"])
+
+        assert series.taxonomy == "dei / us-gaap"
+
+    def test_the_tag_is_not_printed_with_a_namespace_it_already_states(self):
+        series = self.refused(["dei:EntityCommonStockSharesOutstanding"])
+
+        assert series.concept == "EntityCommonStockSharesOutstanding"
