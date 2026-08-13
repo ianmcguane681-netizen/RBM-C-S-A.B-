@@ -96,6 +96,28 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+#: Which runs belong to which lane, for `activity_since`. Three sources unioned, because a
+#: run reaches a lane by two different routes: the scheduler invokes `--reap <lane>` and the
+#: row names it, while an all-lane `--reap` names none and is only connected to a lane by
+#: what it produced. Reaching runs through `harvests` alone — which this used to do — made a
+#: run that harvested nothing invisible, so a REFUSED lane reported as never having run.
+#: `UNION` rather than `UNION ALL`: the two routes overlap on every ordinary run.
+_LANE_RUNS = (
+    "WITH lane_runs AS ("
+    " SELECT r.lane AS lane, r.run_id AS run_id FROM reaper_runs r"
+    "  WHERE r.dry_run = 0 AND r.started_at >= ? AND r.lane IS NOT NULL"
+    " UNION"
+    " SELECT h.lane, h.run_id FROM harvests h"
+    "  JOIN reaper_runs r ON h.run_id = r.run_id"
+    "  WHERE r.dry_run = 0 AND r.started_at >= ?"
+    " UNION"
+    " SELECT e.lane, e.run_id FROM executions e"
+    "  JOIN reaper_runs r ON e.run_id = r.run_id"
+    "  WHERE r.dry_run = 0 AND r.started_at >= ?"
+    ") "
+)
+
+
 class Journal:
     """An append-only record of runs. Readable, and never in the way of a run."""
 
@@ -210,20 +232,55 @@ class Journal:
         message on the day the record went missing, which is the founding defect delivered
         to a phone.
 
+        **A run is counted from `reaper_runs`, never from the harvests it produced.** This
+        query used to reach the runs table only through a JOIN from `harvests`, so a run
+        that harvested nothing did not exist: a config that would not parse makes every
+        lane REFUSED before it is assembled, produces no harvests, and the digest then
+        reported the lane as `NOT_RUN` — nobody asked it — while the REFUSED row sat in the
+        table being discarded by the join. "Ran and was refused" and "was never asked" send
+        a person to different places, so the run count and the last refusal come from the
+        runs table and only the counts come from the harvests.
+
+        A run belongs to a lane if `reaper_runs.lane` names it OR it produced a harvest or
+        a placement for it. Both halves are needed and the first alone is not enough: an
+        all-lane `--reap` is recorded with no lane, so counting only the named ones would
+        report a lane whose findings are sitting in the table as NOT_RUN — the same defect
+        pointing the other way. What survives both is a run that named no lane and produced
+        nothing for any, which is returned as `unattributed_runs` rather than folded into a
+        lane or quietly dropped. Everything on a cadence names its lane.
+
         Dry runs are excluded. `--dry` is somebody at a keyboard looking, and counting it
         would report a person's curiosity as the system running on its cadence.
         """
 
         if not self.readable:
-            return {"status": "UNREADABLE", "reason": self.reason, "lanes": {}}
+            return {"status": "UNREADABLE", "reason": self.reason, "lanes": {},
+                    "unattributed_runs": None}
         try:
             with self._connect() as connection:
                 totals = connection.execute(
-                    "SELECT h.lane, COUNT(DISTINCT h.run_id), MAX(h.observed_at) "
-                    "FROM harvests h JOIN reaper_runs r ON h.run_id = r.run_id "
-                    "WHERE r.dry_run = 0 AND r.started_at >= ? GROUP BY h.lane",
-                    (since,),
+                    _LANE_RUNS + "SELECT lr.lane, COUNT(DISTINCT lr.run_id), "
+                    "MAX(r.started_at) FROM lane_runs lr "
+                    "JOIN reaper_runs r ON lr.run_id = r.run_id GROUP BY lr.lane",
+                    (since, since, since),
                 ).fetchall()
+                # Newest first, so the first row seen per lane is the current state. A lane
+                # refused at 02:00 and fixed by 09:00 should not report the refusal.
+                outcomes = connection.execute(
+                    _LANE_RUNS + "SELECT lr.lane, r.status, r.refusal FROM lane_runs lr "
+                    "JOIN reaper_runs r ON lr.run_id = r.run_id "
+                    "ORDER BY r.started_at DESC, r.rowid DESC",
+                    (since, since, since),
+                ).fetchall()
+                # A run that named no lane and produced nothing for any. It cannot be
+                # attributed and must not be invented into one.
+                unattributed = connection.execute(
+                    "SELECT COUNT(*) FROM reaper_runs r "
+                    "WHERE r.dry_run = 0 AND r.started_at >= ? AND r.lane IS NULL "
+                    "AND NOT EXISTS (SELECT 1 FROM harvests h WHERE h.run_id = r.run_id) "
+                    "AND NOT EXISTS (SELECT 1 FROM executions e WHERE e.run_id = r.run_id)",
+                    (since,),
+                ).fetchone()[0]
                 found = connection.execute(
                     "SELECT h.lane, h.status, COUNT(*) "
                     "FROM harvests h JOIN reaper_runs r ON h.run_id = r.run_id "
@@ -238,19 +295,29 @@ class Journal:
                 ).fetchall()
         except (OSError, sqlite3.Error) as error:
             return {"status": "UNREADABLE", "reason": f"{type(error).__name__}: {error}",
-                    "lanes": {}}
+                    "lanes": {}, "unattributed_runs": None}
 
-        lanes: dict[str, dict[str, Any]] = {
-            row[0]: {"runs": row[1], "last_at": row[2], "harvests": {}, "placements": {}}
-            for row in totals
-        }
+        def blank() -> dict[str, Any]:
+            return {"runs": 0, "last_at": None, "harvests": {}, "placements": {},
+                    "last_status": "", "last_refusal": ""}
+
+        lanes: dict[str, dict[str, Any]] = {}
+        for lane, runs, last_at in totals:
+            lanes[lane] = {**blank(), "runs": runs, "last_at": last_at}
+        for lane, status, refusal in outcomes:
+            entry = lanes.setdefault(lane, blank())
+            if not entry["last_status"]:
+                entry["last_status"] = status
+                entry["last_refusal"] = refusal or ""
+        # A harvest or an execution whose lane never appeared in `reaper_runs.lane` still
+        # gets an entry. It means an all-lane run produced it, and losing the finding
+        # because the run was not attributed would be the same defect one table along.
         for lane, status, count in found:
-            lanes[lane]["harvests"][status] = count
+            lanes.setdefault(lane, blank())["harvests"][status] = count
         for lane, status, count in placed:
-            lanes.setdefault(
-                lane, {"runs": 0, "last_at": None, "harvests": {}, "placements": {}}
-            )["placements"][status] = count
-        return {"status": "READ", "reason": "", "lanes": lanes}
+            lanes.setdefault(lane, blank())["placements"][status] = count
+        return {"status": "READ", "reason": "", "lanes": lanes,
+                "unattributed_runs": unattributed}
 
     def placements_for(self, run_id: str) -> tuple[dict, ...]:
         if not self.readable:

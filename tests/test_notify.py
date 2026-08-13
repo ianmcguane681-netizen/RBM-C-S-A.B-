@@ -298,3 +298,95 @@ class TestTruncation:
 
         assert "TAILMARKER" in captured["data"]
         assert "trimmed" in captured["data"]
+
+
+class TestTheLogNeverLosesTheLastDelivery:
+    """`status.py` answers one question from this file: have I heard nothing because
+    nothing happened, or because nothing was sent? A plain oldest-first cap let a run of
+    failures push every SENT row off the end, so the panel reported that nothing had ever
+    landed on a channel that had been working that morning. The retry loop erased the
+    evidence the panel reads, and the answer it then gave was confident and wrong."""
+
+    def flood(self, tmp_path, failures):
+        from lib.notify import Telegram, TelegramCredentials
+
+        ok = telegram(tmp_path)
+        ok.send("the one that landed", "body")
+
+        def refuse(*_a, **_kw):
+            raise urllib.error.HTTPError("u", 401, "Unauthorized", None, None)
+
+        beaten = Telegram(TelegramCredentials("bot-token-123", "chat-456"),
+                          opener=refuse, log_path=tmp_path / "notifications.json")
+        for _ in range(failures):
+            beaten.send("DAILY", "body")
+        return json.loads((tmp_path / "notifications.json").read_text(encoding="utf-8"))
+
+    def test_a_delivery_survives_more_failures_than_the_log_can_hold(self, tmp_path):
+        from lib.notify import MAX_LOGGED, SENT
+
+        rows = self.flood(tmp_path, MAX_LOGGED + 50)
+
+        assert any(row["status"] == SENT for row in rows)
+        assert rows[0]["subject"] == "the one that landed"
+
+    def test_the_log_still_respects_its_cap(self, tmp_path):
+        from lib.notify import MAX_LOGGED
+
+        assert len(self.flood(tmp_path, MAX_LOGGED + 50)) == MAX_LOGGED
+
+    def test_the_failures_are_still_the_recent_history(self, tmp_path):
+        """Pinning the delivery must not push out the failures a person needs to see."""
+
+        from lib.notify import MAX_LOGGED, REFUSED
+
+        rows = self.flood(tmp_path, MAX_LOGGED + 50)
+
+        assert all(row["status"] == REFUSED for row in rows[-20:])
+
+    def test_status_reads_a_flooded_log_as_delivered_not_as_never_delivered(
+            self, tmp_path, monkeypatch):
+        """The panel is the reason the pin exists, so the property is asserted there."""
+
+        import lib.notify
+        import status
+
+        self.flood(tmp_path, lib.notify.MAX_LOGGED + 50)
+        monkeypatch.setattr(lib.notify, "LOG", tmp_path / "notifications.json")
+
+        panel = "\n".join(status.notifications_panel())
+
+        assert "LAST DELIVERED" in panel
+        assert "NOTHING DELIVERED" not in panel
+
+
+class TestARateLimitIsNotARefusal:
+    """`retrying_urlopen` waits out a 429 and re-raises the original HTTPError when its
+    backoff is spent, so the rate limit arrived at the same `except` clause as a revoked
+    token and was recorded REFUSED — the status this module defines as wanting a person
+    rather than a retry. Telegram being busy is a fact about the afternoon."""
+
+    def refusing(self, tmp_path, code):
+        def answer(*_a, **_kw):
+            raise urllib.error.HTTPError("u", code, "nope", None, None)
+
+        return telegram(tmp_path, opener=answer).send("DAILY", "body")
+
+    @pytest.mark.parametrize("code", [429, 502, 503, 504])
+    def test_an_exhausted_transient_status_is_unreachable(self, tmp_path, code):
+        from lib.notify import UNREACHABLE
+
+        assert self.refusing(tmp_path, code).status == UNREACHABLE
+
+    @pytest.mark.parametrize("code", [400, 401, 403, 404])
+    def test_a_real_answer_is_still_refused(self, tmp_path, code):
+        """The distinction only earns its place if the other half still fires."""
+
+        from lib.notify import REFUSED
+
+        assert self.refusing(tmp_path, code).status == REFUSED
+
+    def test_the_reason_says_the_retries_were_already_spent(self, tmp_path):
+        """Otherwise a reader sees 429 and waits for a backoff that already happened."""
+
+        assert "retries" in self.refusing(tmp_path, 429).reason

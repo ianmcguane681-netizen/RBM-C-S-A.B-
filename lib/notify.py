@@ -17,7 +17,10 @@ which is the only way silence can mean anything at all.
 
 `Delivery` is the third state applied to messaging. `SENT` is an acknowledgement from the
 service. `REFUSED` is the service saying no -- a bad token, a chat that no longer exists.
-`UNREACHABLE` is nothing answering. `NOT_CONFIGURED` is no credentials at all. They are
+`UNREACHABLE` is nothing answering, and also the service saying *not now* for longer than
+the backoff will wait: an exhausted 429 is a fact about the afternoon, not about the
+credentials, and calling it REFUSED sends somebody to rotate a token that was never wrong.
+`NOT_CONFIGURED` is no credentials at all. They are
 kept apart because a person does something different about each, and because a notifier
 that fails quietly is worse than no notifier: you stop checking the dashboard *because* you
 trust the messages, and then the messages stop.
@@ -50,7 +53,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
-from lib.http_retry import TransientRetrievalError, retrying_urlopen
+from lib.http_retry import (
+    BACKOFF_SECONDS,
+    RETRYABLE_STATUSES,
+    TransientRetrievalError,
+    retrying_urlopen,
+)
 
 SENT = "SENT"
 REFUSED = "REFUSED"
@@ -66,6 +74,10 @@ LOG = Path("data/notifications.json")
 MAX_BODY = 3500
 
 API = "https://api.telegram.org"
+
+#: How many attempts the log keeps. Bounded because it is written from a supervisor loop
+#: and nothing prunes it otherwise.
+MAX_LOGGED = 200
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,6 +186,17 @@ class Telegram:
             with self._opener(request) as response:
                 answered = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as error:
+            # A rate limit that outlasted the backoff is NOT the service saying no. It is
+            # the service saying not now, and `retrying_urlopen` re-raises the original
+            # HTTPError once its waits are spent — so 429 and 503 arrived here and were
+            # recorded as REFUSED, the status this module defines as "wants a person, not
+            # a retry". A person sent to check a revoked token because Telegram was busy
+            # is a person who will not trust the next refusal either.
+            if error.code in RETRYABLE_STATUSES:
+                return self._record(Delivery(
+                    UNREACHABLE, _now(), subject,
+                    f"HTTP {error.code} after {len(BACKOFF_SECONDS)} retries: "
+                    f"{_redact(str(error))}"))
             # The service answered and said no. A bad token or a chat that no longer
             # exists lands here, and both want a person, not a retry.
             return self._record(Delivery(
@@ -202,11 +225,35 @@ class Telegram:
                      "subject": delivery.subject, "reason": delivery.reason})
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(rows[-200:], indent=2) + "\n", encoding="utf-8")
+            path.write_text(json.dumps(_trim(rows), indent=2) + "\n", encoding="utf-8")
         except OSError:
             # Recording is best effort. Losing the record must not lose the message.
             pass
         return delivery
+
+
+def _trim(rows: list[dict]) -> list[dict]:
+    """Cap the log without ever discarding the last message that actually landed.
+
+    A plain `rows[-200:]` loses oldest-first regardless of status, and the supervisor
+    retries a failed digest on a timer — so a revoked token produced a few hundred
+    failures in a few hours and pushed every SENT row off the end. `status.py` then read
+    the log it was given and reported NOTHING DELIVERED: attempts are recorded and none of
+    them landed. Messages had landed. The retry loop had erased the evidence, and the panel
+    whose whole job is telling "nothing happened" from "nothing was sent" gave the
+    confident wrong answer to exactly the question it exists for.
+
+    The newest successful delivery is therefore pinned. One row of the cap is spent on the
+    single fact this file is read for.
+    """
+
+    if len(rows) <= MAX_LOGGED:
+        return rows
+    kept = rows[-MAX_LOGGED:]
+    if any(row.get("status") == SENT for row in kept):
+        return kept
+    landed = [row for row in rows if row.get("status") == SENT]
+    return [landed[-1]] + kept[1:] if landed else kept
 
 
 #: The token as it appears in a URL path: `/bot<digits>:<secret>/sendMessage`. Matched up

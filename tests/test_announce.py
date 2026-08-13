@@ -744,3 +744,111 @@ class TestTheDigestSaysWhatTheLanesFound:
         body = self.digest(tmp_path, Channel(), monkeypatch)
 
         assert "arb      NOT_RUN" in body
+
+    def refused_run(self, tmp_path, lane="arb"):
+        """What `reap` actually produces when the config will not parse: a REFUSED run,
+        recorded against the lane the scheduler named, carrying no harvests at all."""
+
+        from lib.journal import Journal
+
+        Journal(tmp_path / "journal.sqlite3").record(
+            Reaping(refusal="data/reapers.json could not be read (line 4, column 2)"),
+            lane=lane)
+
+    def test_a_lane_refused_before_it_looked_is_not_a_lane_nobody_asked(self, tmp_path,
+                                                                       monkeypatch):
+        """Reading the runs table only through a join from `harvests` made a run that
+        harvested nothing disappear, so the digest blamed the scheduler for a config
+        file — `NOT_RUN` sends a person to look at cron; the truth was in `data/`."""
+
+        self.refused_run(tmp_path)
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "arb      REFUSED" in body
+        assert "arb      NOT_RUN" not in body
+
+    def test_a_lane_that_ran_and_was_refused_keeps_the_reason(self, tmp_path, monkeypatch):
+        """`REFUSED` alone trains a reader to skim. The row carries what to go and fix."""
+
+        self.refused_run(tmp_path)
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "data/reapers.json could not be read" in body
+
+
+class TestTheDigestIsHonestAboutWhatItCannotRead:
+    """The money half of `daily_digest` had a third state for an unreadable journal and the
+    orchestrator half had none, so a state file that would not parse — which stops every
+    lane running — produced a digest saying every lane had never run and nothing was
+    waiting. The most reassuring message this system can send, on its worst morning."""
+
+    def digest(self, tmp_path, channel, monkeypatch):
+        import run as runner
+
+        monkeypatch.setattr(runner, "STATE", tmp_path / "orchestrator.json")
+        runner.daily_digest(
+            runner.Orchestrator(runner.LANES, tmp_path / "orchestrator.json"),
+            announcer=announcer(tmp_path, channel),
+            journal_path=tmp_path / "journal.sqlite3")
+        return channel.sent[0][1]
+
+    def test_an_unreadable_orchestrator_makes_every_lane_unknown_not_never_run(
+            self, tmp_path, monkeypatch):
+        (tmp_path / "orchestrator.json").write_text("{ not json")
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "UNKNOWN" in body
+        assert "NEVER_RAN" not in body
+
+    def test_an_unreadable_orchestrator_never_reports_an_empty_queue(self, tmp_path,
+                                                                    monkeypatch):
+        """Nought decisions and a decisions list that could not be opened are the same
+        sentence and different facts. Only one of them means you may go back to bed."""
+
+        (tmp_path / "orchestrator.json").write_text("{ not json")
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "Nothing is waiting for you in the queue." not in body
+        assert "UNKNOWN rather than nothing" in body
+
+    def test_a_readable_orchestrator_still_says_when_a_lane_last_ran(self, tmp_path,
+                                                                    monkeypatch):
+        """`Run` has `started_at` and no `at`. The digest read `at` through a getattr
+        default, and because `Run` is a slots dataclass that could only ever be "" — so
+        the line carrying when anything last happened was silently always blank."""
+
+        import run as runner
+        from lib.orchestrator import Run
+
+        book = runner.Orchestrator(runner.LANES, tmp_path / "orchestrator.json")
+        book.runs.append(Run("monitor", "2026-08-09T09:00:00Z", "COMPLETED"))
+        book.save()
+
+        body = self.digest(tmp_path, Channel(), monkeypatch)
+
+        assert "2026-08-09T09:00:00Z" in body
+
+
+class TestSwitchingTheAnnouncerOffMeansOff:
+    """`None` means send nothing in `lib.reaping.reap` and in `positions.apply`. It meant
+    send to the real Telegram channel here, so the spelling a caller reaches for to get
+    silence was the one that messaged a phone."""
+
+    def test_announcer_none_sends_nothing(self, tmp_path, monkeypatch):
+        import run as runner
+
+        monkeypatch.setattr(runner, "STATE", tmp_path / "orchestrator.json")
+        called = []
+        monkeypatch.setattr("lib.announce.default_announcer",
+                            lambda **kw: called.append(1))
+
+        out = runner.daily_digest(
+            runner.Orchestrator(runner.LANES, tmp_path / "orchestrator.json"),
+            announcer=None, journal_path=tmp_path / "journal.sqlite3")
+
+        assert out.status == UNTOLD
+        assert called == []

@@ -52,6 +52,11 @@ from lib.orchestrator import HELD, Lane, Orchestrator
 
 STATE = Path("data/orchestrator.json")
 
+#: "Nobody passed an announcer", which is not the same as "send this to nobody". The same
+#: sentinel as `lib.reaping` and `positions`, because a caller writing `announcer=None` to
+#: mean silence must get silence from every one of the three.
+_DEFAULT = object()
+
 
 def _stamp() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -256,6 +261,12 @@ def _beat(path: Path, ticks: int, started: str, last_exit: int | None) -> None:
 #: in which the lane was not scheduled to run at all.
 DIGEST_WINDOW_HOURS = 24
 
+#: How long the supervisor waits before re-attempting a digest that did not go. Long enough
+#: that an outage costs a handful of log rows an hour instead of sixty, short enough that a
+#: token fixed at lunchtime still gets the day's message out. The announcer's date key is
+#: what makes a retry safe; this only decides how often one is worth trying.
+DIGEST_RETRY_SECONDS = 15 * 60
+
 
 def _money_lane_lines(activity: dict) -> list[Any]:
     """One line per reaper lane, saying what it FOUND rather than how it exited.
@@ -281,8 +292,13 @@ def _money_lane_lines(activity: dict) -> list[Any]:
 
         seen = activity["lanes"].get(lane)
         if not seen or not seen.get("runs"):
+            # An all-lane `--reap` is recorded without a lane, so it cannot be attributed
+            # to one. Saying so beats reporting NOT_RUN beside runs that plainly happened.
+            loose = activity.get("unattributed_runs") or 0
             lines.append(Line(lane, "NOT_RUN", f"no run in the last "
-                                               f"{DIGEST_WINDOW_HOURS}h"))
+                                               f"{DIGEST_WINDOW_HOURS}h"
+                              + (f"; {loose} all-lane run(s) on file, not attributed to a "
+                                 f"lane" if loose else "")))
             continue
 
         # Ordered by what a person acts on first, not alphabetically or by count.
@@ -302,11 +318,20 @@ def _money_lane_lines(activity: dict) -> list[Any]:
         detail = "; ".join(filter(None, [
             f"{placed} order(s) placed" if placed else "",
             f"{seen['runs']} run(s), last {seen.get('last_at') or 'unknown'}"]))
-        lines.append(Line(lane, ", ".join(parts) or "ran, no harvest recorded", detail))
+        if not parts:
+            # The lane ran and harvested nothing at all, which is not the same as looking
+            # and finding nothing. It was refused before it was assembled — a config that
+            # would not parse, a lane HALTED — and the run's own status carries the reason
+            # the harvest counts cannot. Reporting "ran, no harvest recorded" here threw
+            # away a refusal that was sitting in the row.
+            lines.append(Line(lane, seen.get("last_status") or "RAN", "; ".join(filter(
+                None, [seen.get("last_refusal", "")[:110], detail]))))
+            continue
+        lines.append(Line(lane, ", ".join(parts), detail))
     return lines
 
 
-def daily_digest(orchestrator: Orchestrator, *, announcer: Any = None,
+def daily_digest(orchestrator: Orchestrator, *, announcer: Any = _DEFAULT,
                  journal_path: Any = None) -> Any:
     """Send the digest, if today's has not gone. The message whose absence is the alarm.
 
@@ -325,11 +350,19 @@ def daily_digest(orchestrator: Orchestrator, *, announcer: Any = None,
     constraint on the arb lane.
     """
 
-    from lib.announce import Line, default_announcer
+    from lib.announce import HEARTBEAT, UNTOLD, Announcement, Line, default_announcer
     from lib.journal import JOURNAL, Journal
     from lib.reaping import LANES as REAPER_LANES
 
-    teller = announcer if announcer is not None else default_announcer()
+    # `None` means send nothing and the sentinel means send, which is the convention
+    # `lib.reaping.reap` and `positions.apply` already use. It was inverted here — `None`
+    # resolved the live channel — so the two spellings of "quiet" disagreed across three
+    # modules, and the one that messages a real phone was the default a caller reaches for
+    # when they want silence. Only the test fixture stood between those two readings.
+    if announcer is None:
+        return Announcement(HEARTBEAT, "", _stamp()[:10], UNTOLD, _stamp(), reason=(
+            "announcing was switched off for this call, so today's digest went to nobody"))
+    teller = default_announcer() if announcer is _DEFAULT else announcer
     since = (datetime.now(timezone.utc)
              - timedelta(hours=DIGEST_WINDOW_HOURS)).isoformat(timespec="seconds"
                                                                ).replace("+00:00", "Z")
@@ -337,15 +370,35 @@ def daily_digest(orchestrator: Orchestrator, *, announcer: Any = None,
     lines = _money_lane_lines(journal.activity_since(since))
 
     reaper_lanes = {f"reap-{lane}" for lane in REAPER_LANES}
-    for lane in LANES:
-        if lane.name in reaper_lanes:
-            continue
+    other_lanes = [lane for lane in LANES if lane.name not in reaper_lanes]
+
+    # The orchestrator half must answer the question the money half already answers: not
+    # "what did this lane do" but "do we know what it did". An unreadable state file leaves
+    # `runs` and `decisions` empty rather than raising, so every lane read NEVER_RAN and the
+    # queue read "nothing waiting" — a cheerful digest on the one morning the scheduler had
+    # refused to run anything at all. Unreadable is a third state here exactly as it is for
+    # the journal, and it suppresses no line: a lane whose history is unknown still appears.
+    if not orchestrator.readable:
+        for lane in other_lanes:
+            lines.append(Line(lane.name, "UNKNOWN", (
+                f"the orchestrator state could not be read "
+                f"({orchestrator.reason[:60]}), so when this lane last ran is not "
+                f"established")))
+        return teller.announce_heartbeat(lines, extra=(
+            "The orchestrator state file would not parse, so nothing is being scheduled "
+            "and whether anything awaits you is UNKNOWN rather than nothing. Fix or "
+            "restore data/orchestrator.json, then: python run.py --queue"))
+
+    for lane in other_lanes:
         run = orchestrator.last_run(lane.name)
         lines.append(Line(
             lane.name,
-            getattr(run, "status", "") or "NEVER_RAN",
-            (getattr(run, "at", "") or "") if run is not None else
-            "no record of this lane ever running",
+            run.status if run is not None else "NEVER_RAN",
+            # `started_at`, not `at`. `Run` has no attribute called `at`, and because it is
+            # a slots dataclass the getattr default this used to carry could never be
+            # anything but "", so the digest silently never said when a lane last ran.
+            f"last ran {run.started_at}" if run is not None
+            else "no record of this lane ever running",
         ))
 
     open_decisions = len(orchestrator.open_decisions)
@@ -355,7 +408,7 @@ def daily_digest(orchestrator: Orchestrator, *, announcer: Any = None,
 
 
 def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
-          heartbeat: Path | None = None, announcer: Any = None) -> int:
+          heartbeat: Path | None = None, announcer: Any = _DEFAULT) -> int:
     """Run what is due, forever. The heartbeat this repository did not have.
 
     Every lane carries a cadence and `--go` runs whatever is due — but `--go` is one shot
@@ -378,6 +431,9 @@ def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
     started = _stamp()
     ticks = 0
     last_exit: int | None = None
+    #: `None` rather than 0.0, so the first tick always tries. A supervisor restarted at
+    #: 09:00 must not wait out a retry window before sending anything.
+    last_digest: float | None = None
 
     print(f"SUPERVISING  waking every {interval}s. The orchestrator decides what is due; "
           f"this only decides how often it is asked.")
@@ -395,7 +451,15 @@ def serve(interval: int = TICK_SECONDS, *, limit: int | None = None,
             print(f"  TICK FAILED  {type(error).__name__}: {error}")
         ticks += 1
         _beat(path, ticks, started, last_exit)
-        _digest_once(announcer)
+        # Not every tick. The announcer dedupes a SENT digest by date and costs nothing on
+        # a healthy day, but a failed send is deliberately not recorded as told — so a
+        # revoked token meant a fresh attempt every sixty seconds, and each one appends to
+        # a bounded log. Throttling the retry keeps a messaging outage from turning into a
+        # few hundred rows an hour; `lib.notify._trim` keeps it from lying if it does.
+        now = time.monotonic()
+        if last_digest is None or now - last_digest >= DIGEST_RETRY_SECONDS:
+            last_digest = now
+            _digest_once(announcer)
         if limit is not None and ticks >= limit:
             break
         time.sleep(interval)

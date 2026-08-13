@@ -141,3 +141,44 @@ class TestAStoppedSupervisorIsVisible:
         monkeypatch.setattr(run, "main", lambda go: 0)
 
         assert run.serve(interval=0, limit=2, heartbeat=blocked / "beat.json") == 0
+
+
+class TestAFailingDigestDoesNotFloodTheLog:
+    """A digest that did not go is deliberately not recorded as told, so the next tick
+    tries again — correct, and at a sixty-second tick it meant a fresh attempt every
+    minute. Each one appends to a bounded log, so a revoked token filled the whole record
+    with failures in an afternoon. The retry is right; its cadence was the tick's."""
+
+    def test_the_digest_is_not_attempted_on_every_tick(self, tmp_path, monkeypatch):
+        attempts = []
+        monkeypatch.setattr(run, "main", lambda go: 0)
+        monkeypatch.setattr(run, "_digest_once", lambda announcer: attempts.append(1))
+
+        run.serve(interval=0, limit=5, heartbeat=tmp_path / "heartbeat.json")
+
+        assert attempts == [1]
+
+    def test_the_first_tick_always_tries(self, tmp_path, monkeypatch):
+        """A supervisor restarted at 09:00 must not wait out a retry window first, or a
+        machine that keeps restarting sends nothing ever — which is the failure the whole
+        heartbeat argument is built on."""
+
+        attempts = []
+        monkeypatch.setattr(run, "main", lambda go: 0)
+        monkeypatch.setattr(run, "_digest_once", lambda announcer: attempts.append(1))
+
+        run.serve(interval=0, limit=1, heartbeat=tmp_path / "heartbeat.json")
+
+        assert attempts == [1]
+
+    def test_a_tick_past_the_retry_window_tries_again(self, tmp_path, monkeypatch):
+        """The window throttles the retry; it must not cancel it."""
+
+        attempts = []
+        monkeypatch.setattr(run, "main", lambda go: 0)
+        monkeypatch.setattr(run, "_digest_once", lambda announcer: attempts.append(1))
+        monkeypatch.setattr(run, "DIGEST_RETRY_SECONDS", 0)
+
+        run.serve(interval=0, limit=3, heartbeat=tmp_path / "heartbeat.json")
+
+        assert attempts == [1, 1, 1]
