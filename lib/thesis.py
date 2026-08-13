@@ -48,6 +48,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
+from guards.human_acts import AUTOMATION_PREFIXES as _AUTOMATION_PREFIXES
+
 PERMITTED = "PERMITTED"
 REFUSED = "REFUSED"
 EXPIRED = "EXPIRED"
@@ -55,7 +57,12 @@ INDETERMINATE = "INDETERMINATE"
 
 #: Prefixes that cannot author a thesis. Identical to the set `board verify` refuses, and
 #: for the identical reason: the accountability is the point of the record.
-AUTOMATION_PREFIXES = ("agent:", "ai:", "model:", "automation:", "bot:", "system:")
+#:
+#: That sentence was written here while it was false. This file listed six prefixes and
+#: `rbe_runtime.profile` listed four, so `board verify` accepted two authors a thesis
+#: refused. Both read `guards.human_acts` now, which is the only arrangement under which
+#: a comment claiming two lists are identical stays true.
+AUTOMATION_PREFIXES = _AUTOMATION_PREFIXES
 
 #: Findings that veto regardless of any thesis. A thesis grants authority to act on a
 #: position; it does not grant authority to disbelieve the evidence.

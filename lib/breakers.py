@@ -41,6 +41,8 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
+from guards.human_acts import AUTOMATION_PREFIXES
+
 ARMED = "ARMED"
 TRIPPED = "TRIPPED"
 HALTED = "HALTED"
@@ -399,8 +401,7 @@ class Breakers:
         """
 
         author = by.strip().lower()
-        if not author or any(author.startswith(p) for p in
-                             ("agent:", "ai:", "model:", "automation:", "bot:", "system:")):
+        if not author or any(author.startswith(p) for p in AUTOMATION_PREFIXES):
             raise ValueError(
                 f"{by!r} cannot reset a breaker. It tripped because something was wrong, "
                 f"and deciding it is now right is exactly the judgement automation must "

@@ -52,6 +52,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping, Sequence
 
+from guards.human_acts import AUTOMATION_PREFIXES as _AUTOMATION_PREFIXES
 from lib.candidates import INDETERMINATE, PASSED, REFUSED, Candidate, Stage
 from lib.reaper import Reaper, Unworthy
 from lib.sizing import (
@@ -68,7 +69,7 @@ FORECAST = "FORECAST"
 
 #: Prefixes that cannot declare a forecast criterion. Identical to `lib.thesis`, because it
 #: is the identical judgement: a claim about the future needs somebody accountable for it.
-AUTOMATION_PREFIXES = ("agent:", "ai:", "model:", "automation:", "bot:", "system:")
+AUTOMATION_PREFIXES = _AUTOMATION_PREFIXES
 
 #: Above this the two sides are far enough apart that the mid is fiction and the executable
 #: price is materially worse than the screen price.

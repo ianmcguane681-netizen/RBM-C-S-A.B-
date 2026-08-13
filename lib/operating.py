@@ -55,6 +55,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
+from guards.human_acts import AUTOMATION_PREFIXES as _AUTOMATION_PREFIXES
+
 AUTONOMOUS = "AUTONOMOUS"
 OWNER_OPERATING_MANUALLY = "OWNER_OPERATING_MANUALLY"
 HALTED = "HALTED"
@@ -69,8 +71,9 @@ FROM_DEFAULT = "DEFAULT"
 HALT_FILE = "HALT"
 MANUAL_FILE = "MANUAL"
 
-#: Identical to `lib.thesis` and `lib.breakers`, and for the identical reason.
-AUTOMATION_PREFIXES = ("agent:", "ai:", "model:", "automation:", "bot:", "system:")
+#: Identical to `lib.thesis` and `lib.breakers`, and for the identical reason — which is
+#: now enforced by importing the one list rather than by three files agreeing by hand.
+AUTOMATION_PREFIXES = _AUTOMATION_PREFIXES
 
 
 def _now() -> str:

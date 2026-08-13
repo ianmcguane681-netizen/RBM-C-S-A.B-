@@ -28,6 +28,8 @@ import math
 from dataclasses import dataclass
 from typing import Sequence
 
+from guards.human_acts import is_automation
+
 LOCK = "LOCK"
 NO_LOCK = "NO_LOCK"
 UNFILLABLE = "UNFILLABLE"
@@ -246,9 +248,12 @@ class EquivalenceDeclaration:
     scenarios_checked: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.declared_by.strip() or self.declared_by.lower().startswith(
-            ("agent:", "ai:", "model:", "automation:")
-        ):
+        # `is_automation` rather than a tuple written out here. This call site listed four
+        # prefixes while every other guard listed six, so `declared_by="bot: scanner"`
+        # constructed a settlement equivalence — the one judgement that turns an arb from
+        # INDETERMINATE into something placeable. Four plausible prefixes read exactly as
+        # complete as six, which is why this must not be a local literal.
+        if not self.declared_by.strip() or is_automation(self.declared_by):
             raise ValueError(
                 "settlement equivalence must be declared by a named human; comparing "
                 "wordings is exactly the judgement automation is not entitled to make"

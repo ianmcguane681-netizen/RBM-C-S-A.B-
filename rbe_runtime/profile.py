@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from guards.human_acts import AUTOMATION_PREFIXES as _AUTOMATION_PREFIXES
+from guards.human_acts import is_automation
 from rbe_runtime.authority import AuthorityBundle
 from rbe_runtime.errors import RBEError
 
@@ -13,14 +15,23 @@ from rbe_runtime.errors import RBEError
 _ROLE_LINE = re.compile(r"^\*\*Reviewer Role:\*\* .*\(([A-Z]{2,3})\)$", re.MULTILINE)
 
 
-# Any actor carrying one of these prefixes is automation, however it is named.
-# Treating them all as agents stops a seat dodging the agent rules by choosing a
-# different prefix, or dodging the human rules by choosing "agent:".
-AUTOMATION_PREFIXES = ("agent:", "ai:", "model:", "automation:")
+# Any actor carrying one of these prefixes is automation, however it is named. Treating
+# them all as agents stops a seat dodging the agent rules by choosing a different prefix,
+# or dodging the human rules by choosing "agent:".
+#
+# Imported rather than written out, because this copy had drifted to four entries while
+# the money side used six: `board verify --by "system: importer"` was accepted here as a
+# human ratification for as long as the two lists disagreed. A guard whose contents look
+# equally plausible at four entries or six is one that must not be restated per file.
+#
+# Bound to a name here rather than re-exported by the import alone, because a bare
+# `from ... import AUTOMATION_PREFIXES` reads as unused and the next `ruff --fix` deletes
+# it — quietly reopening the gap this whole change closed.
+AUTOMATION_PREFIXES = _AUTOMATION_PREFIXES
 
 
 def is_agent_actor(actor: str) -> bool:
-    return actor.lower().startswith(AUTOMATION_PREFIXES)
+    return is_automation(actor)
 
 
 @dataclass(frozen=True, slots=True)
