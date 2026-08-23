@@ -72,3 +72,8 @@ data/heartbeat.json
 # subjects of live opportunities travel through them, so neither belongs in a public repo.
 data/announced.json
 data/notifications.json
+
+# Cached Kraken candles. Not secret — public OHLC anybody can fetch — but bulk, and it
+# churns on every refresh. `data/kraken.receipt.json` IS committed and records which
+# candles a quoted backtest figure came from, which is the part a reader needs.
+data/kraken/

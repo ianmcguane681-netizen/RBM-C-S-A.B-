@@ -1,13 +1,70 @@
 # Next work — checkpoint 2026-08-23
 
-> **1529 tests, 2 skipped.** The Kraken funded-account paper model landed today and is the
-> section immediately below. Nothing before it changed.
+> **1574 tests, 2 skipped.** The Kraken funded-account paper model landed today, and then
+> the backtester that measures what it had been assuming. Both are below. Nothing before
+> them changed.
 >
 > **Nothing is running on a cadence.** No supervisor has been started, so no lane has ever
 > run unattended and nothing is being missed while it is not.
 >
 > The 2026-08-09 checkpoint and everything under it is kept unedited, because the reasoning
 > in it is why the code looks the way it does.
+
+---
+
+# THE BACKTESTER — 2026-08-23, and it says do not buy a seat yet
+
+Built: `connectors/kraken.py` (public OHLC, no key), `lib/backtest.py` (the engine),
+`lib/strategies.py` (five rules, each carrying its philosophy), `backtest.py` (the CLI),
+28 offline tests. **The findings are in `docs/kraken-backtest.md`.**
+
+This closes the "a measured edge instead of an estimated one" item below. The funded model
+no longer has to guess a win rate: `BacktestResult.measured_profile()` hands it the real
+per-trade distribution, tails included, and `StrategyProfile.empirical_r` resamples actual
+trades rather than flipping a two-point coin.
+
+## The answer
+
+**A real trend edge exists in two years of Kraken dailies. It is not strong enough to buy a
+seat on.** Best case is `ema-10x40` at 2% risk: 43.1% pass, **+$84 net against a $500
+seat** — break-even, before the four costs the backtest does not charge.
+
+What makes it believable rather than a fluke: the rules were chosen in disagreeing pairs,
+and they sorted. Both continuation rules measured positive (`ema-10x40` +0.354R,
+`donchian-20` +0.166R) and both reversion rules measured negative, on the same candles.
+Noise has no reason to sort itself by what the rules claim. Both survivors held up out of
+sample, and `donchian-20` is positive in 8 of 10 markets.
+
+## Three reasons a real edge still fails
+
+1. **The daily loss limit does most of the killing.** Same rule, same size: with a 3% daily
+   limit, 39.1% of accounts die to it and net is −247. Without one, net is +204. And these
+   are daily bars, so every position is held overnight and no self-imposed stop can defend
+   it. **This is the third time the daily limit has come out as the decisive unknown.**
+2. **The edge is too slow.** +0.067R/day against the ~0.18R/day needed to clear 8% in 45
+   days at 1% risk. Sizing up to compensate is what breaches the floor — the interior
+   optimum from the funded model, arriving from the other direction.
+3. **Ten crypto majors are not ten independent bets.** Measured same-day correlation 0.66,
+   against the 0.35 the estimated profiles guessed. Real, but second-order: forcing it to
+   zero still leaves net negative.
+
+## The ceiling on what can be claimed
+
+Kraken serves 720 candles per request and `since` does not page past it, so the interval
+fixes the history: 30 days at 1h, 120 at 4h, two years daily. **Thirty days of hourly bars
+cannot evidence an intraday edge and the study does not claim one.** What is measurable here
+is a daily-timeframe swing system, and that constraint shapes every number above. Rebuilding
+deeper intraday candles from the Trades endpoint is thousands of calls against a free API —
+not done, and recorded in the connector so it is not rediscovered as an oversight.
+
+## What is owed next
+
+- **Ask about the daily loss limit.** Item 1 above; it is worth more than everything else
+  on this list together.
+- **Do not tune the parameters against this data.** They are the conventional ones, and
+  that is the only thing protecting the numbers. Tuning them here turns a measurement into
+  a fitted story, and the out-of-sample half is already spent.
+- If a faster edge is wanted, it needs intraday data this connector cannot reach.
 
 ---
 
@@ -73,11 +130,10 @@ it is what kills every account that dies.
 - **Is there a daily loss limit, and at what?** See above. Top of the list now.
 - The profit target, deadline, minimum trading days, seat price. Assumed, and section 3
   shows the verdict does not move across the plausible range of the floor.
-- **A measured edge instead of an estimated one.** Every win rate in `lib/funded_kraken.py`
-  is somebody's guess and the model computes the consequences of guesses exactly. The
-  candidate that wins on the current numbers (`cross-venue-arb` at an assumed 96%) is the
-  one whose assumption is shakiest, and `lib/arbfind.py` has no crypto venue feed to check
-  it against.
+- ~~**A measured edge instead of an estimated one.**~~ **DONE — see the backtester section
+  at the top.** The seven candidates in `lib/funded_kraken.py` are still estimates and are
+  still labelled as such; five real rules are now measured beside them, and the measured
+  ones say do not buy a seat yet.
 - **A decision on the lane question** above.
 
 Leverage turned out not to bind: the widest candidate needs 2x the account in notional

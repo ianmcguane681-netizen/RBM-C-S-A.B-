@@ -108,6 +108,13 @@ class StrategyProfile:
     #: None means trade on regardless, which is what an undisciplined operator does and
     #: what the model should be able to show the cost of.
     daily_stop_at: float | None = 0.6
+    #: Measured per-trade results in R, when this profile came from `lib/backtest.py`
+    #: rather than from somebody's estimate. When present it REPLACES the win/payoff coin
+    #: flip: the day is played by resampling real trades, which keeps the shape of the
+    #: distribution — the occasional -1.4R gap through a stop, the rare +6R runner — that a
+    #: two-point model throws away. Those tails are what breach funded accounts, so
+    #: throwing them away is not a simplification, it is the flattering direction.
+    empirical_r: tuple[float, ...] = ()
     #: How far the stop sits from entry, as a percentage of price. Optional because a
     #: profile can be stated purely in R, but supplying it is what lets the model check
     #: the position against the venue's leverage cap — see `implied_leverage`.
@@ -161,13 +168,23 @@ class StrategyProfile:
 
     @property
     def edge_r(self) -> float:
-        """Expected R per trade, after cost. Negative means the rest is arithmetic."""
+        """Expected R per trade, after cost. Negative means the rest is arithmetic.
 
+        Measured trades are already net of the costs charged in the backtest, so their mean
+        is taken as it stands. Subtracting `cost_r` again would charge the fee twice.
+        """
+
+        if self.empirical_r:
+            return statistics.fmean(self.empirical_r)
         return (
             self.win_rate * self.payoff_ratio
             - (1 - self.win_rate)
             - self.cost_r
         )
+
+    @property
+    def measured(self) -> bool:
+        return bool(self.empirical_r)
 
     @property
     def expected_daily_r(self) -> float:
@@ -193,7 +210,9 @@ class StrategyProfile:
                if self.daily_stop_at is not None else "NONE — trades on regardless")
             + (", holds overnight" if self.holds_overnight else ", flat overnight"),
             f"  edge {edge:+.3f}R per trade ({verdict}), "
-            f"{self.expected_daily_r:+.3f}R per day",
+            f"{self.expected_daily_r:+.3f}R per day"
+            + (f"  [MEASURED from {len(self.empirical_r)} real trades]"
+               if self.measured else "  [ESTIMATED, not measured]"),
             "  implied leverage " + (
                 "not computable — this profile does not state its stop distance"
                 if self.implied_leverage() is None
@@ -252,7 +271,9 @@ def play_day(
     # One regime draw for the day. Each trade then either follows it or is drawn on its
     # own, which gives equicorrelated outcomes with `intraday_correlation` as the weight —
     # the cheapest honest way to stop a day being four independent coin flips.
+    measured = profile.empirical_r
     regime_won = rng.random() < profile.win_rate
+    regime_r = rng.choice(measured) if measured else 0.0
 
     allowance = rules.max_daily_loss_pct
     self_stop = None
@@ -266,10 +287,7 @@ def play_day(
     traded = False
     for _ in range(count):
         traded = True
-        if rng.random() < profile.intraday_correlation:
-            won = regime_won
-        else:
-            won = rng.random() < profile.win_rate
+        follows_the_day = rng.random() < profile.intraday_correlation
 
         basis = (
             rules.account_size
@@ -277,7 +295,12 @@ def play_day(
             else max(equity, 0.0)
         )
         risk = basis * profile.risk_per_trade_pct / 100.0
-        r = (profile.payoff_ratio if won else -1.0) - profile.cost_r
+        if measured:
+            # Resample a real trade. Costs are already inside a measured R.
+            r = regime_r if follows_the_day else rng.choice(measured)
+        else:
+            won = regime_won if follows_the_day else rng.random() < profile.win_rate
+            r = (profile.payoff_ratio if won else -1.0) - profile.cost_r
         equity += r * risk
         low = min(low, equity)
         high = max(high, equity)

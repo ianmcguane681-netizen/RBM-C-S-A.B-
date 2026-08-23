@@ -250,6 +250,12 @@ a rulebook and prints what became of them. See `docs/kraken-funded-model.md`. Th
 it are second-hand at best and every report says so until somebody passes `--confirmed-by`;
 that matters because a static floor and a trailing one call for opposite payout policies.
 
+`python backtest.py` needs nothing either — Kraken serves OHLC candles to anybody, which
+makes it the first evidence source the money side has that runs on a fresh machine with
+nothing configured. It measures what `funded_model.py` had been assuming. See
+`docs/kraken-backtest.md`; the short version is that a real trend edge exists in the data
+and is not strong enough to buy a funded seat on.
+
 `python preflight.py` says which of those you have, per lane, and what each missing one
 unlocks. It reports three lane states rather than two, and the middle one is the honest
 part: **arbitrage runs with no credentials at all** — the maths, the settlement-rule
@@ -462,6 +468,7 @@ check_token.py        one command, six chain gates
 check_stock.py        one command, the filing gates
 check_arb.py          is a claimed arb real, from two screens
 funded_model.py       the Kraken funded-account paper model, no key and no venue
+backtest.py           five rules over two years of real Kraken candles, no key
 trade_sheet.py        board verdict, round-trip cost, and your own target
 monitor.py            has anything a review relied on moved since last time
 preflight.py          what each lane needs before it can read anything

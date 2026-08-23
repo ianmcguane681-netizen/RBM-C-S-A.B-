@@ -63,6 +63,7 @@ rbe_runtime/  board/  controlled_authority/   the review board engine (the origi
 connectors/   evidence readers: chain, EDGAR, odds, Alpaca, and the two execution adapters
 lib/          the money side: reapers, breakers, sizing, thesis, outcomes, arb maths
               funded*.py is the funded-account paper model — a simulator, not a lane
+              backtest.py + strategies.py measure real edges; connectors/kraken.py feeds them
 docs/         methodology profiles RBM-001..005, and docs/next-work.md
 ```
 
@@ -80,6 +81,7 @@ python positions.py          # what is open; --settle feeds the breakers
 python run.py                # the orchestrator: what is due, what is held
 python preflight.py          # what each lane needs before it can read anything
 python funded_model.py       # the Kraken funded-account paper model: simulates, places nothing
+python backtest.py           # five rules over real Kraken candles: measures, places nothing
 ```
 
 ## Two lanes of work, one repo

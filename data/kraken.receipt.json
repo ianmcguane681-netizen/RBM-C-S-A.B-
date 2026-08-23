@@ -1,0 +1,105 @@
+{
+  "written_at": "2026-08-23T18:05:34+00:00",
+  "markets": {
+    "ADAUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:35+00:00",
+      "detail": ""
+    },
+    "ATOMUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:40+00:00",
+      "detail": ""
+    },
+    "AVAXUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:39+00:00",
+      "detail": ""
+    },
+    "DOTUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:37+00:00",
+      "detail": ""
+    },
+    "ETHUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:30+00:00",
+      "detail": ""
+    },
+    "LINKUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:38+00:00",
+      "detail": ""
+    },
+    "LTCUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:34+00:00",
+      "detail": ""
+    },
+    "SOLUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:31+00:00",
+      "detail": ""
+    },
+    "XBTUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:18+00:00",
+      "detail": ""
+    },
+    "XRPUSD": {
+      "status": "READ",
+      "interval": "1d",
+      "bars": 721,
+      "span_days": 720.0,
+      "first": "2024-09-02",
+      "last": "2026-08-23",
+      "fetched_at": "2026-08-23T17:56:33+00:00",
+      "detail": ""
+    }
+  }
+}
