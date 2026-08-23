@@ -27,22 +27,34 @@ from datetime import date
 
 import pytest
 
+import statistics
+
 from lib.funded import (
     DAILY_LOSS,
+    STATIC,
     TOTAL_DRAWDOWN,
+    TRAILING,
 )
 from lib.funded_kraken import (
     CANDIDATES,
     BY_NAME,
+    MAX_LEVERAGE,
     SPOT_TAKER_PCT,
     challenge_rules,
     confirm_terms,
     cost_r,
     funded_rules,
     sweep_payout_floor,
+    sweep_retention,
     sweep_risk,
 )
-from lib.funded_sim import StrategyProfile, play_day, resized, simulate
+from lib.funded_sim import (
+    PayoutPolicy,
+    StrategyProfile,
+    play_day,
+    resized,
+    simulate,
+)
 
 
 def profile(**kw) -> StrategyProfile:
@@ -214,21 +226,114 @@ class TestSizeIsAQuestionAskedOfAStrategyNotARivalToIt:
         assert swept[3.0].breaches.get(TOTAL_DRAWDOWN, 0) > swept[0.1].breaches.get(TOTAL_DRAWDOWN, 0)
 
 
-class TestThePayoutTermIsWorthMoneyAndTheModelPricesIt:
-    def test_a_floor_that_does_not_follow_the_money_out_costs_the_trader(self):
-        swept = dict(sweep_payout_floor(BY_NAME["cross-venue-arb"], paths=400, seed=19))
+class TestThePayoutTrapIsAPropertyOfTRAILINGFloorsOnly:
+    """The distinction this class exists to pin was got wrong once, in a summary.
+
+    A floor left where the peak put it can rise ABOVE the post-payout balance, which
+    breaches an account that never had a losing day. A floor pinned to the starting balance
+    cannot: it has nothing to rise from. Kraken is reported to use the static kind, so the
+    trap does not apply there — and stating it as though it did would have somebody
+    negotiating hard for a clause worth nothing to them while missing the one that is.
+    """
+
+    def trailing(self, **kw):
+        return dict(sweep_payout_floor(
+            BY_NAME["cross-venue-arb"],
+            funded_terms={"drawdown_basis": TRAILING}, paths=400, seed=19, **kw
+        ))
+
+    def test_on_a_trailing_floor_not_following_the_money_out_costs_the_trader(self):
+        swept = self.trailing()
         assert swept[True].expected_net > swept[False].expected_net
 
     def test_and_it_shortens_the_life_of_the_funded_account(self):
         # The mechanism, not just the outcome: the accounts die sooner, which is what
         # distinguishes this from simply earning less per day.
-        swept = dict(sweep_payout_floor(BY_NAME["cross-venue-arb"], paths=400, seed=19))
-        import statistics
-
+        swept = self.trailing()
         assert (
             statistics.median(swept[False].funded_days)
             < statistics.median(swept[True].funded_days)
         )
+
+    def test_on_a_static_floor_the_term_makes_no_difference_at_all(self):
+        # Same sweep, static floor. Both sides must land on exactly the same figure: the
+        # clause is unreachable, not merely less important.
+        swept = dict(sweep_payout_floor(
+            BY_NAME["cross-venue-arb"],
+            funded_terms={"drawdown_basis": STATIC}, paths=400, seed=19,
+        ))
+        assert swept[True].net_takes == swept[False].net_takes
+
+    def test_and_the_rulebook_says_so_rather_than_printing_a_moot_clause(self):
+        assert "moot on a static floor" in funded_rules(drawdown_basis=STATIC).describe()
+
+
+class TestRetainedProfitDefendsAgainstTheFloorAndNotTheDailyLimit:
+    """The rule that decides the withdrawal policy, and it is not a matter of degree.
+
+    Under a floor pinned to the starting balance, profit left in the account widens the gap
+    to it permanently. Under a daily allowance computed as a percentage of the ACCOUNT SIZE,
+    the same retained profit widens nothing: tomorrow's allowance is the same number of
+    dollars whether the balance is 10,000 or 14,000. So the two breach columns, not a
+    preference, decide how much to leave in.
+    """
+
+    def swept(self, daily):
+        return dict(sweep_retention(
+            BY_NAME["mean-reversion"], (0.0, 0.9),
+            funded=funded_rules(max_daily_loss_pct=daily),
+            paths=700, seed=37,
+        ))
+
+    def test_retaining_profit_cuts_floor_breaches(self):
+        swept = self.swept(None)
+        assert (
+            swept[0.9].funded_breaches.get(TOTAL_DRAWDOWN, 0)
+            < swept[0.0].funded_breaches.get(TOTAL_DRAWDOWN, 0)
+        )
+
+    def test_retaining_profit_does_not_cut_daily_breaches(self):
+        # The allowance is a percentage of the account SIZE, so it does not widen with the
+        # balance. Any model in which retention helped here would be wrong about the rule.
+        swept = dict(sweep_retention(
+            BY_NAME["momentum-swing"], (0.0, 0.9),
+            funded=funded_rules(max_daily_loss_pct=3.0), paths=700, seed=37,
+        ))
+        assert (
+            swept[0.9].funded_breaches.get(DAILY_LOSS, 0)
+            >= swept[0.0].funded_breaches.get(DAILY_LOSS, 0)
+        )
+
+    def test_retaining_everything_is_not_a_payout_policy(self):
+        with pytest.raises(ValueError, match="declining to be paid"):
+            PayoutPolicy(14, 1.0)
+
+    @pytest.mark.parametrize("bad", [(0, 0.0), (14, -0.1), (14, 1.5)])
+    def test_a_nonsense_policy_is_refused_rather_than_clamped(self, bad):
+        with pytest.raises(ValueError):
+            PayoutPolicy(*bad)
+
+
+class TestTheLeverageCapIsCheckedRatherThanAssumedAway:
+    def test_a_tighter_stop_needs_more_notional_for_the_same_risk(self):
+        # Risk-based sizing says nothing about the notional it takes to express that risk,
+        # and on a capped venue those are different constraints.
+        tight = profile(risk_per_trade_pct=2.0, stop_distance_pct=0.4)
+        wide = profile(risk_per_trade_pct=2.0, stop_distance_pct=4.0)
+        assert tight.implied_leverage() > wide.implied_leverage()
+        assert tight.implied_leverage() == pytest.approx(5.0)
+
+    def test_an_unstated_stop_is_not_computable_rather_than_zero(self):
+        # "No leverage used" and "we cannot tell from what this profile states" are
+        # different facts, and only one of them is safe to act on.
+        assert profile(stop_distance_pct=None).implied_leverage() is None
+        assert "not computable" in profile(stop_distance_pct=None).describe()
+
+    @pytest.mark.parametrize("candidate", CANDIDATES, ids=lambda c: c.name)
+    def test_every_candidate_states_its_stop_and_fits_the_cap(self, candidate):
+        leverage = candidate.implied_leverage()
+        assert leverage is not None, "a candidate must state the stop that priced it"
+        assert leverage <= MAX_LEVERAGE
 
 
 class TestConfirmingTheTermsIsAReadingAndAReadingIsSomebodys:

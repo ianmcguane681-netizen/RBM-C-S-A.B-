@@ -5,17 +5,26 @@ anything about Kraken, and that separation is deliberate: the venue's fee schedu
 programme's terms are the two things most likely to be wrong today and corrected next week,
 and they should be correctable in one file without touching a line of maths.
 
-## The terms are NOT confirmed
+## The terms are SECOND-HAND, which is not the same as confirmed
 
-Nobody has yet put their name to the challenge parameters. `UNCONFIRMED_CHALLENGE` and
-`UNCONFIRMED_FUNDED` carry an empty `terms_confirmed_by`, so every report built from them
-says so at the top. They are placeholders shaped like the industry norm — an 8% target
-against a 6% lifetime floor and a 3% daily limit — and the point of `sweep_drawdown` is
-that the recommendation does not have to wait for the real number: it is computed across
-the plausible range, and the range is narrow enough that the conclusion holds throughout.
+Two of them are now answered well enough to model against, from a search summary Ian
+relayed on 2026-08-23 rather than from Kraken's own rules page:
 
-When the real terms arrive, edit the two constants below, set `terms_confirmed_by` to the
-name of whoever read the published rules, and re-run. Nothing else changes.
+    the venue is Kraken Pro PERPETUAL FUTURES, not spot, with up to 50x leverage
+    the drawdown is a STATIC maximum pinned to the initial balance — 8% of a 10,000
+        account puts a permanent floor at 9,200 that neither rises with the peak nor
+        falls when profit is withdrawn
+
+Both are now the defaults here, and both matter enormously — see `docs/kraken-funded-model.md`.
+But an AI-written search summary is a reading of a document by something that cannot be
+asked what it meant, so `terms_confirmed_by` stays EMPTY and every report still prints
+UNCONFIRMED. `confirm_terms` wants the name of a person who has read the rules page itself.
+That is not pedantry about provenance: static and trailing floors invert the correct
+withdrawal policy, and which one is on offer is exactly the kind of detail a summary
+flattens.
+
+Still unknown and still assumed: the profit target, the daily loss limit if there is one,
+the deadline, the minimum trading days and the seat price.
 
 ## Cost in units of risk, which is the number that decides things
 
@@ -49,7 +58,6 @@ from lib.funded import (
     OF_ACCOUNT_SIZE as FLOOR_OF_ACCOUNT_SIZE,
     ON_CLOSE,
     STATIC,
-    TRAILING_LOCKED,
     ChallengeRules,
 )
 from lib.funded_sim import Campaign, StrategyProfile, simulate
@@ -62,6 +70,12 @@ SPOT_TAKER_PCT = 0.25
 SPOT_MAKER_PCT = 0.15
 PERP_TAKER_PCT = 0.05
 PERP_MAKER_PCT = 0.02
+
+#: The venue's cap, reported alongside the perpetuals answer. Checked rather than assumed
+#: away: risk-based sizing says nothing about the notional needed to express that risk, and
+#: a tight stop turns a modest risk into a large position. None of the candidates here comes
+#: close, which is a finding rather than a reason not to have looked.
+MAX_LEVERAGE = 50.0
 
 #: What crossing the book costs beyond the fee, on a liquid major. Small, and not zero:
 #: a model that sets slippage to zero is asserting a measurement it has not made.
@@ -128,7 +142,7 @@ TRADER_SPLIT = 0.80
 def challenge_rules(
     *,
     account_size: float = DEFAULT_ACCOUNT_SIZE,
-    max_total_drawdown_pct: float = 6.0,
+    max_total_drawdown_pct: float = 8.0,
     profit_target_pct: float = 8.0,
     max_daily_loss_pct: float | None = 3.0,
     max_calendar_days: int | None = 45,
@@ -160,19 +174,21 @@ def challenge_rules(
 def funded_rules(
     *,
     account_size: float = DEFAULT_ACCOUNT_SIZE,
-    max_total_drawdown_pct: float = 6.0,
+    max_total_drawdown_pct: float = 8.0,
     max_daily_loss_pct: float | None = 3.0,
     withdrawal_threshold_pct: float = 1.0,
-    drawdown_basis: str = TRAILING_LOCKED,
+    drawdown_basis: str = STATIC,
     payout_lowers_floor: bool = True,
     confirmed_by: str = "",
 ) -> ChallengeRules:
     """The live phase: no target, survive and take the 80%.
 
-    `drawdown_basis` differs from the challenge on purpose. A funded account whose floor
-    trails the peak is the common arrangement and it is the one that interacts badly with
-    payouts, so it is the default here — the optimistic assumption belongs on the side of
-    the thing being tested, not on the side of the answer.
+    `drawdown_basis` is STATIC because that is what Kraken is reported to use: a floor
+    pinned to the initial balance that neither trails the peak nor moves when money comes
+    out. It is the kinder of the two arrangements and it changes the right answer rather
+    than merely improving it — under a static floor retained profit is permanent room, so
+    the withdrawal policy worth optimising is how much to LEAVE, not how fast to take it.
+    Pass `drawdown_basis=TRAILING` to see what the other arrangement would have cost.
     """
 
     return ChallengeRules(
@@ -221,6 +237,7 @@ CANDIDATES: tuple[StrategyProfile, ...] = (
         payoff_ratio=1.0,
         risk_per_trade_pct=0.35,
         cost_r=cost_r(0.4, SPOT_TAKER_PCT),
+        stop_distance_pct=0.4,
         intraday_correlation=0.45,
         daily_stop_at=0.6,
     ),
@@ -236,6 +253,7 @@ CANDIDATES: tuple[StrategyProfile, ...] = (
         payoff_ratio=1.05,
         risk_per_trade_pct=0.35,
         cost_r=cost_r(0.8, PERP_MAKER_PCT),
+        stop_distance_pct=0.8,
         intraday_correlation=0.45,
         daily_stop_at=0.6,
     ),
@@ -250,6 +268,7 @@ CANDIDATES: tuple[StrategyProfile, ...] = (
         payoff_ratio=3.0,
         risk_per_trade_pct=1.0,
         cost_r=cost_r(3.0, PERP_TAKER_PCT),
+        stop_distance_pct=3.0,
         intraday_correlation=0.25,
         daily_stop_at=None,
         holds_overnight=True,
@@ -266,6 +285,7 @@ CANDIDATES: tuple[StrategyProfile, ...] = (
         payoff_ratio=0.50,
         risk_per_trade_pct=0.6,
         cost_r=cost_r(1.5, PERP_TAKER_PCT),
+        stop_distance_pct=1.5,
         intraday_correlation=0.70,
         daily_stop_at=0.6,
     ),
@@ -281,6 +301,7 @@ CANDIDATES: tuple[StrategyProfile, ...] = (
         payoff_ratio=0.30,
         risk_per_trade_pct=1.5,
         cost_r=cost_r(2.0, PERP_TAKER_PCT),
+        stop_distance_pct=2.0,
         intraday_correlation=0.85,
         daily_stop_at=None,
         holds_overnight=True,
@@ -297,6 +318,7 @@ CANDIDATES: tuple[StrategyProfile, ...] = (
         payoff_ratio=0.8,
         risk_per_trade_pct=2.0,
         cost_r=cost_r(1.0, PERP_TAKER_PCT),
+        stop_distance_pct=1.0,
         intraday_correlation=0.10,
         daily_stop_at=0.6,
     ),
@@ -312,6 +334,7 @@ CANDIDATES: tuple[StrategyProfile, ...] = (
         payoff_ratio=2.6,
         risk_per_trade_pct=1.5,
         cost_r=cost_r(4.0, PERP_TAKER_PCT),
+        stop_distance_pct=4.0,
         intraday_correlation=0.20,
         daily_stop_at=None,
         holds_overnight=True,
@@ -414,4 +437,42 @@ def sweep_payout_floor(
             ),
         )
         for lowers in (True, False)
+    )
+
+
+def sweep_retention(
+    profile: StrategyProfile,
+    fractions: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 0.9),
+    *,
+    challenge: ChallengeRules | None = None,
+    funded: ChallengeRules | None = None,
+    every_days: int = 14,
+    **kw,
+) -> tuple[tuple[float, Campaign], ...]:
+    """How much profit to LEAVE in the account, which is the live question on a static floor.
+
+    Under a floor pinned to the initial balance, every dollar retained widens the gap to it
+    permanently, and that gap is what the strategy spends during a bad week. Taking 100% of
+    profit every cycle resets the account to the thinnest buffer it will ever have, again
+    and again, so it never becomes safer no matter how well it trades.
+
+    Against that: money left in the account is money the provider still holds and a breach
+    still takes, and it is only worth 80 cents on the dollar when it does come out. Retained
+    profit is survival bought with cash, and this prices it. There is no reason to expect
+    the optimum at either end.
+    """
+
+    from lib.funded_sim import PayoutPolicy
+
+    challenge = challenge or challenge_rules()
+    funded = funded or funded_rules()
+    return tuple(
+        (
+            fraction,
+            simulate(
+                challenge, profile, funded=funded,
+                payout=PayoutPolicy(every_days, fraction), **kw
+            ),
+        )
+        for fraction in fractions
     )

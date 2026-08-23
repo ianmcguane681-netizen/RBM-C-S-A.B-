@@ -246,8 +246,9 @@ identify itself. `check_token.py` needs an Ethereum node URL. `check_arb.py` nee
 you type in odds from two screens.
 
 `python funded_model.py` needs nothing at all — it simulates funded-trader accounts against
-a rulebook and prints what became of them. See `docs/kraken-funded-model.md`; the challenge
-terms in it are assumptions until somebody passes `--confirmed-by`, and every report says so.
+a rulebook and prints what became of them. See `docs/kraken-funded-model.md`. The terms in
+it are second-hand at best and every report says so until somebody passes `--confirmed-by`;
+that matters because a static floor and a trailing one call for opposite payout policies.
 
 `python preflight.py` says which of those you have, per lane, and what each missing one
 unlocks. It reports three lane states rather than two, and the middle one is the honest

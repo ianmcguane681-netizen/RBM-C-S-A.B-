@@ -108,6 +108,10 @@ class StrategyProfile:
     #: None means trade on regardless, which is what an undisciplined operator does and
     #: what the model should be able to show the cost of.
     daily_stop_at: float | None = 0.6
+    #: How far the stop sits from entry, as a percentage of price. Optional because a
+    #: profile can be stated purely in R, but supplying it is what lets the model check
+    #: the position against the venue's leverage cap — see `implied_leverage`.
+    stop_distance_pct: float | None = None
     #: Does risk sit on the books across the day boundary. This is not a label: a
     #: strategy that holds overnight may not also claim a self-imposed daily stop, because
     #: a stop somebody has to be awake to apply is not a limit. `__post_init__` refuses
@@ -131,6 +135,8 @@ class StrategyProfile:
             raise ValueError("intraday_correlation must be between 0 and 1")
         if self.daily_stop_at is not None and not 0 < self.daily_stop_at <= 1:
             raise ValueError("daily_stop_at must be a fraction of the allowance, or None")
+        if self.stop_distance_pct is not None and self.stop_distance_pct <= 0:
+            raise ValueError("stop_distance_pct must be positive, or None if not stated")
         if self.holds_overnight and self.daily_stop_at is not None:
             raise ValueError(
                 f"{self.name} holds overnight and also claims a daily stop at "
@@ -138,6 +144,20 @@ class StrategyProfile:
                 f"somebody is awake does not bound a position held through the night — "
                 f"set daily_stop_at=None, or model the strategy as flat overnight"
             )
+
+    def implied_leverage(self) -> float | None:
+        """Notional as a multiple of the account, or None if the stop is not stated.
+
+        Risk-based sizing says nothing about how much notional it takes to express that
+        risk, and on a venue with a leverage cap those are different constraints. A 0.4%
+        stop risking 2% of the account needs five times the account in notional; the same
+        2% risk behind a 4% stop needs half of it. None is NOT "no leverage used" — it is
+        "not computable from what this profile states", and the report prints it that way.
+        """
+
+        if self.stop_distance_pct is None:
+            return None
+        return self.risk_per_trade_pct / self.stop_distance_pct
 
     @property
     def edge_r(self) -> float:
@@ -174,6 +194,11 @@ class StrategyProfile:
             + (", holds overnight" if self.holds_overnight else ", flat overnight"),
             f"  edge {edge:+.3f}R per trade ({verdict}), "
             f"{self.expected_daily_r:+.3f}R per day",
+            "  implied leverage " + (
+                "not computable — this profile does not state its stop distance"
+                if self.implied_leverage() is None
+                else f"{self.implied_leverage():.1f}x the account per position"
+            ),
         ])
 
 
@@ -269,6 +294,38 @@ def play_day(
     return Day(when, opening_equity, high, low, equity, traded=traded)
 
 
+@dataclass(frozen=True, slots=True)
+class PayoutPolicy:
+    """How often profit comes out, and how much of it is left behind.
+
+    A policy, not a rule: the provider decides what MAY be withdrawn, the trader decides
+    what IS. Separating them matters because the right answer inverts with the floor.
+
+    Under a TRAILING floor that does not reset, retained profit raises the floor along with
+    the balance and buys nothing, so the money is safer in your bank than in the account:
+    withdraw little and often.
+
+    Under a STATIC floor the retained profit is permanent room. The floor never moves, so
+    every dollar left behind widens the gap to it forever, and the gap is what the strategy
+    spends when it has a bad week. Withdrawing 100% of profit every cycle resets the account
+    to the thinnest buffer it will ever have, over and over, which is why the survival curve
+    across `retain_fraction` is the interesting one on Kraken's rulebook.
+    """
+
+    every_days: int = 14
+    #: Of the withdrawable profit, the share left in the account rather than taken.
+    retain_fraction: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.every_days < 1:
+            raise ValueError("every_days must be at least one day")
+        if not 0 <= self.retain_fraction < 1:
+            raise ValueError(
+                "retain_fraction must be at least 0 and below 1: retaining everything is "
+                "not a payout policy, it is declining to be paid"
+            )
+
+
 def resized(profile: StrategyProfile, risk_per_trade_pct: float) -> StrategyProfile:
     """The same strategy at a different size.
 
@@ -319,7 +376,7 @@ def run_path(
     start: date,
     challenge_day_cap: int,
     funded_horizon_days: int,
-    payout_every_days: int,
+    payout: PayoutPolicy,
 ) -> PathResult:
     """One account, from the day the fee is paid to the end of the horizon.
 
@@ -346,8 +403,8 @@ def run_path(
     funded_days = 0
     for index in range(1, funded_horizon_days + 1):
         day = play_day(profile, funded, when, funded_walk.equity, rng)
-        if index % payout_every_days == 0:
-            take = withdrawable(funded, day.equity_close)
+        if index % payout.every_days == 0:
+            take = withdrawable(funded, day.equity_close) * (1 - payout.retain_fraction)
             if take:
                 day = Day(
                     day.day, day.equity_open, day.equity_high, day.equity_low,
@@ -378,6 +435,7 @@ class Campaign:
     funded: ChallengeRules | None
     paths: int
     funded_horizon_days: int
+    payout: PayoutPolicy = PayoutPolicy()
     passed: int = 0
     indeterminate: int = 0
     unresolved: int = 0
@@ -478,7 +536,7 @@ def simulate(
     start: date | None = None,
     challenge_day_cap: int | None = None,
     funded_horizon_days: int = 180,
-    payout_every_days: int = 14,
+    payout: PayoutPolicy | None = None,
 ) -> Campaign:
     """Run `paths` accounts and report what became of them.
 
@@ -489,8 +547,7 @@ def simulate(
 
     if paths < 1:
         raise ValueError("paths must be at least one")
-    if payout_every_days < 1:
-        raise ValueError("payout_every_days must be at least one day")
+    payout = payout or PayoutPolicy()
     rng = random.Random(seed)
     start = start or date(2026, 9, 1)
     cap = challenge_day_cap or challenge.max_calendar_days or 60
@@ -507,7 +564,7 @@ def simulate(
             challenge, funded, profile, rng,
             start=start, challenge_day_cap=cap,
             funded_horizon_days=funded_horizon_days,
-            payout_every_days=payout_every_days,
+            payout=payout,
         )
         status = result.challenge.status
         if status == PASSED:
@@ -527,7 +584,7 @@ def simulate(
         net_takes.append(result.net_take)
 
     return Campaign(
-        profile, challenge, funded, paths, funded_horizon_days,
+        profile, challenge, funded, paths, funded_horizon_days, payout,
         passed=passed, indeterminate=indeterminate, unresolved=unresolved,
         breaches=breaches, funded_breaches=funded_breaches,
         days_to_pass=tuple(days_to_pass), net_takes=tuple(net_takes),

@@ -274,14 +274,25 @@ class ChallengeRules:
             f"  payout             {self.profit_split_to_trader:.0%} of withdrawn profit "
             f"to the trader, withdrawable above {self.withdrawal_threshold_amount:,.2f} profit"
         )
-        lines.append(
-            "                     "
-            + ("floor comes back down with the withdrawal, so a payout costs no buffer"
-               if self.payout_lowers_floor
-               else "floor does NOT come back down after a payout — every withdrawal "
-                    "permanently spends buffer, and enough of them breach a winning "
-                    "account with no losing day")
-        )
+        if self.drawdown_basis == STATIC:
+            # Under a static floor the payout term cannot bite: the floor is pinned to the
+            # starting balance and has nothing to come down FROM. Printing the term anyway
+            # would invite somebody to negotiate hard for a clause worth nothing to them,
+            # and to miss the one that is — see the retention note below.
+            lines.append(
+                "                     the payout/floor clause is moot on a static floor; "
+                "what matters is\n                     how much profit you LEAVE, since "
+                "retained profit is permanent room"
+            )
+        else:
+            lines.append(
+                "                     "
+                + ("floor comes back down with the withdrawal, so a payout costs no buffer"
+                   if self.payout_lowers_floor
+                   else "floor does NOT come back down after a payout — every withdrawal "
+                        "permanently spends buffer, and enough of them breach a winning "
+                        "account with no losing day")
+            )
         lines.append("  floors are checked against the day's LOW, never its close.")
         return "\n".join(lines)
 

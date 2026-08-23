@@ -14,7 +14,7 @@
 # THE KRAKEN FUNDED ACCOUNT — 2026-08-23
 
 Built: `lib/funded.py` (the rulebook), `lib/funded_sim.py` (the paper model),
-`lib/funded_kraken.py` (fees, terms, candidates), `funded_model.py` (the CLI), 83 tests.
+`lib/funded_kraken.py` (fees, terms, candidates), `funded_model.py` (the CLI), 100 tests.
 **The findings and the reasoning are in `docs/kraken-funded-model.md`** — read that rather
 than a summary of it. What belongs here is the state and what is owed.
 
@@ -24,34 +24,65 @@ only thing running it costs is electricity. Whether a funded account eventually 
 fourth lane or a tighter `Ringfence` on an existing one is a design question deliberately
 left open until the terms are known.
 
-**The terms are UNCONFIRMED and every report says so.** The parameters are the industry
-standard shape, not Kraken's published rules, and `confirm_terms` refuses the automation
-prefixes so the confirmation cannot be minted by whatever is running. Not knowing them did
-not block the work: the report sweeps the plausible range of the floor rather than guessing
-a point in it, and the buy/do-not-buy verdict does not move across it.
+## Two terms answered second-hand, and why that is still not confirmed
 
-## The two questions for the provider, in order
+Ian relayed a search summary on 08-23 giving two answers, and both are now the defaults:
 
-1. **Spot or perpetual futures?** At Kraken's published fee schedules this decides which
-   strategies are possible at all — a 0.4% stop costs 1.35R a round trip on spot and about
-   0.3R on perps. It matters more than every parameter of the strategies put together.
-2. **Does the loss floor come back down after a payout?** Identical accounts and identical
-   strategy, that clause alone is the difference between $4,842 and $431 per account, and
-   between a funded account living 180 days and 28. It is never the headline term.
+    the venue is Kraken Pro PERPETUAL FUTURES, not spot, with up to 50x leverage
+    the drawdown is a STATIC maximum pinned to the initial balance — 8% of a 10,000
+        account puts a permanent floor at 9,200 that never moves in either direction
 
-Then the rest: floor %, target %, daily %, deadline, seat price, static or trailing, close
-or intraday high, minimum trading days. `python funded_model.py --confirmed-by "Ian
-McGuane"` once somebody has read the page.
+`terms_confirmed_by` stays EMPTY and every report still prints UNCONFIRMED, because an
+AI-written search summary is a reading of a document by something that cannot be asked what
+it meant. That is not fastidiousness about provenance. Static and trailing floors invert the
+correct withdrawal policy, and which one is on offer is exactly the sort of detail a summary
+flattens.
 
-## What is owed if this goes further
+## A correction, recorded because the wrong version was said out loud
 
+The first pass reported that the payout/floor clause was worth a factor of eleven. **That
+is a property of TRAILING floors only.** A floor left where the peak put it can rise above
+the post-payout balance and breach an account that never had a losing day; a floor pinned
+to the starting balance has nothing to rise from and the trap is unreachable. The static
+answer above means it does not apply here.
+
+`test_a_static_floor_is_indifferent_to_the_payout_term` had pinned this correctly from the
+first commit — the code was right and the summary of it was not. There are now four more
+tests under `TestThePayoutTrapIsAPropertyOfTRAILINGFloorsOnly` saying so where somebody
+reading the class name will see it, and `ChallengeRules.describe()` refuses to print the
+clause at all on a static floor rather than printing it as satisfied.
+
+## What replaced it
+
+On a static floor the live question is **how much profit to LEAVE in the account**, and the
+answer is decided by which breaker is actually killing the accounts:
+
+**Retained profit defends against the FLOOR and not against the DAILY limit.** Money left
+in widens the permanent gap to a floor that never moves. It widens nothing against a daily
+allowance computed as a percentage of the account SIZE — tomorrow's allowance is the same
+number of dollars whether the balance is 10,000 or 14,000. So read the two breach columns
+in section 4 and let them choose the retention, rather than picking a percentage.
+
+This makes the **daily loss limit the most valuable remaining unknown**, ahead of the
+target and the seat price. It is not in what Ian relayed; the 3% assumed here is the
+difference between retention being worth buying and worth nothing, and for some strategies
+it is what kills every account that dies.
+
+## Still open
+
+- **Is there a daily loss limit, and at what?** See above. Top of the list now.
+- The profit target, deadline, minimum trading days, seat price. Assumed, and section 3
+  shows the verdict does not move across the plausible range of the floor.
 - **A measured edge instead of an estimated one.** Every win rate in `lib/funded_kraken.py`
-  is somebody's guess, and the model computes the consequences of guesses exactly. The
+  is somebody's guess and the model computes the consequences of guesses exactly. The
   candidate that wins on the current numbers (`cross-venue-arb` at an assumed 96%) is the
   one whose assumption is shakiest, and `lib/arbfind.py` has no crypto venue feed to check
   it against.
 - **A decision on the lane question** above.
-- Nothing else. This is a model, and it should stay one until there is something to measure.
+
+Leverage turned out not to bind: the widest candidate needs 2x the account in notional
+against a 50x cap. `implied_leverage()` checks it rather than assuming it, and a profile
+that does not state its stop returns None rather than zero.
 
 ---
 

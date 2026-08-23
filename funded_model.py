@@ -9,18 +9,24 @@ Nothing here touches a key, a venue or a balance. It simulates accounts against 
 rulebook in `lib/funded.py` and prints what became of them, and the only thing it can cost
 is the electricity.
 
-**The terms are assumptions until somebody confirms them.** Pass `--confirmed-by "Name"`
-once a person has read the provider's published rules and states these match; until then
-every section says so, because a result computed from an assumed rulebook is a result about
-the assumption. `--drawdown-sweep` is the answer to not knowing yet: it runs the range
-rather than guessing a point in it.
+**The terms are assumptions until somebody confirms them.** Two of them — perpetual
+futures rather than spot, and a static floor pinned to the starting balance — come from a
+search summary rather than Kraken's own rules page, which is second-hand and not the same
+as confirmed. The rest are still guesses. Pass `--confirmed-by "Name"` once a person has
+read the published rules and states these match; until then every section says so, because
+a result computed from an assumed rulebook is a result about the assumption.
+
+Section 3 is what not knowing looks like when it is handled rather than guessed: it runs
+the whole plausible range of the floor instead of picking a point inside it.
 """
 from __future__ import annotations
 
 import argparse
 import sys
 
-from lib.funded import DAILY_LOSS, TIME_EXPIRED, TOTAL_DRAWDOWN
+import statistics
+
+from lib.funded import DAILY_LOSS, TIME_EXPIRED, TOTAL_DRAWDOWN, TRAILING
 from lib.funded_kraken import (
     CANDIDATES,
     BY_NAME,
@@ -33,9 +39,10 @@ from lib.funded_kraken import (
     funded_rules,
     sweep_drawdown,
     sweep_payout_floor,
+    sweep_retention,
     sweep_risk,
 )
-from lib.funded_sim import simulate
+from lib.funded_sim import PayoutPolicy, simulate
 
 RULE_LABEL = {
     TOTAL_DRAWDOWN: "floor",
@@ -69,7 +76,7 @@ def comparison(challenge, funded, args) -> list[str]:
             challenge, profile, funded=funded,
             paths=args.paths, seed=args.seed,
             funded_horizon_days=args.horizon,
-            payout_every_days=args.payout_every,
+            payout=PayoutPolicy(args.payout_every, args.retain),
         )
         results.append(campaign)
 
@@ -130,7 +137,8 @@ def sizing(best, args) -> list[str]:
             max_daily_loss_pct=args.daily,
         ),
         paths=args.paths, seed=args.seed,
-        funded_horizon_days=args.horizon, payout_every_days=args.payout_every,
+        funded_horizon_days=args.horizon,
+        payout=PayoutPolicy(args.payout_every, args.retain),
     )
     for size, campaign in swept:
         days = campaign.median_days_to_pass
@@ -172,7 +180,8 @@ def drawdown_sensitivity(best, args) -> list[str]:
             "fee": args.fee, "confirmed_by": args.confirmed_by,
         },
         paths=args.paths, seed=args.seed,
-        funded_horizon_days=args.horizon, payout_every_days=args.payout_every,
+        funded_horizon_days=args.horizon,
+        payout=PayoutPolicy(args.payout_every, args.retain),
     ):
         verdict = "worth a seat" if campaign.expected_net > 0 else "do not buy"
         lines.append(
@@ -189,10 +198,108 @@ def drawdown_sensitivity(best, args) -> list[str]:
 
 
 def payout_term(best, args) -> list[str]:
-    lines = [rule("4. THE ONE LINE OF THE CONTRACT WORTH READING")]
+    """How much profit to leave in, and — the part that decides it — what is killing you."""
+
+    lines = [rule("4. HOW MUCH PROFIT TO LEAVE IN THE ACCOUNT")]
     lines.append(
-        "   When profit is withdrawn the balance falls. Whether the loss floor falls with "
-        "it\n   is a term, and it is usually not the headline one."
+        "   The floor is pinned to the starting balance and never moves, so every dollar "
+        "left\n   in the account is permanent room, and room is what a strategy spends "
+        "during a bad\n   week. Against that, retained profit is still the provider's to "
+        "take on a breach and\n   is only worth 80 cents on the dollar when it does come "
+        "out."
+    )
+    lines.append("")
+    lines.append(
+        f"   {'retain':>7}{'net/acct':>11}{'life':>7}"
+        f"{'floor':>8}{'daily':>8}   of the funded accounts"
+    )
+    lines.append(f"   {'-' * 60}")
+
+    swept = sweep_retention(
+        best, tuple(args.retentions),
+        challenge=challenge_rules(
+            account_size=args.account, max_total_drawdown_pct=args.drawdown,
+            profit_target_pct=args.target, max_daily_loss_pct=args.daily,
+            max_calendar_days=args.days, fee=args.fee,
+        ),
+        funded=funded_rules(
+            account_size=args.account, max_total_drawdown_pct=args.drawdown,
+            max_daily_loss_pct=args.daily,
+        ),
+        every_days=args.payout_every,
+        paths=args.paths, seed=args.seed, funded_horizon_days=args.horizon,
+    )
+    floor_first = daily_first = 0
+    for fraction, campaign in swept:
+        life = (
+            statistics.median(campaign.funded_days) if campaign.funded_days else 0.0
+        )
+        floors = campaign.funded_breaches.get(TOTAL_DRAWDOWN, 0)
+        dailies = campaign.funded_breaches.get(DAILY_LOSS, 0)
+        if fraction == swept[0][0]:
+            floor_first, daily_first = floors, dailies
+        lines.append(
+            f"   {fraction:>6.0%}{campaign.expected_net:>11,.0f}{life:>6.0f}d"
+            f"{floors:>8}{dailies:>8}   of {campaign.passed}"
+        )
+
+    best_retention = max(swept, key=lambda pair: pair[1].expected_net)[0]
+    lines.append("")
+    lines.append(
+        f"   Best of those tried: leave {best_retention:.0%} of each payout in the account."
+    )
+    lines.append("")
+
+    # Which breaker is binding decides whether retention is worth anything at all, and the
+    # answer differs by strategy. Stating the rule rather than the number is the point:
+    # the number moves with every parameter above it, the rule does not.
+    funded_count = swept[0][1].passed
+    breaches = floor_first + daily_first
+    if funded_count and breaches / funded_count < 0.01:
+        # Too few breaches to say which breaker binds. Reading "daily beats floor" off
+        # thirteen events would be inventing a finding out of noise, and it is the same
+        # refusal the rest of this repository makes when the evidence does not reach.
+        lines.append(
+            f"   NOT DECIDABLE FROM THIS STRATEGY. Only {breaches} of {funded_count} funded "
+            f"accounts\n   breached at all, so which breaker binds is not established and "
+            f"the retention column\n   above is measuring rounding. Retention is buying "
+            f"nothing here because there is\n   nothing much to defend against — which is a "
+            f"fact about this strategy, not about\n   retention. Run `--strategy "
+            f"momentum-swing` to see the case where it decides something."
+        )
+    elif daily_first > floor_first:
+        lines.append(
+            "   Retention is buying little here, and the table says why: these accounts die "
+            "to the\n   DAILY limit, not to the floor. A daily allowance computed as a "
+            "percentage of the\n   account size does not widen when you leave profit in, so "
+            "no amount of retained\n   buffer defends against it. Fix the daily discipline "
+            "or the overnight exposure\n   instead, and take the cash."
+        )
+    else:
+        lines.append(
+            "   Retention is buying real survival here: the floor breaches fall sharply down "
+            "the\n   column. That is the case where leaving profit in is a purchase rather "
+            "than a cost,\n   because the thing killing these accounts is exactly the thing "
+            "a wider buffer stops."
+        )
+    lines.append("")
+    lines.append(
+        "   The rule, which outlives every number above it: **retained profit defends "
+        "against\n   the FLOOR and not against the DAILY limit.** Read the two breach "
+        "columns first and\n   let them choose the retention, rather than picking a "
+        "percentage and hoping."
+    )
+    return lines
+
+
+def counterfactual(best, args) -> list[str]:
+    """What the static floor is worth, priced against the arrangement it is not."""
+
+    lines = [rule("4b. WHAT THE STATIC FLOOR IS WORTH")]
+    lines.append(
+        "   Kraken is reported to pin the floor to the starting balance. The common "
+        "alternative\n   trails the peak, and on that arrangement withdrawing profit walks "
+        "the balance toward\n   a floor that stayed where the peak left it."
     )
     lines.append("")
     for lowers, campaign in sweep_payout_floor(
@@ -204,28 +311,24 @@ def payout_term(best, args) -> list[str]:
         ),
         funded_terms={
             "account_size": args.account, "max_total_drawdown_pct": args.drawdown,
-            "max_daily_loss_pct": args.daily,
+            "max_daily_loss_pct": args.daily, "drawdown_basis": TRAILING,
         },
-        paths=args.paths, seed=args.seed,
-        funded_horizon_days=args.horizon, payout_every_days=args.payout_every,
+        paths=args.paths, seed=args.seed, funded_horizon_days=args.horizon,
     ):
         label = (
-            "floor follows the money out" if lowers
-            else "floor stays at the peak"
+            "trailing, floor follows the payout" if lowers
+            else "trailing, floor stays at the peak"
         )
         life = campaign.funded_days
-        median_life = (
-            f"{sorted(life)[len(life) // 2]:.0f} days" if life else "—"
-        )
         lines.append(
-            f"   {label:<32}net {campaign.expected_net:>9,.0f}   "
-            f"funded account lives {median_life}"
+            f"   {label:<36}net {campaign.expected_net:>9,.0f}   lives "
+            + (f"{statistics.median(life):.0f} days" if life else "—")
         )
     lines.append("")
     lines.append(
-        "   If those two numbers differ materially, the payout schedule is not an "
-        "administrative\n   detail — it is a risk parameter, and taking money out on the "
-        "wrong terms breaches a\n   winning account without a single losing day."
+        "   This is a counterfactual, not a Kraken figure. It is here because it is the "
+        "clause\n   to check on any OTHER programme, and because it is worth knowing what "
+        "the static\n   floor spared us before treating it as unremarkable."
     )
     return lines
 
@@ -241,8 +344,9 @@ def caveats() -> list[str]:
         "",
         "   What survives a wrong estimate is the structural half: that cost in units of "
         "risk\n   decides which strategies are possible at all, that size has an interior "
-        "optimum,\n   that a payout can breach a winning account. Those are arithmetic on "
-        "the rulebook.",
+        "optimum, and\n   that retained profit defends against the floor and not against "
+        "the daily limit. Those\n   are arithmetic on the rulebook rather than consequences "
+        "of the guesses.",
         "",
         "   Not modelled, all of which push against the trader: slippage that widens when "
         "it\n   matters, a stop gapping through on a Sunday wick, the exchange unreachable "
@@ -253,10 +357,34 @@ def caveats() -> list[str]:
         f"{SPOT_TAKER_PCT}%,\n   perp taker {PERP_TAKER_PCT}%, perp maker {PERP_MAKER_PCT}%. "
         "Constants in a file, not a live read.",
         "",
-        "   FIRST QUESTION FOR THE PROVIDER: is the account spot or perpetual futures? At "
-        "these\n   fee schedules that one answer decides more about which strategies are "
-        "viable than\n   every parameter of the strategies put together.",
+        "   ANSWERED, SECOND-HAND: the venue is perpetual futures and the floor is static. "
+        "Both\n   came from a search summary Ian relayed rather than from Kraken's rules "
+        "page, and both\n   change the answer enough to be worth reading at the source. "
+        "`spot-scalp` is kept in\n   the table as the counterfactual: it is what the "
+        "perpetuals engine spared us.",
+        "",
+        "   STILL THE BIGGEST UNKNOWN: whether there is a daily loss limit, and at what. "
+        "The 3%\n   assumed here is the difference between retention being worth buying and "
+        "worth\n   nothing, and for some strategies it is what kills every account that "
+        "dies. It is now\n   the question to put to the provider, ahead of the target and "
+        "the seat price.",
     ]
+
+
+def parse_daily(text: str) -> float | None:
+    """`--daily none` is a rulebook with NO daily limit, which is not the same as a very
+    large one. Whether the programme has one at all is the biggest open question about
+    these terms, so the CLI has to be able to say 'there isn't one' rather than approximate
+    it with 99%."""
+
+    if text.strip().lower() in {"none", "no", "off"}:
+        return None
+    value = float(text)
+    if not 0 < value < 100:
+        raise argparse.ArgumentTypeError(
+            "a daily loss limit is a percentage strictly between 0 and 100, or 'none'"
+        )
+    return value
 
 
 def parse_list(text: str) -> tuple[float, ...]:
@@ -270,12 +398,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=20260823,
                         help="seeded so a quoted figure can be reproduced")
     parser.add_argument("--account", type=float, default=10_000.0)
-    parser.add_argument("--drawdown", type=float, default=6.0,
+    parser.add_argument("--drawdown", type=float, default=8.0,
                         help="lifetime loss floor, %% of the account")
     parser.add_argument("--target", type=float, default=8.0,
                         help="profit target to pass, %% of the account")
-    parser.add_argument("--daily", type=float, default=3.0,
-                        help="daily loss allowance, %% of the account")
+    parser.add_argument("--daily", type=parse_daily, default=3.0,
+                        help="daily loss allowance as %% of the account, or 'none' for a "
+                             "rulebook with no daily rule at all")
     parser.add_argument("--days", type=int, default=45,
                         help="calendar days allowed for the challenge")
     parser.add_argument("--fee", type=float, default=500.0)
@@ -283,10 +412,14 @@ def main(argv: list[str] | None = None) -> int:
                         help="funded days simulated after a pass")
     parser.add_argument("--payout-every", type=int, default=14,
                         help="days between withdrawals in the funded phase")
+    parser.add_argument("--retain", type=float, default=0.0,
+                        help="fraction of each payout left in the account (sections 1-3)")
     parser.add_argument("--strategy", default="",
                         help="name to carry into sections 2-4 (default: the best earner)")
     parser.add_argument("--sizes", type=parse_list, default=(0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0))
     parser.add_argument("--floors", type=parse_list, default=(4.0, 5.0, 6.0, 8.0, 10.0, 12.0))
+    parser.add_argument("--retentions", type=parse_list, default=(0.0, 0.25, 0.5, 0.75, 0.9),
+                        help="fractions of each payout left in the account")
     parser.add_argument("--confirmed-by", default="",
                         help="the person who read the provider's published rules")
     args = parser.parse_args(argv)
@@ -337,6 +470,7 @@ def main(argv: list[str] | None = None) -> int:
     print("\n".join(sizing(best, args)))
     print("\n".join(drawdown_sensitivity(best, args)))
     print("\n".join(payout_term(best, args)))
+    print("\n".join(counterfactual(best, args)))
     print("\n".join(caveats()))
     return 0
 
