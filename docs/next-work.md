@@ -1,3 +1,60 @@
+# Next work — checkpoint 2026-08-23
+
+> **1529 tests, 2 skipped.** The Kraken funded-account paper model landed today and is the
+> section immediately below. Nothing before it changed.
+>
+> **Nothing is running on a cadence.** No supervisor has been started, so no lane has ever
+> run unattended and nothing is being missed while it is not.
+>
+> The 2026-08-09 checkpoint and everything under it is kept unedited, because the reasoning
+> in it is why the code looks the way it does.
+
+---
+
+# THE KRAKEN FUNDED ACCOUNT — 2026-08-23
+
+Built: `lib/funded.py` (the rulebook), `lib/funded_sim.py` (the paper model),
+`lib/funded_kraken.py` (fees, terms, candidates), `funded_model.py` (the CLI), 83 tests.
+**The findings and the reasoning are in `docs/kraken-funded-model.md`** — read that rather
+than a summary of it. What belongs here is the state and what is owed.
+
+**Nothing about it can place an order.** No connector, no key path, no entry in
+`lib.reaping.LANES`, no wiring into `lib/operating.py`. It simulates and it prints, and the
+only thing running it costs is electricity. Whether a funded account eventually becomes a
+fourth lane or a tighter `Ringfence` on an existing one is a design question deliberately
+left open until the terms are known.
+
+**The terms are UNCONFIRMED and every report says so.** The parameters are the industry
+standard shape, not Kraken's published rules, and `confirm_terms` refuses the automation
+prefixes so the confirmation cannot be minted by whatever is running. Not knowing them did
+not block the work: the report sweeps the plausible range of the floor rather than guessing
+a point in it, and the buy/do-not-buy verdict does not move across it.
+
+## The two questions for the provider, in order
+
+1. **Spot or perpetual futures?** At Kraken's published fee schedules this decides which
+   strategies are possible at all — a 0.4% stop costs 1.35R a round trip on spot and about
+   0.3R on perps. It matters more than every parameter of the strategies put together.
+2. **Does the loss floor come back down after a payout?** Identical accounts and identical
+   strategy, that clause alone is the difference between $4,842 and $431 per account, and
+   between a funded account living 180 days and 28. It is never the headline term.
+
+Then the rest: floor %, target %, daily %, deadline, seat price, static or trailing, close
+or intraday high, minimum trading days. `python funded_model.py --confirmed-by "Ian
+McGuane"` once somebody has read the page.
+
+## What is owed if this goes further
+
+- **A measured edge instead of an estimated one.** Every win rate in `lib/funded_kraken.py`
+  is somebody's guess, and the model computes the consequences of guesses exactly. The
+  candidate that wins on the current numbers (`cross-venue-arb` at an assumed 96%) is the
+  one whose assumption is shakiest, and `lib/arbfind.py` has no crypto venue feed to check
+  it against.
+- **A decision on the lane question** above.
+- Nothing else. This is a model, and it should stay one until there is something to measure.
+
+---
+
 # Next work — checkpoint 2026-08-09
 
 > **1436 tests, 2 skipped.** `main` is at the PR #9 merge; PR #10 carries the 8-9 August

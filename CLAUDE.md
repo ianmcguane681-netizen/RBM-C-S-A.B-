@@ -62,6 +62,7 @@ without an explicit instruction naming them. If a task seems to require it, say 
 rbe_runtime/  board/  controlled_authority/   the review board engine (the original project)
 connectors/   evidence readers: chain, EDGAR, odds, Alpaca, and the two execution adapters
 lib/          the money side: reapers, breakers, sizing, thesis, outcomes, arb maths
+              funded*.py is the funded-account paper model — a simulator, not a lane
 docs/         methodology profiles RBM-001..005, and docs/next-work.md
 ```
 
@@ -78,6 +79,7 @@ python run.py --manual "why" # take the wheel: lanes keep running, you place
 python positions.py          # what is open; --settle feeds the breakers
 python run.py                # the orchestrator: what is due, what is held
 python preflight.py          # what each lane needs before it can read anything
+python funded_model.py       # the Kraken funded-account paper model: simulates, places nothing
 ```
 
 ## Two lanes of work, one repo

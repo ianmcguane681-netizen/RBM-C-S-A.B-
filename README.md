@@ -245,6 +245,10 @@ python check_arb.py my-arb.json                                    # is a claime
 identify itself. `check_token.py` needs an Ethereum node URL. `check_arb.py` needs neither —
 you type in odds from two screens.
 
+`python funded_model.py` needs nothing at all — it simulates funded-trader accounts against
+a rulebook and prints what became of them. See `docs/kraken-funded-model.md`; the challenge
+terms in it are assumptions until somebody passes `--confirmed-by`, and every report says so.
+
 `python preflight.py` says which of those you have, per lane, and what each missing one
 unlocks. It reports three lane states rather than two, and the middle one is the honest
 part: **arbitrage runs with no credentials at all** — the maths, the settlement-rule
@@ -456,6 +460,7 @@ docs/arb-board/         RBM-005    arbitrage
 check_token.py        one command, six chain gates
 check_stock.py        one command, the filing gates
 check_arb.py          is a claimed arb real, from two screens
+funded_model.py       the Kraken funded-account paper model, no key and no venue
 trade_sheet.py        board verdict, round-trip cost, and your own target
 monitor.py            has anything a review relied on moved since last time
 preflight.py          what each lane needs before it can read anything
