@@ -67,6 +67,10 @@ MAX_BODY = 3500
 
 API = "https://api.telegram.org"
 
+#: Discord refuses anything past 2000 characters outright rather than truncating. Kept
+#: below the limit because the trim marker itself has to fit.
+MAX_DISCORD_BODY = 1900
+
 
 @dataclass(frozen=True, slots=True)
 class TelegramCredentials:
@@ -85,6 +89,30 @@ class TelegramCredentials:
             token.read_text(encoding="utf-8").strip(),
             chat.read_text(encoding="utf-8").strip(),
         )
+
+
+@dataclass(frozen=True, slots=True)
+class DiscordCredentials:
+    """A webhook URL, which is itself the secret.
+
+    Unlike a bot token there is no separate id: anyone holding this URL can post to the
+    channel. It is therefore treated exactly as a credential — file only, mode 600, never
+    in this repository, and redacted out of every log line and error message.
+    """
+
+    webhook: str
+
+    @classmethod
+    def load(cls, directory: str | Path = "~/.discord") -> "DiscordCredentials | None":
+        path = Path(directory).expanduser() / "webhook"
+        if not path.is_file():
+            return None
+        url = path.read_text(encoding="utf-8").strip()
+        if not url.startswith("https://"):
+            # A webhook that is not a URL cannot be sent to, and failing here beats
+            # failing at the moment there is something worth saying.
+            return None
+        return cls(url)
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,12 +143,37 @@ class Delivery:
         return f"{self.status}  {self.subject}: {self.reason}"
 
 
+def _append_attempt(log_path: "Path | None", delivery: Delivery) -> Delivery:
+    """Append one attempt to the notification log. A notifier that fails invisibly is
+    worse than none, and every channel records through here so a second channel cannot
+    quietly skip the step that makes failure visible."""
+
+    path = log_path if log_path is not None else LOG
+    try:
+        rows = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+        if not isinstance(rows, list):
+            rows = []
+    except (OSError, ValueError):
+        rows = []
+    rows.append({"status": delivery.status, "at": delivery.at,
+                 "subject": delivery.subject, "reason": delivery.reason})
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(rows[-200:], indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        # Recording is best effort. Losing the record must not lose the message.
+        pass
+    return delivery
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 class Telegram:
     """One channel. Sends, and says exactly what happened when it does not."""
+
+    name = "Telegram"
 
     def __init__(
         self,
@@ -189,41 +242,181 @@ class Telegram:
         return self._record(Delivery(SENT, _now(), subject))
 
     def _record(self, delivery: Delivery) -> Delivery:
-        """Append the attempt. A notifier that fails invisibly is worse than none."""
+        return _append_attempt(self.log_path, delivery)
 
-        path = self.log_path if self.log_path is not None else LOG
+
+class Discord:
+    """The second channel. Same contract as `Telegram`, different failure shapes.
+
+    Two differences are load-bearing rather than cosmetic. Discord answers a successful
+    post with **204 and an empty body**, so there is no `ok` field to check and a client
+    written against Telegram's shape would read every success as a malformed reply. And its
+    content limit is 2000 characters against Telegram's 4096, so the same message can
+    deliver on one channel and be refused by the other — which is exactly the case the
+    broadcast below has to be able to report.
+    """
+
+    name = "Discord"
+
+    def __init__(
+        self,
+        credentials: "DiscordCredentials | None",
+        *,
+        opener: Callable[..., Any] = retrying_urlopen,
+        log_path: str | Path | None = None,
+    ) -> None:
+        self.credentials = credentials
+        self._opener = opener
+        self.log_path = Path(log_path) if log_path is not None else None
+
+    @classmethod
+    def from_directory(cls, directory: str | Path = "~/.discord", **kw: Any) -> "Discord":
+        return cls(DiscordCredentials.load(directory), **kw)
+
+    @property
+    def is_configured(self) -> bool:
+        return self.credentials is not None
+
+    def send(self, subject: str, body: str) -> Delivery:
+        """Deliver one message. Never raises, for the reason argued on `Telegram.send`."""
+
+        if self.credentials is None:
+            return self._record(Delivery(NOT_CONFIGURED, _now(), subject))
+
+        text = f"**{subject}**\n```\n{body}\n```"
+        if len(text) > MAX_DISCORD_BODY:
+            keep = (MAX_DISCORD_BODY - 60) // 2
+            text = f"{text[:keep]}\n[... trimmed ...]\n{text[-keep:]}"
+
+        payload = json.dumps({"content": text, "flags": 4}).encode("utf-8")
+        request = urllib.request.Request(
+            self.credentials.webhook, data=payload, method="POST",
+            headers={"Content-Type": "application/json", "User-Agent": "rbm-notify"},
+        )
         try:
-            rows = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
-            if not isinstance(rows, list):
-                rows = []
-        except (OSError, ValueError):
-            rows = []
-        rows.append({"status": delivery.status, "at": delivery.at,
-                     "subject": delivery.subject, "reason": delivery.reason})
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(rows[-200:], indent=2) + "\n", encoding="utf-8")
-        except OSError:
-            # Recording is best effort. Losing the record must not lose the message.
-            pass
-        return delivery
+            with self._opener(request) as response:
+                # 204 and an empty body is the success case. Reading it is enough.
+                response.read()
+        except urllib.error.HTTPError as error:
+            return self._record(Delivery(
+                REFUSED, _now(), subject, f"HTTP {error.code}: {_redact(str(error))}"))
+        except (urllib.error.URLError, TransientRetrievalError, OSError, ValueError) as error:
+            return self._record(Delivery(
+                UNREACHABLE, _now(), subject,
+                f"{type(error).__name__}: {_redact(str(error))}"))
+        return self._record(Delivery(SENT, _now(), subject))
+
+    def _record(self, delivery: Delivery) -> Delivery:
+        return _append_attempt(self.log_path, delivery)
+
+
+#: Every channel that delivered, none, or some — and "some" is its own answer.
+ALL_SENT = "ALL_SENT"
+PARTIAL = "PARTIAL"
+NONE_SENT = "NONE_SENT"
+
+
+@dataclass(frozen=True, slots=True)
+class Broadcast:
+    """One message across every configured channel, and what became of each.
+
+    `PARTIAL` exists because two channels are not a redundancy unless somebody is told when
+    one of them stops. A fan-out that reported "sent" whenever ANY channel worked would let
+    Discord fail silently for a month, and the person would find out on the day Telegram
+    also went down — which is the day it mattered.
+
+    A channel that is NOT_CONFIGURED is not counted as a failure. Having only Telegram set
+    up is a choice, not an outage.
+    """
+
+    status: str
+    subject: str
+    deliveries: tuple[tuple[str, Delivery], ...] = ()
+
+    @property
+    def reached_somebody(self) -> bool:
+        return self.status in {ALL_SENT, PARTIAL}
+
+    @property
+    def failures(self) -> tuple[tuple[str, Delivery], ...]:
+        return tuple(
+            (name, d) for name, d in self.deliveries
+            if d.status not in {SENT, NOT_CONFIGURED}
+        )
+
+    def describe(self) -> str:
+        if self.status == NOT_CONFIGURED:
+            return (
+                "NOT_CONFIGURED  no channel is set up, so nothing was sent and nothing "
+                "failed.\n  Telegram: a bot token in ~/.telegram/bot_token and the chat id "
+                "in ~/.telegram/chat_id.\n  Discord: a webhook URL in ~/.discord/webhook.")
+        lines = [f"{self.status}  {self.subject}"]
+        for name, delivery in self.deliveries:
+            lines.append(f"  {name}: {delivery.describe()}")
+        if self.status == PARTIAL:
+            lines.append(
+                "  A channel failed while another worked. You were told THIS time; the "
+                "point of\n  the second channel is that you would not have been next time.")
+        return "\n".join(lines)
+
+
+class Channels:
+    """Every configured channel, sent to in turn. The thing a caller should hold."""
+
+    def __init__(self, channels: Sequence[Any]) -> None:
+        self.channels = tuple(channels)
+
+    @classmethod
+    def from_home(cls, **kw: Any) -> "Channels":
+        return cls([Telegram.from_directory(**kw), Discord.from_directory(**kw)])
+
+    @property
+    def configured(self) -> tuple[Any, ...]:
+        return tuple(c for c in self.channels if c.is_configured)
+
+    def send(self, subject: str, body: str) -> Broadcast:
+        """Send everywhere. One channel's failure never prevents another's attempt."""
+
+        if not self.configured:
+            return Broadcast(NOT_CONFIGURED, subject)
+        deliveries = tuple(
+            (getattr(channel, "name", type(channel).__name__), channel.send(subject, body))
+            for channel in self.configured
+        )
+        sent = [d for _, d in deliveries if d.status == SENT]
+        if len(sent) == len(deliveries):
+            status = ALL_SENT
+        elif sent:
+            status = PARTIAL
+        else:
+            status = NONE_SENT
+        return Broadcast(status, subject, deliveries)
 
 
 #: The token as it appears in a URL path: `/bot<digits>:<secret>/sendMessage`. Matched up
 #: to the next slash so the method name and everything after it survive.
 _TOKEN_IN_URL = re.compile(r"/bot[^/\s]*")
 
+#: A Discord webhook URL is itself the credential — anyone holding it can post. Both the id
+#: and the token are dropped, because the pair is what authorises.
+_WEBHOOK_IN_URL = re.compile(r"(https://[^/\s]*discord[^/\s]*/api/webhooks)/\S*")
+
 
 def _redact(text: str) -> str:
-    """A bot token appears in the URL, and error strings quote the URL back at you.
+    """Secrets appear in URLs, and error strings quote the URL back at you.
 
-    Only the token goes. The first version of this replaced the WHOLE string as soon as it
-    contained `/bot`, which kept the secret out of the log and took the diagnosis with it —
+    Only the secret goes. The first version of this replaced the WHOLE string as soon as it
+    contained `/bot`, which kept the token out of the log and took the diagnosis with it —
     and a refusal that does not name what a person can go and do about it is barely a
     refusal. `HTTP 401 ... /bot<redacted>/sendMessage` says both things at once.
+
+    A Discord webhook needs the same treatment for a different reason. A bot token is one
+    half of a credential; the webhook URL is the WHOLE of one, so a log line quoting it
+    hands the channel to whoever reads the log.
     """
 
-    return _TOKEN_IN_URL.sub("/bot<redacted>", str(text))
+    text = _TOKEN_IN_URL.sub("/bot<redacted>", str(text))
+    return _WEBHOOK_IN_URL.sub(r"\1/<redacted>", text)
 
 
 # -- what a message says ----------------------------------------------------------------
@@ -345,6 +538,62 @@ def chain_message(plan: Any, *, subject: str = "", thesis: Any = None,
         f"READ AT  {getattr(plan, 'at', '') or 'time not recorded'}",
     ]
     return f"CHAIN READY (UNSIGNED) · {token}", "\n".join(lines)
+
+
+def signal_message(signal: Any, *, ring_balance: float = 0.0) -> tuple[str, str]:
+    """One Kraken signal, carrying everything needed to act without opening anything.
+
+    Same trade Ian made for arb and stocks on 2026-08-08: full detail travels, because an
+    instruction you have to go and look up is one you act on late or not at all. Nothing
+    here is a credential and nothing identifies the account.
+
+    The last line is not decoration. A message that reads like a filled order is one
+    somebody stops double-checking, and this system can place — so the message says, every
+    time, that it has not.
+    """
+
+    side = str(getattr(signal, "side", "")).upper()
+    pair = getattr(signal, "pair", "")
+    subject = f"SIGNAL  {side} {pair}"
+    stop = float(getattr(signal, "stop", 0.0))
+    price = float(getattr(signal, "price", 0.0))
+    away = abs(price - stop) / price * 100 if price else 0.0
+    lines = [
+        f"{side} {pair}",
+        f"  size      {getattr(signal, 'volume', 0.0):.8f}  (~{getattr(signal, 'notional', 0.0):,.2f} notional)",
+        f"  entry     ~{price:,.4f}",
+        f"  stop      {stop:,.4f}   {away:.2f}% away",
+        f"  target    {float(getattr(signal, 'target', 0.0)):,.4f}   "
+        f"{getattr(signal, 'reward_to_risk', 0.0):.2f}:1",
+        f"  risking   {getattr(signal, 'risk_cash', 0.0):,.2f}"
+        + (f" of {ring_balance:,.2f}" if ring_balance else ""),
+        f"  bound by  {getattr(getattr(signal, 'size', None), 'bound_by', 'unknown')}",
+        f"  rule      {getattr(signal, 'strategy', '')}",
+        "",
+        "NOTHING HAS BEEN PLACED. This is a signal; you place it.",
+    ]
+    return subject, "\n".join(lines)
+
+
+def scan_silence_message(scanned: int, blind: Sequence[str]) -> tuple[str, str]:
+    """Said when a scan finds nothing, so that finding nothing is a message too.
+
+    The whole argument of this module in one function. "No signal" and "the scan could not
+    reach six markets" are different facts with the same silence, and only one of them is
+    good news.
+    """
+
+    subject = f"No signals ({scanned} market(s) read)"
+    body = [f"Scanned {scanned} market(s). Nothing is signalling."]
+    if blind:
+        body.append("")
+        body.append(
+            f"{len(blind)} market(s) COULD NOT BE READ: {', '.join(sorted(blind))}."
+        )
+        body.append(
+            "They are not quiet, they are unmeasured. Any of them may be signalling."
+        )
+    return subject, "\n".join(body)
 
 
 def placement_message(placement: Any) -> tuple[str, str]:

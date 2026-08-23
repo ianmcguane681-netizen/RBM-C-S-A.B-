@@ -37,6 +37,11 @@ which is a human act.
 **Arb**: bet365 and Sky Bet have no betting API. The slip is the deliverable and always was.
 **Crypto**: `connectors/chain_exec` has no key path, no signing library and no send method.
 
+The `kraken` lane is neither. It has an adapter that CAN sign and send, and it is the first
+one in this repository that can — `connectors/kraken_exec`. That adapter covers Kraken's
+SPOT exchange only. Perpetual futures, which is what the funded programme runs on, is a
+different host and a different API, and no order for it can be sent from here.
+
 Neither is a gap to be filled later. They are reported as `NOT_PLACED` with the reason, so a
 reader never files a deliberate absence as an unfinished feature.
 
@@ -277,13 +282,113 @@ def _place_stock(harvest, order, *, mode, ledger, broker, thesis_declared_at,
         f"the broker returned {result.status}: {result.reason}"), **shared)
 
 
+def _place_kraken(harvest, order, *, mode, ledger, broker, thesis_declared_at,
+                  common) -> Placement:
+    """Submit one spot order to Kraken, stop attached, position recorded first.
+
+    Differs from the stock placer in two ways that matter, both forced by the venue.
+
+    **The order carries its own stop.** `connectors/kraken_exec.Instruction` will not
+    construct without one and Kraken attaches it to the entry as a conditional close, so
+    there is never a moment where the position exists and its exit does not.
+
+    **A submitted order is not a filled one.** Kraken answers AddOrder with a transaction
+    id, not a fill — the order is live and working. That is recorded as UNRESOLVED rather
+    than PLACED, which is the honest reading: money is committed, the quantity is not yet
+    known, and the thing to do is query it rather than assume it. Alpaca's market orders
+    come back filled and this one does not, and treating them alike would report a working
+    limit order as a closed position.
+    """
+
+    from connectors.kraken_exec import (
+        FILLED,
+        NOT_CONFIGURED,
+        PART_FILLED,
+        SUBMITTED,
+        UNKNOWN,
+        VALIDATED,
+        Instruction,
+        userref_for,
+    )
+
+    permission = getattr(harvest, "permission", None)
+    side = getattr(order, "side", "")
+    volume = float(getattr(order, "volume", 0.0) or 0.0)
+    pair = getattr(order, "pair", "") or common.get("subject", "")
+    userref = userref_for(pair, side, volume, thesis_declared_at)
+
+    try:
+        instruction = Instruction(
+            pair=pair, side=side, volume=volume,
+            stop_price=float(getattr(order, "stop_price", 0.0) or 0.0),
+            permission=permission, userref=userref,
+            limit_price=getattr(order, "limit_price", None),
+        )
+    except (ValueError, AttributeError, TypeError) as error:
+        return Placement(status=REFUSED, client_order_id=str(userref), reason=(
+            f"the order could not be turned into a Kraken instruction: "
+            f"{type(error).__name__}: {error}"), **common)
+
+    # Recorded first. See the module docstring.
+    position = ledger.open_position(
+        common["lane"], common["subject"] or pair,
+        float(getattr(order, "cash", 0.0) or 0.0),
+        source="BROKER", note=f"submitted to Kraken as userref {userref}")
+    ledger.save()
+
+    result = broker.place(instruction, validate=False)
+    shared = dict(common, position_id=position.position_id,
+                  client_order_id=str(userref), result=result,
+                  requested_quantity=volume)
+
+    if result.status == VALIDATED:
+        # The broker was asked to place and reported a dry run. Something is wired wrong,
+        # and reporting it as placed would put a position on file for an order that was
+        # explicitly not sent.
+        ledger.void(position.position_id, note=(
+            "the adapter returned VALIDATED for a live placement. Nothing was sent."))
+        ledger.save()
+        return Placement(status=REFUSED, reason=(
+            "the broker validated instead of placing. Nothing was sent, and the recorded "
+            "position has been voided."), **shared)
+
+    if result.status == UNKNOWN:
+        ledger.mark_unknown(position.position_id, (
+            f"Kraken's answer could not be established: {result.reason}. The order may "
+            f"exist under userref {userref}."))
+        ledger.save()
+        return Placement(status=UNRESOLVED, reason=result.reason, **shared)
+
+    if result.status in {SUBMITTED, FILLED, PART_FILLED}:
+        filled = float(result.filled_quantity or 0.0)
+        if result.status == SUBMITTED:
+            # Live and working, quantity not yet known. Not a fill, and not a failure.
+            ledger.mark_unknown(position.position_id, (
+                f"Kraken accepted the order as {result.txid} and it is working. The filled "
+                f"quantity is not yet known."))
+            ledger.save()
+            return Placement(status=UNRESOLVED, reason=(
+                f"the order is live at Kraken as {result.txid}, not yet filled. Query it "
+                f"rather than assuming either way."), **shared)
+        return Placement(status=PLACED, filled_quantity=filled, **shared)
+
+    # REJECTED, CANCELLED, NOT_CONFIGURED — the venue decided, nothing is at risk.
+    ledger.void(position.position_id, note=(
+        f"Kraken did not accept it ({result.status}): {result.reason}. Nothing was placed."))
+    ledger.save()
+    reason = f"Kraken returned {result.status}: {result.reason}"
+    if result.status == NOT_CONFIGURED:
+        reason += ". Put a key and secret in ~/.kraken, mode 600."
+    return Placement(status=NOT_PLACED, reason=reason, **shared)
+
+
 #: Lane -> the one function permitted to submit for it. A lane in neither this nor
 #: `NO_ADAPTER` cannot place, and is REFUSED by name rather than assumed to be like stocks.
 #:
 #: Adding a lane here is a deliberate act with a signature to match: every placer takes
 #: `(harvest, instruction, *, mode, ledger, broker, thesis_declared_at, common)` and must
 #: record the position BEFORE it sends, for the reason argued at the top of this file.
-PLACERS = {"stocks": _place_stock}
+PLACERS = {"stocks": _place_stock, "kraken": _place_kraken}
 
 #: Lane -> how to obtain its broker when a caller supplied none. Kept beside `PLACERS`
 #: because the two are the same decision seen from either end, and a lane whose broker
@@ -295,7 +400,13 @@ def _alpaca():
     return AlpacaBroker.from_directory()
 
 
-BROKER_FACTORIES = {"stocks": _alpaca}
+def _kraken():
+    from connectors.kraken_exec import KrakenBroker
+
+    return KrakenBroker.from_directory()
+
+
+BROKER_FACTORIES = {"stocks": _alpaca, "kraken": _kraken}
 
 
 def broker_for(lane: str):

@@ -204,10 +204,30 @@ class TestANewLaneCannotBorrowAnotherLanesExecutionPath:
         assert placement.status == NOT_PLACED
         assert "no betting API" in placement.reason
 
-    def test_the_lane_that_does_place_still_places(self):
+    def test_the_placer_registry_is_an_exact_whitelist(self):
+        """Pinned by name, because a lane arriving here silently is the thing to prevent.
+
+        The property is not "only stocks may place" — `kraken` was added deliberately on
+        2026-08-23. It is that the set is exactly what somebody chose, so a lane that
+        acquires an execution path has to come through this assertion to do it, and the
+        person adding it has to say the name out loud.
+        """
+
         from lib.placing import PLACERS
 
-        assert set(PLACERS) == {"stocks"}
+        assert set(PLACERS) == {"stocks", "kraken"}
+
+    def test_every_placer_has_a_broker_factory_beside_it(self):
+        """The two are the same decision seen from either end.
+
+        A lane in PLACERS with no factory reaches `place_harvest`'s `broker is None` check
+        and refuses — which is safe, and is a confusing way to find out that half the wiring
+        was done.
+        """
+
+        from lib.placing import BROKER_FACTORIES, PLACERS
+
+        assert set(PLACERS) == set(BROKER_FACTORIES)
 
     def test_a_lane_with_no_broker_factory_gets_none_rather_than_an_import_error(self):
         from lib.placing import broker_for

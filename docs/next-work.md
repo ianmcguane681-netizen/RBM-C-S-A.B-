@@ -1,6 +1,6 @@
 # Next work — checkpoint 2026-08-23
 
-> **1574 tests, 2 skipped.** The Kraken funded-account paper model landed today, and then
+> **1618 tests, 2 skipped.** The Kraken funded-account paper model landed today, and then
 > the backtester that measures what it had been assuming. Both are below. Nothing before
 > them changed.
 >
@@ -9,6 +9,44 @@
 >
 > The 2026-08-09 checkpoint and everything under it is kept unedited, because the reasoning
 > in it is why the code looks the way it does.
+
+---
+
+# THE DELIVERY MECHANISM — 2026-08-23
+
+Built: `lib/notify.Discord` and `Channels` (Telegram + Discord fan-out),
+`lib/kraken_lane.py` (signal to sized instruction), `signals.py` (the CLI),
+`connectors/kraken_exec.py` (the first adapter here that can sign and send),
+`connectors/kraken.read_depth` (live order book). 43 offline tests.
+**See `docs/kraken-delivery.md`.**
+
+Signals now reach a phone. `python signals.py --send` scans, sizes against a ring-fence and
+delivers to Telegram and Discord; `--quiet-ok` sends when nothing is signalling, because
+otherwise silence means four things and the flattering reading is the one a person adopts.
+A partial delivery is its own state and exits non-zero — two channels are not a redundancy
+unless somebody is told when one stops.
+
+**`connectors/kraken_exec.py` can sign and send, and that is deliberate.** The chain lane's
+refusal is structural and unchanged; Kraken spot is a different venue and a different
+decision. It is reachable only through `lib/placing.py`, so the mode, the breakers and
+record-before-send all apply, and `place()` defaults to Kraken's own `validate` — a real
+check against the real venue that places nothing. Placing is the argument you pass.
+
+Two Kraken traps are handled rather than discovered later: the nonce is monotonic and
+persisted (a rejected nonce looks exactly like a rejected order), and Kraken does NOT
+de-duplicate on a client reference, so the adapter never retries a submit and `resolve()`
+exists instead.
+
+**Perpetual futures is not implemented** — different host, different API. A funded-account
+order cannot be sent from here, and that is said loudly because the two are close enough to
+be assumed identical.
+
+## Still open on the delivery side
+
+- **`kraken` is not in `lib.reaping.LANES`.** It has a placer and a broker factory but
+  nothing runs it on a cadence. That should follow a reason to trade rather than precede one.
+- **A cadence for `signals.py`.** Nothing schedules it; today it is a command somebody runs.
+- The mechanism being ready is not the edge being ready. See the section below.
 
 ---
 

@@ -82,6 +82,7 @@ python run.py                # the orchestrator: what is due, what is held
 python preflight.py          # what each lane needs before it can read anything
 python funded_model.py       # the Kraken funded-account paper model: simulates, places nothing
 python backtest.py           # five rules over real Kraken candles: measures, places nothing
+python signals.py --send     # what the rule says now, to Telegram and Discord; places nothing
 ```
 
 ## Two lanes of work, one repo
@@ -106,7 +107,10 @@ window where a crash produces a position nothing in this system knows about. Rec
 can leave a phantom on rejection, which is visible and fixed in one command.
 
 **The chain lane cannot sign, and that is not a setting.** `connectors/chain_exec.py` has no
-key path, no signing library and no send method. Do not add one.
+key path, no signing library and no send method. Do not add one. `connectors/kraken_exec.py`
+CAN sign and send — a different venue and a deliberate decision, reachable only through
+`lib/placing.py`, defaulting to Kraken's own `validate` so placing is the argument you pass.
+It covers Kraken SPOT only; perpetual futures is a different host and is not implemented.
 
 **Bookmakers have no betting API.** bet365 and Sky Bet will not take an order from a program.
 The bet slip *is* the deliverable — this is not a missing adapter.

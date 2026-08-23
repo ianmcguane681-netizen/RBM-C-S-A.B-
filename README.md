@@ -469,6 +469,7 @@ check_stock.py        one command, the filing gates
 check_arb.py          is a claimed arb real, from two screens
 funded_model.py       the Kraken funded-account paper model, no key and no venue
 backtest.py           five rules over two years of real Kraken candles, no key
+signals.py            what the measured rule says now, to Telegram and Discord
 trade_sheet.py        board verdict, round-trip cost, and your own target
 monitor.py            has anything a review relied on moved since last time
 preflight.py          what each lane needs before it can read anything

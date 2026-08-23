@@ -289,6 +289,75 @@ def read_many(
     return {pair: read_ohlc(pair, interval, **kw) for pair in pairs}
 
 
+@dataclass(frozen=True, slots=True)
+class DepthRead:
+    """How much can be sold within a tolerated slippage, or why that is not known.
+
+    `lib/sizing.py` treats an unmeasured constraint as INDETERMINATE rather than skipping
+    it, because a constraint that silently drops out RAISES the permitted size. Exit depth
+    is the one most often unavailable and the one that most deserves that treatment: it is
+    the answer to "can I get out", and sizing past it is how a position becomes a holding.
+    """
+
+    status: str
+    pair: str
+    #: Quote-currency value available on the bid side within the tolerance.
+    exitable_value: float = 0.0
+    slippage_pct: float = 0.0
+    mid: float = 0.0
+    detail: str = ""
+
+    @property
+    def usable(self) -> bool:
+        return self.status == READ
+
+
+def read_depth(
+    pair: str,
+    *,
+    slippage_pct: float = 0.5,
+    count: int = 100,
+    opener: Callable = retrying_urlopen,
+) -> DepthRead:
+    """Walk the bid side and total what could be sold inside `slippage_pct` of the mid.
+
+    Never cached. A book from an hour ago is not a measurement of what can be sold now, and
+    the whole point of this number is that it is current.
+    """
+
+    url = f"{API.replace('/OHLC', '/Depth')}?pair={pair}&count={count}"
+    try:
+        with opener(urllib.request.Request(
+            url, headers={"User-Agent": "rbm-backtest"}
+        )) as response:
+            payload = json.load(response)
+    except (urllib.error.URLError, OSError, ValueError, TimeoutError) as error:
+        return DepthRead(COULD_NOT_LOOK, pair, detail=f"{type(error).__name__}: {error}")
+
+    errors = payload.get("error") or []
+    if errors:
+        return DepthRead(COULD_NOT_LOOK, pair,
+                         detail="; ".join(str(e) for e in errors))
+    result = payload.get("result") or {}
+    keys = [k for k in result if k != "last"]
+    if not keys:
+        return DepthRead(COULD_NOT_LOOK, pair, detail="Kraken returned no book")
+
+    book = result[keys[0]]
+    try:
+        bids = [(float(p), float(v)) for p, v, *_ in book.get("bids", [])]
+        asks = [(float(p), float(v)) for p, v, *_ in book.get("asks", [])]
+    except (TypeError, ValueError) as error:
+        return DepthRead(COULD_NOT_LOOK, pair, detail=f"unparseable book: {error}")
+    if not bids or not asks:
+        return DepthRead(COULD_NOT_LOOK, pair, detail="one side of the book was empty")
+
+    mid = (bids[0][0] + asks[0][0]) / 2
+    floor = mid * (1 - slippage_pct / 100.0)
+    value = sum(price * volume for price, volume in bids if price >= floor)
+    return DepthRead(READ, pair, value, slippage_pct, mid)
+
+
 def write_receipt(reads: dict[str, OhlcRead], cache_dir: Path | None = None) -> Path:
     """Record what was fetched, beside a cache that is not committed.
 
