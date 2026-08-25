@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from prospector.business import Business, Fact
 from prospector.condition import Condition
 from prospector.presence import Presence
+from prospector.locales import ENGLISH, LANGUAGE_UNAVAILABLE, LocaleChoice
 from prospector.seen import Sighting
 from prospector.states import (COULD_NOT_LOOK, DEFICIENT, NEW, NO_SITE_FOUND,
                                NO_SITE_LISTED, SEEN_BEFORE, SERVICEABLE, SITE_LISTED,
@@ -41,6 +42,10 @@ class Decision:
     status: str
     stage: str = ""
     reason: str = ""
+    #: Which opening the evidence supports, as a key rather than a sentence. The sentence
+    #: itself lives in `locales.py`, because the business may not read English and the
+    #: claim has to survive translation without being strengthened on the way.
+    claim_key: str = ""
     #: The one sentence the outreach note is allowed to open with. Derived here rather
     #: than in the writer, because it is a claim about evidence and this is where the
     #: evidence is.
@@ -61,8 +66,15 @@ def _contactable(business: Business) -> bool:
 
 
 def decide(business: Business, sighting: Sighting, presence: Presence,
-           condition: Condition | None, *, prepare_again: bool = False) -> Decision:
-    """The cascade. `condition` is `None` when there was no site to assess."""
+           condition: Condition | None, *, prepare_again: bool = False,
+           locale_choice: LocaleChoice | None = None) -> Decision:
+    """The cascade. `condition` is `None` when there was no site to assess.
+
+    `locale_choice` is the last stage rather than the first because it is the only one that
+    can be fixed by passing a flag: everything before it is a fact about the business, and
+    a run that refused on language before checking whether the business was worth
+    approaching would hide the interesting refusals behind a fixable one.
+    """
 
     if not business.name.value.strip():
         return Decision(REFUSED, "named", "the listing carries no name to put on a page")
@@ -84,6 +96,7 @@ def decide(business: Business, sighting: Sighting, presence: Presence,
 
     if presence.status == NO_SITE_FOUND:
         return Decision(PREPARE, "presence", "a search found no website for this business",
+                        claim_key="claim_no_site_found",
                         opening_claim="I could not find a website for you anywhere, so I "
                                       "built you one to look at.")
 
@@ -95,6 +108,7 @@ def decide(business: Business, sighting: Sighting, presence: Presence,
         return Decision(PREPARE, "presence",
                         "the public listing carries no website. This is NOT established "
                         "absence — see the opening claim",
+                        claim_key="claim_no_site_listed",
                         opening_claim="I could not find a website listed for you in the "
                                       "public directories, so I put together what one "
                                       "could look like. If you already have one, ignore "
@@ -103,6 +117,7 @@ def decide(business: Business, sighting: Sighting, presence: Presence,
     if presence.is_social_only:
         return Decision(PREPARE, "presence",
                         f"the only web presence listed is a social page: {presence.url}",
+                        claim_key="claim_social_only",
                         opening_claim="Your Facebook page is doing the job of a website at "
                                       "the moment, so I put together what a site of your "
                                       "own could look like.")
@@ -117,30 +132,54 @@ def decide(business: Business, sighting: Sighting, presence: Presence,
                             f"Nothing here justifies an approach.")
         if condition.status == DEFICIENT:
             defects = ", ".join(f.code for f in condition.defects)
+            key = _defect_claim_key(condition)
             return Decision(PREPARE, "condition",
                             f"{presence.url} has named defects: {defects}",
-                            opening_claim=_defect_claim(condition))
+                            claim_key=key, opening_claim=_ENGLISH_CLAIMS[key])
 
     return Decision(INDETERMINATE, "presence",
                     f"unhandled presence state {presence.status!r}")
 
 
-def _defect_claim(condition: Condition) -> str:
+def with_language(decision: Decision, locale_choice: LocaleChoice | None) -> Decision:
+    """Apply the language stage to a decision that otherwise says PREPARE.
+
+    Separate from `decide` because the language depends on the country, the country
+    sometimes depends on the business, and threading that through every early refusal
+    would put a language lookup in front of "this listing has no name".
+    """
+
+    if decision.status != PREPARE or locale_choice is None:
+        return decision
+    if locale_choice.status == LANGUAGE_UNAVAILABLE:
+        return Decision(INDETERMINATE, "language", locale_choice.reason,
+                        claim_key=decision.claim_key,
+                        opening_claim=decision.opening_claim)
+    return decision
+
+
+def _defect_claim_key(condition: Condition) -> str:
+    """Which defect the note opens with, worst and most concrete first.
+
+    Order matters more than it looks. A dead domain and a missing viewport tag can both be
+    true of the same site, and opening with the viewport would waste the one sentence that
+    was going to be read.
+    """
+
     codes = {f.code for f in condition.defects}
     if "DOMAIN_DOES_NOT_RESOLVE" in codes:
-        return ("Your domain does not resolve at all any more — the registration may have "
-                "lapsed. I built a replacement you can look at.")
+        return "claim_domain_gone"
     if "UNREACHABLE" in codes or "SERVER_ERROR" in codes:
-        return ("Your website did not load on either of two attempts today, so I built a "
-                "page that does.")
+        return "claim_unreachable"
     if "PLACEHOLDER" in codes or "EMPTY_PAGE" in codes or "NOT_FOUND" in codes:
-        return ("The address listed for your website shows a placeholder rather than a "
-                "site, so I built what could be there instead.")
+        return "claim_placeholder"
     if "NO_MOBILE_VIEWPORT" in codes:
-        return ("Your site is served to phones at desktop width, which is most of the "
-                "people looking for you. Here is the same information laid out for a "
-                "phone.")
+        return "claim_no_viewport"
     if "NO_HTTPS" in codes:
-        return ("Your site is served over plain HTTP, so browsers show visitors a 'Not "
-                "secure' warning before they read a word. Here is a version without it.")
-    return "I noticed a few fixable things about your site, and built an example."
+        return "claim_no_https"
+    return "claim_generic"
+
+
+#: The English rendering, kept beside the key so the run log and the record read as
+#: sentences. What reaches the business comes from the locale, never from here.
+_ENGLISH_CLAIMS = {key: text for key, text in ENGLISH.items() if key.startswith("claim_")}

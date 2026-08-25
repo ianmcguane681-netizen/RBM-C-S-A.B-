@@ -17,6 +17,9 @@ from pathlib import Path
 from prospector import (cascade, condition as condition_mod, dossier, images as images_mod,
                         presence as presence_mod)
 from prospector.business import Business, Fact
+from prospector.countries import COUNTRY_KNOWN, Country, from_tags, lookup
+from prospector.countries import UNKNOWN as COUNTRY_UNKNOWN
+from prospector.locales import LANGUAGE_AVAILABLE, choose
 from prospector.seen import Register
 from prospector.sources import overpass
 from prospector.states import (COULD_NOT_LOOK, COULD_NOT_LOOK_FOR_IMAGES, LOOKED,
@@ -76,6 +79,25 @@ def _images_for(business: Business, presence, args) -> images_mod.ImageSet:
     return images_mod.gather(*sets)
 
 
+def _country_for(business: Business, discovery, args) -> Country:
+    """The business's own tag first, then the area's ISO code, then what you passed.
+
+    In that order because they are increasingly coarse. `addr:country` on the shop is about
+    the shop; the area's code is about the area, which is right until a run spans a border;
+    and `--country` is about the whole run, which is a statement by you rather than
+    evidence and is therefore the fallback rather than the override.
+    """
+
+    from_business = from_tags((business.raw or {}).get("tags") or {})
+    if from_business.status == COUNTRY_KNOWN:
+        return from_business
+    if discovery.country.status == COUNTRY_KNOWN:
+        return discovery.country
+    if args.country:
+        return lookup(args.country, basis="--country, which you asserted")
+    return COUNTRY_UNKNOWN
+
+
 def run(args: argparse.Namespace) -> int:
     operator = args.operator.strip()
     lowered = operator.lower()
@@ -115,20 +137,28 @@ def run(args: argparse.Namespace) -> int:
         condition = None
         if presence.status in (SITE_LISTED, SITE_REACHED) and not presence.is_social_only:
             condition = _check_condition(presence.url, fetch=args.fetch)
-        decision = cascade.decide(business, sighting, presence, condition,
-                                  prepare_again=args.again)
+        country = _country_for(business, discovery, args)
+        language = choose(args.language, country_languages=country.languages,
+                          country=country.name)
+        decision = cascade.with_language(
+            cascade.decide(business, sighting, presence, condition,
+                           prepare_again=args.again), language)
 
         if decision.status == cascade.PREPARE:
             if args.dry:
-                tally.prepared.append(f"{label} — {decision.reason} (dry run, nothing written)")
+                tally.prepared.append(f"{label} [{language.locale.code}] — "
+                                      f"{decision.reason} (dry run, nothing written)")
                 continue
             image_set = _images_for(business, presence, args)
             folder = dossier.write(business, presence, condition, decision,
                                    out_dir=out_dir, operator=operator,
-                                   images=image_set, fetch_images=args.fetch)
+                                   images=image_set, fetch_images=args.fetch,
+                                   locale=language.locale, country=country)
             if not register.record(business.identity):
                 tally.unrecorded.append(label)
-            tally.prepared.append(f"{label} -> {folder}")
+            unreviewed = "" if language.locale.reviewed else "  UNREVIEWED TRANSLATION"
+            tally.prepared.append(f"{label} [{language.locale.code}] -> {folder}"
+                                  f"{unreviewed}")
         elif decision.status == cascade.REFUSED:
             tally.refused.append(f"{label} — [{decision.stage}] {decision.reason}")
         else:
@@ -191,6 +221,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-fetch", dest="fetch", action="store_false",
                         help="do not fetch any business's website; every site condition "
                              "becomes UNDETERMINED and nothing with a site is prepared")
+    parser.add_argument("--language", default="",
+                        help="the language to build in, e.g. fr, de, ga. Omitted, it is "
+                             "taken from the country; a language this package has no "
+                             "strings for refuses rather than falling back to English")
+    parser.add_argument("--country", default="",
+                        help="ISO 3166-1 alpha-2 code, e.g. PT. Only used when neither the "
+                             "business nor the area says which country it is in; it "
+                             "decides the language and which sending rules are printed")
     parser.add_argument("--images", choices=("both", "subject", "stock", "none"),
                         default="both",
                         help="where photographs come from: 'subject' takes them from the "

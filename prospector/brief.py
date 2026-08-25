@@ -30,20 +30,32 @@ from __future__ import annotations
 
 from prospector.business import Business, Fact
 from prospector.cascade import Decision
+from prospector.countries import Country
+from prospector.countries import UNKNOWN as COUNTRY_UNKNOWN
 from prospector.images import ImageSet
+from prospector.locales import CATALOGUE, Locale
 from prospector.presence import Presence
 from prospector.states import IMAGES_FOUND, LICENSED_STOCK, SUBJECT_OWN
 
 
 def write_brief(business: Business, presence: Presence, decision: Decision,
-                image_set: ImageSet, *, operator: str) -> str:
+                image_set: ImageSet, *, operator: str, locale: Locale | str = "en",
+                country: Country = COUNTRY_UNKNOWN) -> str:
     """The brief for one business, as Markdown."""
 
-    name = business.name.value
+    if isinstance(locale, str):
+        locale = CATALOGUE[locale]
+    name = business.name_in(locale.code).value
     trade = business.kind.value.replace("_", " ")
     lines = [f"# Design brief — {name}", "",
              f"A one-page sample site for a {trade}, to be shown to the business itself. "
              f"Prepared for {operator}.", "",
+             f"**Language: {locale.name} (`{locale.code}`), written {locale.direction}. "
+             f"Country: {country.name or 'not established'}.** Every word you write goes "
+             f"on the page in {locale.name} — headings, buttons, the lot. The facts below "
+             f"are printed exactly as the source carries them and are never translated: a "
+             f"street name rendered into English is an invented address."
+             + (f"\n\n> {locale.caveat}" if not locale.reviewed else ""), "",
              "**Design it for this business.** There is no house template and there is not "
              "meant to be one: a page that could be any of forty businesses in the county "
              "is worth what a template is worth, and the recipient can tell. Type, colour, "
@@ -102,7 +114,9 @@ def write_brief(business: Business, presence: Presence, decision: Decision,
               "fact-shaped it cannot trace. `COULD_NOT_VERIFY` is a failure, not a pass.",
               "",
               "## What you are opening with", "",
-              f"> {decision.opening_claim}", "",
+              f"> {locale.text(decision.claim_key) if decision.claim_key else decision.opening_claim}",
+              "", (f"In English, for you: *{decision.opening_claim}*" if locale.code != "en"
+                   else ""), "",
               f"Presence: `{presence.status}`. "
               + ("This is established absence — the note may say so."
                  if presence.may_claim_no_website else

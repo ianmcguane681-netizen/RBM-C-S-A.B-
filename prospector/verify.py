@@ -46,6 +46,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Iterable
 
+from prospector.locales import CATALOGUE, Locale
 from prospector.states import COULD_NOT_VERIFY, LICENSED_STOCK, UNSOURCED_CLAIMS, VERIFIED
 
 #: Phrases that make a claim about a business rather than describing a page. Deliberately
@@ -146,13 +147,32 @@ def _evidence_values(evidence: dict) -> list[str]:
     return values
 
 
-def verify(page_html: str, evidence: dict, *, operator: str = "") -> Verdict:
-    """The page, the evidence beside it, and every claim that does not join up."""
+def verify(page_html: str, evidence: dict, *, operator: str = "",
+           locale: Locale | None = None) -> Verdict:
+    """The page, the evidence beside it, and every claim that does not join up.
+
+    The language matters here as much as anywhere: the banner check is a check for a
+    specific sentence, and looking for an English one on a Portuguese page would fail every
+    correct page and pass every page that quietly reverted to English. So the language is
+    read from the evidence, and evidence that does not say is `COULD_NOT_VERIFY` rather
+    than an assumption of English.
+    """
 
     if not page_html.strip():
         return Verdict(COULD_NOT_VERIFY, reason="the page is empty")
     if not evidence:
         return Verdict(COULD_NOT_VERIFY, reason="no evidence was supplied to check against")
+    if locale is None:
+        code = str(evidence.get("language", "")).lower()
+        if not code:
+            return Verdict(COULD_NOT_VERIFY,
+                           reason="the evidence does not record what language the page is "
+                                  "in, so the sample banner cannot be checked for")
+        locale = CATALOGUE.get(code)
+        if locale is None:
+            return Verdict(COULD_NOT_VERIFY,
+                           reason=f"the evidence says the page is in {code!r}, which this "
+                                  f"package has no strings for")
 
     parser = _Visible()
     try:
@@ -167,14 +187,18 @@ def verify(page_html: str, evidence: dict, *, operator: str = "") -> Verdict:
     known_digits = {_digits(v) for v in known if _digits(v)}
     problems: list[Problem] = []
 
-    if "unofficial sample" not in lowered:
+    banner = locale.text("banner_lead").lower().rstrip(".")
+    disclaimer = locale.text("not_affiliated_marker").lower()
+    if banner not in lowered:
         problems.append(Problem("NO_SAMPLE_BANNER",
-                                "the page does not say it is an unofficial sample. A page "
-                                "carrying a business's name that does not say this is a "
-                                "forgery of their web presence"))
-    if "not affiliated" not in lowered:
+                                f"the page does not say it is an unofficial sample "
+                                f"({banner!r} in {locale.name}). A page carrying a "
+                                f"business's name that does not say this is a forgery of "
+                                f"their web presence"))
+    if disclaimer not in lowered:
         problems.append(Problem("NO_DISCLAIMER",
-                                "the page does not disclaim affiliation with the business"))
+                                f"the page does not disclaim affiliation with the business "
+                                f"({disclaimer!r} in {locale.name})"))
     if operator and operator.lower() not in lowered:
         problems.append(Problem("UNSIGNED",
                                 f"the page does not name {operator}, so nobody is standing "
@@ -213,14 +237,16 @@ def verify(page_html: str, evidence: dict, *, operator: str = "") -> Verdict:
                                     f"the page says {phrase!r}, which is a claim about the "
                                     f"business that nothing here established"))
 
-    problems += _image_problems(parser.images, evidence, lowered)
+    problems += _image_problems(parser.images, evidence, lowered,
+                                locale_label=locale.text("stock_caption"))
 
     if problems:
         return Verdict(UNSOURCED_CLAIMS, tuple(problems))
     return Verdict(VERIFIED)
 
 
-def _image_problems(srcs: Iterable[str], evidence: dict, lowered_text: str) -> list[Problem]:
+def _image_problems(srcs: Iterable[str], evidence: dict, lowered_text: str,
+                    locale_label: str = "") -> list[Problem]:
     recorded = evidence.get("images") or []
     by_name = {}
     for entry in recorded:
@@ -241,7 +267,7 @@ def _image_problems(srcs: Iterable[str], evidence: dict, lowered_text: str) -> l
                                     f"images recorded in the evidence"))
             continue
         if entry.get("provenance") == LICENSED_STOCK:
-            label = (entry.get("label") or "").lower().rstrip(".")
+            label = (locale_label or entry.get("label") or "").lower().rstrip(".")
             if label and label not in lowered_text:
                 problems.append(Problem("UNLABELLED_STOCK",
                                         f"{src!r} is a stock photograph and the page does "

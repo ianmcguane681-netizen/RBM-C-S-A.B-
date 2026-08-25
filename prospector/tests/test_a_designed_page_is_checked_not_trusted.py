@@ -16,6 +16,7 @@ from prospector.states import COULD_NOT_VERIFY, UNSOURCED_CLAIMS, VERIFIED
 from prospector.verify import verify
 
 EVIDENCE = {
+    "language": "en",
     "business": {
         "name": {"value": "Bridge End Barbers"},
         "kind": {"value": "hairdresser"},

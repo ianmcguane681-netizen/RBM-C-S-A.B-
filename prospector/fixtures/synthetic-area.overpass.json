@@ -1,29 +1,104 @@
 {
  "version": 0.6,
- "generator": "invented for tests — no real business appears here",
+ "generator": "invented for tests \u2014 no real business appears here",
  "elements": [
-  {"type":"node","id":1001,"lat":54.6538,"lon":-8.1096,"tags":{
-    "name":"Bridge End Barbers","shop":"hairdresser","phone":"+353 74 912 0001",
-    "addr:street":"Main Street","addr:city":"Invented Town",
-    "opening_hours":"Tu-Fr 09:00-18:00; Sa 09:00-16:00"}},
-  {"type":"node","id":1002,"lat":54.6541,"lon":-8.1102,"tags":{
-    "name":"The Quay Fish Bar","amenity":"fast_food","cuisine":"fish_and_chips",
-    "contact:facebook":"https://facebook.com/quayfishbar-invented",
-    "phone":"+353 74 912 0002","addr:street":"Quay Road","addr:city":"Invented Town"}},
-  {"type":"way","id":1003,"center":{"lat":54.6520,"lon":-8.1150},"tags":{
-    "name":"Hillside Veterinary Practice","amenity":"veterinary",
-    "website":"http://this-domain-does-not-exist-9f3a.ie",
-    "phone":"+353 74 912 0003","addr:street":"Hill Road","addr:city":"Invented Town"}},
-  {"type":"node","id":1004,"lat":54.6500,"lon":-8.1200,"tags":{
-    "name":"Coastal Software Ltd","office":"it","website":"https://www.python.org",
-    "email":"hello@invented.example","addr:city":"Invented Town"}},
-  {"type":"node","id":1005,"lat":54.6510,"lon":-8.1210,"tags":{
-    "name":"Lough View Guest House","tourism":"guest_house"}},
-  {"type":"node","id":1006,"lat":54.6511,"lon":-8.1212,"tags":{
-    "shop":"bakery","addr:city":"Invented Town"}},
-  {"type":"node","id":1007,"lat":54.6533,"lon":-8.1099,"tags":{
-    "name":"Corner Stone Joinery","craft":"carpenter","phone":"+353 74 912 0007",
-    "addr:street":"Chapel Lane","addr:city":"Invented Town",
-    "website":"http://neverssl.com"}}
+  {
+   "type": "node",
+   "id": 1001,
+   "lat": 54.6538,
+   "lon": -8.1096,
+   "tags": {
+    "name": "Bridge End Barbers",
+    "shop": "hairdresser",
+    "phone": "+353 74 912 0001",
+    "addr:street": "Main Street",
+    "addr:city": "Invented Town",
+    "opening_hours": "Tu-Fr 09:00-18:00; Sa 09:00-16:00",
+    "addr:country": "IE"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1002,
+   "lat": 54.6541,
+   "lon": -8.1102,
+   "tags": {
+    "name": "The Quay Fish Bar",
+    "amenity": "fast_food",
+    "cuisine": "fish_and_chips",
+    "contact:facebook": "https://facebook.com/quayfishbar-invented",
+    "phone": "+353 74 912 0002",
+    "addr:street": "Quay Road",
+    "addr:city": "Invented Town",
+    "addr:country": "IE"
+   }
+  },
+  {
+   "type": "way",
+   "id": 1003,
+   "center": {
+    "lat": 54.652,
+    "lon": -8.115
+   },
+   "tags": {
+    "name": "Hillside Veterinary Practice",
+    "amenity": "veterinary",
+    "website": "http://this-domain-does-not-exist-9f3a.ie",
+    "phone": "+353 74 912 0003",
+    "addr:street": "Hill Road",
+    "addr:city": "Invented Town",
+    "addr:country": "IE"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1004,
+   "lat": 54.65,
+   "lon": -8.12,
+   "tags": {
+    "name": "Coastal Software Ltd",
+    "office": "it",
+    "website": "https://www.python.org",
+    "email": "hello@invented.example",
+    "addr:city": "Invented Town",
+    "addr:country": "IE"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1005,
+   "lat": 54.651,
+   "lon": -8.121,
+   "tags": {
+    "name": "Lough View Guest House",
+    "tourism": "guest_house"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1006,
+   "lat": 54.6511,
+   "lon": -8.1212,
+   "tags": {
+    "shop": "bakery",
+    "addr:city": "Invented Town",
+    "addr:country": "IE"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1007,
+   "lat": 54.6533,
+   "lon": -8.1099,
+   "tags": {
+    "name": "Corner Stone Joinery",
+    "craft": "carpenter",
+    "phone": "+353 74 912 0007",
+    "addr:street": "Chapel Lane",
+    "addr:city": "Invented Town",
+    "website": "http://neverssl.com",
+    "addr:country": "IE"
+   }
+  }
  ]
 }

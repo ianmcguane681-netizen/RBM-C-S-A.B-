@@ -74,6 +74,22 @@ class Business:
         value = self.fields.get(key, ABSENT)
         return value if value else ABSENT
 
+    def name_in(self, language: str) -> Fact:
+        """`name:<language>` if OpenStreetMap carries one, otherwise the default name.
+
+        Never a translation. A business's name is its name, and rendering `Rua da
+        Boavista` as `Boavista Street` would be inventing an address; but where the map
+        itself carries `name:en`, that is a fact with a source like any other and using it
+        on an English page is reading the source rather than paraphrasing it.
+        """
+
+        tags = (self.raw or {}).get("tags") or {}
+        localised = str(tags.get(f"name:{language}", "")).strip()
+        if localised:
+            return Fact(value=localised, source=self.name.source,
+                        retrieved_at=self.name.retrieved_at)
+        return self.name
+
     def known(self) -> dict[str, Fact]:
         """The subset that is actually known, for the generator to print."""
 

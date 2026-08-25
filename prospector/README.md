@@ -7,6 +7,8 @@ a folder per business with a draft note you send yourself.
 
 ```bash
 python -m prospector --area "County Donegal" --operator "Ian McGuane"
+python -m prospector --area "Braga"          --operator "Ian McGuane"   # builds in pt
+python -m prospector --area "Ille-et-Vilaine" --operator "Ian McGuane" --language fr
 python -m prospector --area "Letterkenny"    --operator "Ian McGuane" --dry
 python -m prospector --area "Invented Town"  --operator "Ian McGuane" \
     --from-file prospector/fixtures/synthetic-area.overpass.json
@@ -50,6 +52,46 @@ one, ignore this."
 Adding a search backend (`presence.Searcher` — anything with `.find(name, locality)`) is
 the single highest-value change to this package, because it is what turns the second
 sentence into the first.
+
+## Countries and languages
+
+Point it at any administrative area OpenStreetMap knows — a county, a province, a country
+— in whatever the local spelling is. Area names are matched on `name`, `name:en` and
+`int_name`, so "Deutschland" and "Germany" both resolve, and a name that matches several
+areas says which ones it searched rather than quietly picking the smallest.
+
+The country comes from the business's own `addr:country` tag, or the ISO code on the area
+relation, or `--country`, in that order — increasingly coarse, so the most specific
+evidence wins. The country then decides two things.
+
+**The language.** Eight are shipped: `en`, `ga`, `fr`, `es`, `de`, `it`, `pt`, `nl`.
+Portugal builds in Portuguese without being told. `--language` overrides.
+
+**A language this package has no strings for refuses.** It does not fall back to English.
+That is the silent failure this whole codebase is organised against, in its most plausible
+costume: the page still renders, still looks finished, and the only sign is that a shop in
+Kraków got a page in a language nobody there asked for. A business whose language is
+unavailable ends `INDETERMINATE [language]`, naming what was wanted and what exists.
+
+**Only `en` is marked reviewed.** The other seven were written by the author, who is not a
+native speaker of any of them. They work, and every artefact built from one says in the
+brief, in the note and in the run report that a native speaker must read it before it goes
+anywhere. Marking a locale reviewed is a one-line change made by whoever did the reading.
+
+**The facts are never translated.** A street name rendered into English is an invented
+address. Where OpenStreetMap itself carries `name:en`, that is a fact with a source like
+any other and gets used on an English page. Addresses are re-ordered, not rewritten:
+`Hauptstraße 12, 10115 Berlin` and `12 Main Street, Donegal Town, F94 X2P8` are the same
+code path.
+
+**And the rule about sending changes at the border.** Each note carries the regime for
+where it is going — EU/EEA ePrivacy, UK PECR, US CAN-SPAM, Canada's CASL (consent first,
+the strict one), Australia's Spam Act — and an unknown country prints the strictest
+reading rather than the mildest. It is a prompt to check, not legal advice, and it says
+so.
+
+A note in a language you do not read is a note you cannot judge, so every non-English
+draft carries the opening sentence in English underneath.
 
 ## It does not sell a template
 
@@ -149,6 +191,12 @@ means, which is why nothing here promotes it to a claim about the business.
   businesses, not thousands, and expect most of the ones with a website to have no website
   tag on the map.
 - **No search backend**, so absence is never established. Above.
+- **Eight languages**, and no machine translation step. A ninth is a dict in `locales.py`;
+  a page in a language nobody involved can read is a page nobody can check, and the check
+  is the product.
+- **Country coverage in the table is EU/EEA, UK, US, CA, AU, NZ.** Anywhere else resolves
+  to `COUNTRY_UNKNOWN`, which refuses to guess a language and prints the strict sending
+  rule.
 - **No outcome loop.** Nothing here records whether an approach was answered, and silence
   is `UNKNOWN` rather than a refusal. Any future "which counties are worth working" number
   has to be built on that distinction or it will be a story about what people did not say.

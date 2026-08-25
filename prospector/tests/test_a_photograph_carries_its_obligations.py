@@ -122,6 +122,7 @@ def test_an_unlabelled_stock_photograph_fails_verification():
     """The page would be presenting somebody else's premises as this business's."""
 
     evidence = {
+        "language": "en",
         "business": {"name": {"value": "Invented Bakery"}, "kind": {"value": "bakery"},
                      "fields": {}, "raw": {"tags": {}}},
         "images": [{"url": "https://example.org/photo.jpg", "local_path": "images/stock-1.jpg",
@@ -140,6 +141,7 @@ def test_an_unlabelled_stock_photograph_fails_verification():
 
 def test_a_labelled_and_attributed_stock_photograph_passes():
     evidence = {
+        "language": "en",
         "business": {"name": {"value": "Invented Bakery"}, "kind": {"value": "bakery"},
                      "fields": {}, "raw": {"tags": {}}},
         "images": [{"url": "https://example.org/photo.jpg", "local_path": "images/stock-1.jpg",
@@ -158,7 +160,7 @@ def test_a_labelled_and_attributed_stock_photograph_passes():
 def test_a_photograph_nobody_recorded_fails_verification():
     """Including one a designer liked the look of and dropped in from somewhere else."""
 
-    evidence = {"business": {"name": {"value": "Invented Bakery"}, "kind": {"value": "bakery"},
+    evidence = {"language": "en", "business": {"name": {"value": "Invented Bakery"}, "kind": {"value": "bakery"},
                              "fields": {}, "raw": {"tags": {}}}, "images": []}
     page = ('<html><head><meta name=robots content="noindex"></head><body>'
             '<p>Unofficial sample, not affiliated. Ian McGuane.</p>'

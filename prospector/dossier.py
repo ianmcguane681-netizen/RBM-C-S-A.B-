@@ -34,7 +34,10 @@ from prospector.brief import write_brief
 from prospector.business import Business, Fact
 from prospector.cascade import Decision
 from prospector.condition import Condition
+from prospector.countries import Country
+from prospector.countries import UNKNOWN as COUNTRY_UNKNOWN
 from prospector.images import SUBJECT_OWN, ImageSet, download
+from prospector.locales import CATALOGUE, Locale
 from prospector.presence import Presence
 from prospector.site import render
 from prospector.states import COULD_NOT_LOOK_FOR_IMAGES, IMAGES_FOUND
@@ -76,32 +79,45 @@ def _evidence_markdown(business: Business, presence: Presence,
 
 
 def _note_markdown(business: Business, presence: Presence, decision: Decision,
-                   operator: str, site_url: str = "") -> str:
-    name = business.name.value
-    where = site_url or "the attached file"
+                   operator: str, site_url: str = "", locale: Locale | None = None,
+                   country: Country = COUNTRY_UNKNOWN) -> str:
+    locale = locale or CATALOGUE["en"]
+    name = business.name_in(locale.code).value
+    where = (locale.text("where_url", url=site_url) if site_url
+             else locale.text("where_attached"))
     contact = business.get("email")
     to = contact.value if isinstance(contact, Fact) else "no email listed — this one is a "\
         "phone call or a walk-in"
+    claim = (locale.text(decision.claim_key) if decision.claim_key
+             else decision.opening_claim)
+    body = locale.text("note_body", where=where)
+    caveat = ""
+    if not locale.reviewed:
+        caveat = (f"\n> **This note is in {locale.name} and nobody has checked it.** "
+                  f"{locale.caveat}\n")
+    english = ""
+    if locale.code != "en":
+        # The operator has to be able to read what they are about to send over their own
+        # name. A translated note nobody in the room understands is a note nobody can
+        # judge, and the point of stopping before sending is the judgement.
+        english = (f"\n---\n\n## What it says, in English\n\n"
+                   f"> {decision.opening_claim}\n")
     return f"""# Draft note — {name}
 
 **To:** {to}
+**Language:** {locale.name} (`{locale.code}`)
 **Nothing has been sent. This file is a draft for you to read, edit and send yourself.**
-
+{caveat}
 ---
 
-Hello,
+{locale.text("note_greeting")}
 
-{decision.opening_claim}
+{claim}
 
-It is at {where}. It is a sample rather than a finished site: the details on it are the
-ones listed publicly, there are no photographs because those are yours, and the parts that
-need your words are marked as gaps rather than filled in with guesses.
-
-If it is useful, I will finish it properly with you. If it is not, delete this and I will
-not follow up.
+{body}
 
 {operator}
-
+{english}
 ---
 
 ## Before you send this
@@ -110,6 +126,9 @@ not follow up.
   was written from what was actually checked. Do not strengthen it.
 - Check the opening hours and the address on the sample against reality. They came from a
   volunteer-maintained map and they are sometimes years old.
+- **Where this is going:** {country.describe().splitlines()[0]}
+- **The rule about sending it there**, which is a prompt to check rather than legal
+  advice: {country.outreach_rule}
 - If you are sending more than a handful of these in a day, you are running a bulk mailing
   and the rules for one apply to you.
 """
@@ -118,9 +137,12 @@ not follow up.
 def write(business: Business, presence: Presence, condition: Condition | None,
           decision: Decision, *, out_dir: Path, operator: str,
           site_url: str = "", images: ImageSet | None = None,
-          fetch_images: bool = True, max_images: int = 2) -> Path:
+          fetch_images: bool = True, max_images: int = 2,
+          locale: Locale | str = "en", country: Country = COUNTRY_UNKNOWN) -> Path:
     """Write the folder for one business and return its path."""
 
+    if isinstance(locale, str):
+        locale = CATALOGUE[locale]
     folder = Path(out_dir) / f"{slug(business.name.value)}--{slug(business.identity)}"
     folder.mkdir(parents=True, exist_ok=True)
     sources = sorted({fact.source for fact in business.known().values()})
@@ -168,17 +190,23 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         image_dir.rmdir()
 
     (folder / "index.html").write_text(
-        render(business, operator=operator, sources=sources, images=images.images),
+        render(business, operator=operator, sources=sources, images=images.images,
+               locale=locale),
         encoding="utf-8")
     (folder / "BRIEF.md").write_text(
-        write_brief(business, presence, decision, images, operator=operator),
+        write_brief(business, presence, decision, images, operator=operator,
+                    locale=locale, country=country),
         encoding="utf-8")
     (folder / "NOTE.md").write_text(
-        _note_markdown(business, presence, decision, operator, site_url), encoding="utf-8")
+        _note_markdown(business, presence, decision, operator, site_url, locale, country),
+        encoding="utf-8")
     (folder / "EVIDENCE.md").write_text(
         _evidence_markdown(business, presence, condition, decision), encoding="utf-8")
     evidence = {
         "operator": operator,
+        "language": locale.code,
+        "language_reviewed": locale.reviewed,
+        "country": _serialise(country),
         "business": _serialise(business),
         "presence": _serialise(presence),
         "condition": _serialise(condition),
@@ -193,7 +221,7 @@ def write(business: Business, presence: Presence, condition: Condition | None,
     # designed to replace it. A generator that exempts its own output is a generator whose
     # guarantee stops holding the moment somebody edits the file by hand.
     verdict = verify((folder / "index.html").read_text(encoding="utf-8"), evidence,
-                     operator=operator)
+                     operator=operator, locale=locale)
     (folder / "VERIFY.md").write_text(
         f"# Verification\n\nOf `index.html`, against `evidence.json`, at "
         f"{datetime.now(timezone.utc).isoformat(timespec='seconds')}.\n\n"

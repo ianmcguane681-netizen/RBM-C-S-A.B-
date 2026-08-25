@@ -33,41 +33,53 @@ import html
 from typing import Sequence
 
 from prospector.business import Business, Fact
+from prospector.locales import CATALOGUE, NUMBER_LAST, RTL, Locale
 from prospector.states import SUBJECT_OWN
 
 #: Fields that become the contact block, in the order a person reads them.
 _CONTACT_ORDER = (("phone", "Phone"), ("email", "Email"))
 
-_GAPS = (
-    ("Photographs you actually like", "What is here is either your own, taken from your "
-                                      "site, or labelled stock. Send better ones and they "
-                                      "go straight in."),
-    ("A sentence about what you do", "Written by you, or with you. Nothing on this page "
-                                     "is invented, so this space is left as it is."),
-    ("Services and prices", "The public listing does not carry them."),
-)
+#: The gaps, as locale keys. A gap explained in a language the reader does not speak is
+#: an unexplained gap, which reads as an unfinished page rather than a deliberate one.
+_GAP_KEYS = (("gap_photos_title", "gap_photos_body"),
+             ("gap_words_title", "gap_words_body"),
+             ("gap_services_title", "gap_services_body"))
 
 
 def _esc(value: str) -> str:
     return html.escape(value, quote=True)
 
 
-def _address(business: Business) -> str:
+def _address(business: Business, locale: Locale) -> str:
+    """The same facts in the order the country writes them.
+
+    Not cosmetic. "12 Hauptstraße, 10115 Berlin" and "Hauptstraße 12, 10115 Berlin" carry
+    identical information, and only one of them looks like it was written by somebody who
+    has been to Germany. The values themselves are never rewritten.
+    """
+
     parts = []
     number = business.get("housenumber")
     street = business.get("street")
     if isinstance(number, Fact) and isinstance(street, Fact):
-        parts.append(f"{number.value} {street.value}")
+        parts.append(f"{street.value} {number.value}" if locale.address_order == NUMBER_LAST
+                     else f"{number.value} {street.value}")
     elif isinstance(street, Fact):
         parts.append(street.value)
-    for key in ("city", "postcode"):
-        value = business.get(key)
-        if isinstance(value, Fact):
-            parts.append(value.value)
+    city = business.get("city")
+    postcode = business.get("postcode")
+    if locale.postcode_before_city:
+        # "10115 Berlin" is one line with a space, not two fields with a comma between
+        # them — the comma is the tell that a form filled this in rather than a person.
+        joined = " ".join(v.value for v in (postcode, city) if isinstance(v, Fact))
+        if joined:
+            parts.append(joined)
+    else:
+        parts += [v.value for v in (city, postcode) if isinstance(v, Fact)]
     return ", ".join(parts)
 
 
-def _hours_rows(business: Business) -> str:
+def _hours_rows(business: Business, locale: Locale) -> str:
     hours = business.get("opening_hours")
     if not isinstance(hours, Fact):
         return ""
@@ -75,13 +87,12 @@ def _hours_rows(business: Business) -> str:
     # days of the week. Expanding it means interpreting a mini-language with edge cases
     # (PH off, Su 12:00-16:00, "off"), and an interpretation error here publishes wrong
     # opening times over a business's name.
-    return (f'<section class="card"><h2>Opening hours</h2>'
+    return (f'<section class="card"><h2>{_esc(locale.text("opening_hours"))}</h2>'
             f'<p class="hours">{_esc(hours.value)}</p>'
-            f'<p class="note">Recorded in the public listing in this form. Confirm before '
-            f'this page goes anywhere near a customer.</p></section>')
+            f'<p class="note">{_esc(locale.text("hours_note"))}</p></section>')
 
 
-def _map_link(business: Business) -> str:
+def _map_link(business: Business, locale: Locale) -> str:
     raw = business.raw or {}
     lat, lon = raw.get("lat"), raw.get("lon")
     if lat is None or lon is None:
@@ -91,7 +102,7 @@ def _map_link(business: Business) -> str:
         return ""
     href = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=18/{lat}/{lon}"
     return (f'<a class="maplink" href="{_esc(href)}" rel="noopener">'
-            f'View on the map</a>')
+            f'{_esc(locale.text("map_link"))}</a>')
 
 
 STYLE = """
@@ -100,6 +111,7 @@ STYLE = """
 @media (prefers-color-scheme:dark){:root{--ink:#f2ede5;--muted:#a99f92;--line:#33302b;
 --bg:#151412;--card:#1e1c19;--accent:#d9a56a;--warn-bg:#2a2318;--warn-line:#6b552f;--warn-ink:#e8cfa4}}
 *{box-sizing:border-box}
+[dir="rtl"] .trade,[dir="rtl"] h1,[dir="rtl"] p,[dir="rtl"] li{text-align:right}
 body{margin:0;background:var(--bg);color:var(--ink);
 font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
 .wrap{max-width:720px;margin:0 auto;padding:0 20px 64px}
@@ -133,7 +145,7 @@ footer ul{padding-left:18px;margin:8px 0}
 """
 
 
-def _images_block(images: Sequence, folder_relative: bool = True) -> tuple[str, str]:
+def _images_block(images: Sequence, locale: Locale) -> tuple[str, str]:
     """The figures, and the attribution lines the licences oblige.
 
     Returns both because they belong in different places on the page and neither is
@@ -147,11 +159,14 @@ def _images_block(images: Sequence, folder_relative: bool = True) -> tuple[str, 
     for image in images:
         src = image.local_path or image.url
         if image.provenance == SUBJECT_OWN:
-            caption = "Your own photograph, from your website. Not republished anywhere."
-            alt = "Photograph from the business's own website"
+            caption = locale.text("own_caption")
+            alt = locale.text("own_alt")
         else:
-            caption = image.label or "Stock photograph — not this business's premises."
-            alt = "Stock photograph"
+            # The label travels with the image in the operator's language for the brief,
+            # and is rendered here in the reader's. Both say the same thing, and the
+            # verifier checks for the one the page is actually in.
+            caption = locale.text("stock_caption")
+            alt = locale.text("stock_alt")
         figures.append(f'<figure><img src="{_esc(src)}" alt="{_esc(alt)}" loading="lazy">'
                        f'<figcaption>{_esc(caption)}</figcaption></figure>')
         if image.attribution:
@@ -161,7 +176,7 @@ def _images_block(images: Sequence, folder_relative: bool = True) -> tuple[str, 
 
 
 def render(business: Business, *, operator: str, sources: Sequence[str] = (),
-           images: Sequence = ()) -> str:
+           images: Sequence = (), locale: Locale | str = "en") -> str:
     """One self-contained HTML page. `operator` is the person whose sample this is.
 
     `operator` is required and unescapable-by-omission on purpose: an unsigned sample page
@@ -171,10 +186,16 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
 
     if not operator.strip():
         raise ValueError("a sample page must name the person who prepared it")
+    if isinstance(locale, str):
+        # A code with no strings raises rather than falling back: `locales.choose` is where
+        # an unavailable language is turned into a refusal, and reaching here with one
+        # means that stage was skipped.
+        locale = CATALOGUE[locale]
 
-    name = _esc(business.name.value)
+    display_name = business.name_in(locale.code)
+    name = _esc(display_name.value)
     trade = _esc(business.kind.value.replace("_", " "))
-    address = _address(business)
+    address = _address(business, locale)
 
     contact_rows = []
     for key, label in _CONTACT_ORDER:
@@ -185,22 +206,24 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
             contact_rows.append(f'<p class="big"><a href="{_esc(href)}">{shown}</a></p>')
     if address:
         contact_rows.append(f'<p class="big">{_esc(address)}</p>')
-    map_link = _map_link(business)
+    map_link = _map_link(business, locale)
     if map_link:
         contact_rows.append(map_link)
-    contact = (f'<section class="card"><h2>Find us</h2>{"".join(contact_rows)}</section>'
+    contact = (f'<section class="card"><h2>{_esc(locale.text("find_us"))}</h2>'
+               f'{"".join(contact_rows)}</section>'
                if contact_rows else "")
 
-    figures, credits = _images_block(images)
+    figures, credits = _images_block(images, locale)
     figures_block = (f'<section class="figures">{figures}</section>' if figures else "")
 
-    gaps = "".join(f'<div class="gap"><h3>{_esc(title)}</h3><p>{_esc(why)}</p></div>'
-                   for title, why in _GAPS)
+    gaps = "".join(f'<div class="gap"><h3>{_esc(locale.text(title))}</h3>'
+                   f'<p>{_esc(locale.text(body))}</p></div>'
+                   for title, body in _GAP_KEYS)
 
     source_items = "".join(f"<li>{_esc(s)}</li>" for s in sources)
 
     return f"""<!doctype html>
-<html lang="en">
+<html lang="{locale.code}" dir="{locale.direction}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -209,10 +232,8 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
 <style>{STYLE}</style>
 </head>
 <body>
-<div class="banner"><strong>Unofficial sample.</strong> This page was prepared by
-{_esc(operator)} from publicly listed information, as an example of what a site for
-{name} could look like. It is not affiliated with, endorsed by, or connected to
-{name}, and nothing on it was supplied by them.</div>
+<div class="banner"><strong>{_esc(locale.text("banner_lead"))}</strong>
+{_esc(locale.text("banner_body", operator=operator, name=display_name.value))}</div>
 <div class="wrap">
 <header>
   <h1>{name}</h1>
@@ -220,21 +241,17 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
 </header>
 {figures_block}
 {contact}
-{_hours_rows(business)}
+{_hours_rows(business, locale)}
 <section>
-  <h2>What is missing from this sample</h2>
+  <h2>{_esc(locale.text("missing_heading"))}</h2>
   {gaps}
 </section>
 <footer>
-  <p>Every detail on this page came from a public source:</p>
+  <p>{_esc(locale.text("sources_intro"))}</p>
   <ul>{source_items}</ul>
   {credits}
-  <p>Business details from OpenStreetMap contributors, available under the Open Database
-  Licence (ODbL). Photographs are either the business's own, taken from their own public
-  website and shown back to them here, or stock photographs labelled as such and credited
-  above.</p>
-  <p>Prepared by {_esc(operator)}. Not published, not indexed, and yours to have or to
-  have taken down.</p>
+  <p>{_esc(locale.text("attribution_note"))}</p>
+  <p>{_esc(locale.text("prepared_by", operator=operator))}</p>
 </footer>
 </div>
 </body>

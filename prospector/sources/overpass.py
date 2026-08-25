@@ -37,6 +37,8 @@ from datetime import datetime, timezone
 from typing import Any, Sequence
 
 from prospector.business import ABSENT, Business, Fact
+from prospector.countries import Country, from_area_tags
+from prospector.countries import UNKNOWN as COUNTRY_NOT_KNOWN
 from prospector.states import AREA_UNKNOWN, LOOKED, SOURCE_UNREADABLE
 
 #: The public instance. Overridable per call: mirrors exist, some carry regional extracts
@@ -93,12 +95,26 @@ class Discovery:
     businesses: tuple[Business, ...] = ()
     reason: str = ""
     endpoint: str = ""
+    #: Which country the area is in, read from the ISO codes OSM puts on the relation.
+    #: This is what lets `--area "Braga"` know to build in Portuguese without being told.
+    country: Country = COUNTRY_NOT_KNOWN
+    #: Every administrative area the name matched, so a run over an ambiguous name says
+    #: what it actually searched. "Luxembourg" is a country, a district and a city.
+    matched: tuple[str, ...] = ()
     at: str = field(default_factory=_now)
 
     def describe(self) -> str:
         if self.status == LOOKED:
-            return (f"LOOKED  [{self.area}]  {len(self.businesses)} businesses\n"
-                    f"  via {self.endpoint}")
+            lines = [f"LOOKED  [{self.area}]  {len(self.businesses)} businesses",
+                     f"  via {self.endpoint}"]
+            if len(self.matched) > 1:
+                # Not an error: the union of the matches was searched. But a name that
+                # matched four areas searched four areas, and a run that does not say so
+                # invites "why is there a business from the next province in here".
+                lines.append(f"  {len(self.matched)} areas matched that name and all were "
+                             f"searched: {'; '.join(self.matched)}")
+            lines.append(f"  {self.country.describe().splitlines()[0]}")
+            return "\n".join(lines)
         if self.status == AREA_UNKNOWN:
             return (f"AREA_UNKNOWN  [{self.area}]\n"
                     f"  No administrative area of that name exists in OpenStreetMap. This "
@@ -130,8 +146,14 @@ def _area_query(area: str) -> str:
     escaped = area.replace('"', '\\"')
     # Administrative boundaries only. Without the filter, "Donegal" matches the town, a
     # townland and a electoral division, and the selection silently becomes the smallest.
+    # Matched on `name`, `name:en` and `int_name`: a country is spelled differently by the
+    # people who live there and by everyone else, and refusing "Deutschland" because the
+    # map's default name is "Deutschland" is the sort of thing that only shows up abroad.
     return (f'[out:json][timeout:90];'
-            f'relation["name"="{escaped}"]["boundary"="administrative"];out ids tags;')
+            f'(relation["name"="{escaped}"]["boundary"="administrative"];'
+            f'relation["name:en"="{escaped}"]["boundary"="administrative"];'
+            f'relation["int_name"="{escaped}"]["boundary"="administrative"];);'
+            f'out ids tags;')
 
 
 def _poi_query(area_ids: Sequence[int], kinds: Sequence[str], limit: int) -> str:
@@ -203,18 +225,29 @@ def discover(area: str, *, kinds: Sequence[str] = DEFAULT_KINDS, limit: int = 20
             ValueError) as exc:
         return Discovery(SOURCE_UNREADABLE, area, reason=f"resolving the area: {exc!r}",
                          endpoint=endpoint, at=at)
-    area_ids = [int(e["id"]) for e in resolved.get("elements", []) if e.get("id")]
+    elements = [e for e in resolved.get("elements", []) if e.get("id")]
+    area_ids = [int(e["id"]) for e in elements]
     if not area_ids:
         return Discovery(AREA_UNKNOWN, area, endpoint=endpoint, at=at)
+    country = COUNTRY_NOT_KNOWN
+    matched = []
+    for element in elements:
+        tags = element.get("tags") or {}
+        level = tags.get("admin_level", "?")
+        matched.append(f"{tags.get('name', area)} (admin_level {level}, "
+                       f"relation {element['id']})")
+        if country.status != "COUNTRY_KNOWN":
+            country = from_area_tags(tags)
     try:
         found = transport.query(_poi_query(area_ids, kinds, limit))
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError,
             ValueError) as exc:
         return Discovery(SOURCE_UNREADABLE, area, reason=f"selecting businesses: {exc!r}",
-                         endpoint=endpoint, at=at)
+                         endpoint=endpoint, country=country, at=at)
     businesses = []
     for element in found.get("elements", []):
         business = to_business(element, at=at)
         if business is not None:
             businesses.append(business)
-    return Discovery(LOOKED, area, businesses=tuple(businesses), endpoint=endpoint, at=at)
+    return Discovery(LOOKED, area, businesses=tuple(businesses), endpoint=endpoint,
+                     country=country, matched=tuple(matched), at=at)

@@ -1,0 +1,52 @@
+{
+ "version": 0.6,
+ "generator": "invented for tests \u2014 no real business appears here",
+ "elements": [
+  {
+   "type": "node",
+   "id": 2001,
+   "lat": 41.55,
+   "lon": -8.42,
+   "tags": {
+    "name": "Padaria da Ponte",
+    "shop": "bakery",
+    "addr:country": "PT",
+    "addr:street": "Rua Inventada",
+    "addr:housenumber": "14",
+    "addr:city": "Braga",
+    "addr:postcode": "4700-000",
+    "phone": "+351 253 000 001",
+    "opening_hours": "Mo-Sa 07:00-19:00"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2002,
+   "lat": 41.551,
+   "lon": -8.421,
+   "tags": {
+    "name": "Oficina Silva",
+    "shop": "car_repair",
+    "addr:country": "PT",
+    "addr:street": "Travessa Inventada",
+    "addr:city": "Braga",
+    "phone": "+351 253 000 002",
+    "name:en": "Silva Garage"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2003,
+   "lat": 41.552,
+   "lon": -8.422,
+   "tags": {
+    "name": "Caf\u00e9 Central",
+    "amenity": "cafe",
+    "addr:country": "PT",
+    "addr:city": "Braga",
+    "phone": "+351 253 000 003",
+    "website": "https://www.python.org"
+   }
+  }
+ ]
+}
