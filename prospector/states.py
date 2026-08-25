@@ -80,3 +80,20 @@ PREPARATION_FAILED = "PREPARATION_FAILED"
 LOOKED = "LOOKED"
 AREA_UNKNOWN = "AREA_UNKNOWN"
 SOURCE_UNREADABLE = "SOURCE_UNREADABLE"
+
+# Images. `NO_IMAGE_FOUND` and `COULD_NOT_LOOK_FOR_IMAGES` are kept apart for the usual
+# reason and one specific to this stage: a page built with no photograph because none was
+# licensable is a decision, and a page built with no photograph because the search failed
+# is a page that should have been built later.
+IMAGES_FOUND = "IMAGES_FOUND"
+NO_IMAGE_FOUND = "NO_IMAGE_FOUND"
+COULD_NOT_LOOK_FOR_IMAGES = "COULD_NOT_LOOK_FOR_IMAGES"
+
+#: Where a photograph came from, which decides what the page is obliged to say about it.
+SUBJECT_OWN = "SUBJECT_OWN"
+LICENSED_STOCK = "LICENSED_STOCK"
+
+# Verification of a page against the evidence behind it.
+VERIFIED = "VERIFIED"
+UNSOURCED_CLAIMS = "UNSOURCED_CLAIMS"
+COULD_NOT_VERIFY = "COULD_NOT_VERIFY"

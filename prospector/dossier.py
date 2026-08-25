@@ -11,10 +11,12 @@ The parent repository's rule is that the deliverable is whatever a person can ac
 that a slip good enough to act from is harder to produce than an API call. The same applies
 here. Four files:
 
-    index.html   the sample site
-    NOTE.md      the draft approach, with the opening sentence the evidence supports
-    EVIDENCE.md  every fact, where it came from, and what was checked and found
-    evidence.json the same, for a machine
+    BRIEF.md      what to design and what not to invent, for whoever builds the real page
+    index.html    the reference render: plain, correct, and not the thing you send
+    NOTE.md       the draft approach, with the opening sentence the evidence supports
+    EVIDENCE.md   every fact, where it came from, and what was checked and found
+    evidence.json the same, for a machine — and what `verify.py` checks a page against
+    images/       the photographs, theirs and stock, each recorded in evidence.json
 
 `EVIDENCE.md` exists because of the moment a business replies "where did you get my opening
 hours". Being able to answer that in one line, from a file written before the email went
@@ -28,11 +30,15 @@ from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from prospector.brief import write_brief
 from prospector.business import Business, Fact
 from prospector.cascade import Decision
 from prospector.condition import Condition
+from prospector.images import SUBJECT_OWN, ImageSet, download
 from prospector.presence import Presence
 from prospector.site import render
+from prospector.states import COULD_NOT_LOOK_FOR_IMAGES, IMAGES_FOUND
+from prospector.verify import verify
 
 
 def slug(value: str) -> str:
@@ -111,22 +117,95 @@ not follow up.
 
 def write(business: Business, presence: Presence, condition: Condition | None,
           decision: Decision, *, out_dir: Path, operator: str,
-          site_url: str = "") -> Path:
+          site_url: str = "", images: ImageSet | None = None,
+          fetch_images: bool = True, max_images: int = 2) -> Path:
     """Write the folder for one business and return its path."""
 
     folder = Path(out_dir) / f"{slug(business.name.value)}--{slug(business.identity)}"
     folder.mkdir(parents=True, exist_ok=True)
     sources = sorted({fact.source for fact in business.known().values()})
+
+    found = images or ImageSet(status="NO_IMAGE_FOUND", reason="no image search was run")
+    #: What the page may show: only images actually on disk beside it. `considered` keeps
+    #: every candidate, downloaded or not, because the reason attached to a downgraded set
+    #: says the records are in evidence.json and that sentence has to be true.
+    on_disk: list = []
+    considered: list = []
+    if found.status == IMAGES_FOUND:
+        for index, image in enumerate(found.images, start=1):
+            if len(on_disk) >= max_images:
+                considered.append(image)
+                continue
+            hint = ("theirs" if image.provenance == SUBJECT_OWN else "stock") + f"-{index}"
+            fetched = (download(image, folder / "images", name_hint=hint)
+                       if fetch_images else image)
+            # A download that failed keeps its record and drops the picture. The page is
+            # then short a photograph, which is visible, rather than carrying a broken
+            # <img> that the recipient is the first to see.
+            if fetched.local_path:
+                relative = _with_relative_path(fetched)
+                on_disk.append(relative)
+                considered.append(relative)
+            else:
+                considered.append(image)
+        if on_disk:
+            images = ImageSet(IMAGES_FOUND, tuple(on_disk), found.reason, found.at)
+        else:
+            # Found and not fetched is not found. A set reporting IMAGES_FOUND with nothing
+            # in it would put "photographs: 2" in the brief beside an empty folder, which
+            # is the same defect as an empty book reporting a price.
+            images = ImageSet(
+                COULD_NOT_LOOK_FOR_IMAGES, (),
+                reason=f"{len(found.images)} image(s) were found and none could be "
+                       f"downloaded (the host refused an automated fetch); every candidate "
+                       f"is still recorded in evidence.json", at=found.at)
+    else:
+        images = found
+    image_dir = folder / "images"
+    if image_dir.is_dir() and not any(image_dir.iterdir()):
+        # An empty folder called `images` reads as "the photographs are missing" to whoever
+        # opens the dossier. The absence belongs in VERIFY.md and the brief, in words.
+        image_dir.rmdir()
+
     (folder / "index.html").write_text(
-        render(business, operator=operator, sources=sources), encoding="utf-8")
+        render(business, operator=operator, sources=sources, images=images.images),
+        encoding="utf-8")
+    (folder / "BRIEF.md").write_text(
+        write_brief(business, presence, decision, images, operator=operator),
+        encoding="utf-8")
     (folder / "NOTE.md").write_text(
         _note_markdown(business, presence, decision, operator, site_url), encoding="utf-8")
     (folder / "EVIDENCE.md").write_text(
         _evidence_markdown(business, presence, condition, decision), encoding="utf-8")
-    (folder / "evidence.json").write_text(json.dumps({
+    evidence = {
+        "operator": operator,
         "business": _serialise(business),
         "presence": _serialise(presence),
         "condition": _serialise(condition),
         "decision": _serialise(decision),
-    }, indent=1, default=str), encoding="utf-8")
+        "images": [_serialise(image) for image in (considered or images.images)],
+        "images_status": images.status,
+        "images_reason": images.reason,
+    }
+    (folder / "evidence.json").write_text(json.dumps(evidence, indent=1, default=str),
+                                          encoding="utf-8")
+    # The reference render is checked by the same verifier that will check whatever gets
+    # designed to replace it. A generator that exempts its own output is a generator whose
+    # guarantee stops holding the moment somebody edits the file by hand.
+    verdict = verify((folder / "index.html").read_text(encoding="utf-8"), evidence,
+                     operator=operator)
+    (folder / "VERIFY.md").write_text(
+        f"# Verification\n\nOf `index.html`, against `evidence.json`, at "
+        f"{datetime.now(timezone.utc).isoformat(timespec='seconds')}.\n\n"
+        f"```\n{verdict.describe()}\n```\n\nRe-run after any edit, and after a "
+        f"designed page replaces the reference render:\n\n"
+        f"```bash\npython -m prospector.verify {folder}\n```\n", encoding="utf-8")
     return folder
+
+
+def _with_relative_path(image):
+    """The page and the file sit in the same folder, so `images/<name>` is the src."""
+
+    from prospector.images import Image, _as_dict
+
+    return Image(**{**_as_dict(image), "local_path": f"images/{image.local_path}"})

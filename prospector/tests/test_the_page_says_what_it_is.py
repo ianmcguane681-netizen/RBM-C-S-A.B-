@@ -15,7 +15,9 @@ from __future__ import annotations
 import pytest
 
 from prospector.business import ABSENT, Business, Fact
+from prospector.images import Image
 from prospector.site import render
+from prospector.states import LICENSED_STOCK, SUBJECT_OWN
 
 AT = "2026-08-25T00:00:00+00:00"
 FACT = lambda v: Fact(v, "openstreetmap:node/1", AT)  # noqa: E731
@@ -53,12 +55,38 @@ def test_a_field_that_is_present_appears_with_its_value():
     assert "Main Street, Invented Town" in page
 
 
-def test_the_page_carries_no_photograph_of_the_business():
-    """Their photographs are theirs. The space is reserved and asked for instead."""
+def test_a_page_with_no_photographs_supplied_shows_none():
+    """The renderer never reaches for an image on its own. Nothing arrives unsourced."""
 
     page = render(BUSINESS, operator="Ian McGuane")
     assert "<img" not in page
-    assert "belong to that business" in page
+
+
+def test_a_stock_photograph_is_labelled_as_one_where_the_reader_sees_it():
+    """A stock barbershop on a page headed with their name claims to be their premises.
+
+    The label is what turns a picture that lies into a picture that illustrates, and it
+    belongs beside the photograph rather than in a footer nobody scrolls to.
+    """
+
+    stock = Image(url="https://example.org/shop.jpg", provenance=LICENSED_STOCK,
+                  retrieved_at=AT, label="Stock photograph — not this business's premises.",
+                  licence="CC BY 2.0", attribution='"Barbers" by A Person, CC BY 2.0.',
+                  creator="A Person")
+    page = render(BUSINESS, operator="Ian McGuane", images=[stock])
+    assert "Stock photograph" in page
+    # Escaped on the way in, so the assertion is on the credit itself rather than on the
+    # exact quoting. `verify.py` reads the page as a browser does and sees it decoded.
+    assert "by A Person, CC BY 2.0." in page
+
+
+def test_a_photograph_of_theirs_is_named_as_theirs():
+    theirs = Image(url="https://bridgeend.example/front.jpg", provenance=SUBJECT_OWN,
+                   retrieved_at=AT, source_page="https://bridgeend.example/",
+                   local_path="front.jpg")
+    page = render(BUSINESS, operator="Ian McGuane", images=[theirs])
+    assert "Your own photograph" in page
+    assert "Not republished anywhere" in page
 
 
 def test_the_page_is_built_for_a_phone():

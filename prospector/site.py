@@ -1,12 +1,16 @@
-"""The sample site: a real page, built out of facts that carry a source, with every gap
-left visible instead of filled in.
+"""The reference render: a plain, correct page, produced so the pipeline always has one.
 
-This is the part of the idea that sells it — a finished thing with their name on it beats a
-proposal — and it is also the part with the sharp edges. Three rules, and the code is
-arranged so that breaking one of them takes deliberate effort.
+**This is the fallback, not the product.** The page that gets sent should be designed for
+the business in front of you — see `brief.py` for why, and for what goes to whoever designs
+it. One template stamped across a county is worth what a template is worth, and the third
+recipient in the same town can see the seams. What this file guarantees is that every
+business in a run ends with *something* correct on disk, and that the correct-by-construction
+version exists to compare a designed page against.
 
-**Nothing appears on the page that did not come from a `Fact`.** No invented founding year,
-no "family-run since", no "we pride ourselves on". Generated prose about a business you have
+Three rules hold here and are re-checked by `verify.py` on any page, however it was built.
+
+**Nothing appears that did not come from a `Fact`.** No invented founding year, no
+"family-run since", no "we pride ourselves on". Generated prose about a business you have
 never spoken to is indistinguishable from retrieved prose once it is on a page, and the
 first time a recipient reads a sentence about their own business that is not true, the
 pitch is over and deservedly so. Where a real site would have copy, this one carries a
@@ -18,14 +22,10 @@ name that does NOT say this is a passable forgery of that business's web presenc
 difference between a generous piece of speculative work and something quite a lot worse is
 exactly that banner. `render` cannot be asked to omit it.
 
-**No photographs.** The demo that prompted this used the business's own photos, which
-belong to the business or to whoever took them. Reusing them uninvited is a copyright
-question with a real answer, and the answer is no. The page reserves the space and says
-what should go in it, which is also a natural thing to ask for in the first reply.
-
-What is left after those three rules is still worth having: name, trade, address, phone,
-opening hours, a map, and a layout that works on a phone — which is more than a great many
-of the sites this tool will find.
+**Photographs carry their obligations.** Their own photograph is labelled as theirs; a
+stock photograph is labelled as stock, because a picture of *a* barbershop on a page headed
+with *this* barbershop's name asserts that these are their premises. Attribution required
+by a licence is rendered, not summarised.
 """
 from __future__ import annotations
 
@@ -33,13 +33,15 @@ import html
 from typing import Sequence
 
 from prospector.business import Business, Fact
+from prospector.states import SUBJECT_OWN
 
 #: Fields that become the contact block, in the order a person reads them.
 _CONTACT_ORDER = (("phone", "Phone"), ("email", "Email"))
 
 _GAPS = (
-    ("A photograph of the premises", "Yours to supply — nothing here is taken from your "
-                                     "existing pages or social accounts."),
+    ("Photographs you actually like", "What is here is either your own, taken from your "
+                                      "site, or labelled stock. Send better ones and they "
+                                      "go straight in."),
     ("A sentence about what you do", "Written by you, or with you. Nothing on this page "
                                      "is invented, so this space is left as it is."),
     ("Services and prices", "The public listing does not carry them."),
@@ -120,6 +122,10 @@ font-size:15px;margin:0}
 background:transparent}
 .gap h3{margin:0 0 4px;font-size:16px}
 .gap p{margin:0;color:var(--muted);font-size:14px}
+.figures{margin:24px 0;display:grid;gap:14px}
+figure{margin:0}
+figure img{width:100%;height:auto;border-radius:12px;display:block;border:1px solid var(--line)}
+figcaption{color:var(--muted);font-size:12.5px;margin-top:6px}
 .maplink{display:inline-block;margin-top:6px;font-size:14px}
 footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);
 color:var(--muted);font-size:13px}
@@ -127,7 +133,35 @@ footer ul{padding-left:18px;margin:8px 0}
 """
 
 
-def render(business: Business, *, operator: str, sources: Sequence[str] = ()) -> str:
+def _images_block(images: Sequence, folder_relative: bool = True) -> tuple[str, str]:
+    """The figures, and the attribution lines the licences oblige.
+
+    Returns both because they belong in different places on the page and neither is
+    optional: a licence condition rendered only next to the picture is missed when the
+    picture is scrolled past, and a label rendered only in the footer is not a label.
+    """
+
+    if not images:
+        return "", ""
+    figures, credits = [], []
+    for image in images:
+        src = image.local_path or image.url
+        if image.provenance == SUBJECT_OWN:
+            caption = "Your own photograph, from your website. Not republished anywhere."
+            alt = "Photograph from the business's own website"
+        else:
+            caption = image.label or "Stock photograph — not this business's premises."
+            alt = "Stock photograph"
+        figures.append(f'<figure><img src="{_esc(src)}" alt="{_esc(alt)}" loading="lazy">'
+                       f'<figcaption>{_esc(caption)}</figcaption></figure>')
+        if image.attribution:
+            credits.append(f"<li>{_esc(image.attribution)}</li>")
+    return ("".join(figures),
+            f"<ul>{''.join(credits)}</ul>" if credits else "")
+
+
+def render(business: Business, *, operator: str, sources: Sequence[str] = (),
+           images: Sequence = ()) -> str:
     """One self-contained HTML page. `operator` is the person whose sample this is.
 
     `operator` is required and unescapable-by-omission on purpose: an unsigned sample page
@@ -157,6 +191,9 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = ()) ->
     contact = (f'<section class="card"><h2>Find us</h2>{"".join(contact_rows)}</section>'
                if contact_rows else "")
 
+    figures, credits = _images_block(images)
+    figures_block = (f'<section class="figures">{figures}</section>' if figures else "")
+
     gaps = "".join(f'<div class="gap"><h3>{_esc(title)}</h3><p>{_esc(why)}</p></div>'
                    for title, why in _GAPS)
 
@@ -181,6 +218,7 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = ()) ->
   <h1>{name}</h1>
   <p class="trade">{trade}</p>
 </header>
+{figures_block}
 {contact}
 {_hours_rows(business)}
 <section>
@@ -190,9 +228,11 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = ()) ->
 <footer>
   <p>Every detail on this page came from a public source:</p>
   <ul>{source_items}</ul>
+  {credits}
   <p>Business details from OpenStreetMap contributors, available under the Open Database
-  Licence (ODbL). This page carries no photographs, because the photographs of a business
-  belong to that business.</p>
+  Licence (ODbL). Photographs are either the business's own, taken from their own public
+  website and shown back to them here, or stock photographs labelled as such and credited
+  above.</p>
   <p>Prepared by {_esc(operator)}. Not published, not indexed, and yours to have or to
   have taken down.</p>
 </footer>

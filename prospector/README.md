@@ -2,8 +2,8 @@
 
 Point it at an area. It reads the public business directory for that area, works out which
 businesses have no website listed or a website with something demonstrably wrong with it,
-builds each one a sample site out of facts that carry a source, and hands you a folder per
-business with a draft note you send yourself.
+gathers licensed photographs (or their own), writes a design brief for each, and hands you
+a folder per business with a draft note you send yourself.
 
 ```bash
 python -m prospector --area "County Donegal" --operator "Ian McGuane"
@@ -18,12 +18,13 @@ Standard library only. No model SDK, no HTTP client, no HTML parser, no framewor
 ## What it does, stage by stage
 
 ```
-discover ──► seen ──► presence ──► condition ──► decide ──► dossier ──► you send it
-   │           │          │            │            │           │
-OSM via     have I     is there    what is       PREPARE     four files
-Overpass    already    a site      wrong with    REFUSED     on disk
-            done       at all      the one       INDETERM.
-            this one              they have
+discover ─► seen ─► presence ─► condition ─► decide ─► images ─► brief ─► verify ─► you
+   │          │         │           │           │         │         │        │
+OSM via    have I    is there    what is     PREPARE   theirs,   what to   nothing
+Overpass   already   a site      wrong       REFUSED   or CC-    design,   on the
+           done      at all      with the    INDETER-  licensed  what not  page is
+           this one              one they    MINATE    stock     to make   unsourced
+                                 have                            up
 ```
 
 Every stage has three outcomes, never two, and the third one is always "could not tell".
@@ -49,6 +50,54 @@ one, ignore this."
 Adding a search backend (`presence.Searcher` — anything with `.find(name, locality)`) is
 the single highest-value change to this package, because it is what turns the second
 sentence into the first.
+
+## It does not sell a template
+
+One layout stamped across a county is worth what a template is worth, and the third
+recipient in the same town can see the seams. So the pipeline's product is a **brief**,
+not a page: `BRIEF.md` carries the facts with their sources, the gaps that must stay gaps,
+the photographs with the label and credit each one obliges, and the constraints stated as
+constraints. It goes to whoever designs the page — you, a designer, or a model given the
+brief — and what comes back goes through the verifier before anybody sees it.
+
+`site.py` still renders a plain reference page, so every business ends a run with
+something correct on disk. It is the fallback and it is deliberately unexciting.
+
+**That moves the guarantee.** A single template can be audited once. A page designed for
+each business has been read by nobody before it exists, so "nothing on this page is
+invented" has to be enforced on the output:
+
+```bash
+python -m prospector.verify dossiers/county-donegal/bridge-end-barbers--node-1001
+```
+
+`verify.py` reads the page as a browser does and refuses anything fact-shaped it cannot
+trace to `evidence.json` — an invented phone number, a founding year, a price, "family-
+run", "award-winning", a claim hidden in alt text, a photograph nobody recorded, a missing
+sample banner, a page that would be indexed. `COULD_NOT_VERIFY` is a failure, not a pass.
+
+## Photographs
+
+Two sources, each with a different obligation, and neither is allowed on the page
+silently.
+
+**Theirs.** Taken from the business's own public website with robots.txt honoured,
+downloaded into the dossier rather than hotlinked, never republished, and labelled on the
+page as their own photograph. This is their picture shown back to them on a sample of
+their own site — the one use where the ownership question has an easy answer, and it is
+easy only because the page says so and the sample is not published. Facebook is not a
+source: login wall, terms, and no reason to think the image is theirs anyway.
+
+**Licensed stock.** Openverse, no key needed, filtered to licences permitting commercial
+use *and* modification — NC is out because this is commercial work, ND is out because
+cropping to a layout makes a derivative. Licence, licence URL and the verbatim attribution
+travel into the dossier; credit is rendered where the licence requires it, and CC0 is not
+described as requiring it.
+
+**Every stock photograph is labelled where the reader sees it.** A stock barbershop on a
+page headed with this barbershop's name asserts these are their premises — a fact-shaped
+thing that did not come from evidence, which is the defect the whole package refuses.
+`verify.py` fails a page carrying one unlabelled.
 
 ## What it will not do
 
@@ -107,7 +156,10 @@ means, which is why nothing here promotes it to a claim about the business.
   off` into English means interpreting a small language with edge cases, and an
   interpretation error publishes wrong opening times over a business's name.
 - **Rate limits.** Overpass is free, donated hardware. A whole country in one query is a
-  request to be blocked; go county by county.
+  request to be blocked; go county by county. Openverse is free too, and a large share of
+  what it indexes is hosted by Wikimedia, which rate-limits shared addresses hard — a
+  download refused there costs a photograph, not the page, and the set is downgraded to
+  `COULD_NOT_LOOK_FOR_IMAGES` rather than reporting an empty success.
 
 ## Provenance
 

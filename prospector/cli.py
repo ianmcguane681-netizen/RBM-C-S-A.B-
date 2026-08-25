@@ -14,12 +14,13 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from prospector import cascade, condition as condition_mod, dossier, presence as presence_mod
-from prospector.business import Business
+from prospector import (cascade, condition as condition_mod, dossier, images as images_mod,
+                        presence as presence_mod)
+from prospector.business import Business, Fact
 from prospector.seen import Register
 from prospector.sources import overpass
-from prospector.states import (COULD_NOT_LOOK, LOOKED, NO_SITE_FOUND, SITE_LISTED,
-                               SITE_REACHED)
+from prospector.states import (COULD_NOT_LOOK, COULD_NOT_LOOK_FOR_IMAGES, LOOKED,
+                               NO_SITE_FOUND, SITE_LISTED, SITE_REACHED)
 
 #: Refused as an operator name, in the parent repository's list and for its reason: the
 #: sample page is signed, the signature is an attribution to a person, and a person is the
@@ -41,6 +42,38 @@ def _check_condition(url: str, *, fetch: bool) -> condition_mod.Condition | None
             condition_mod.UNDETERMINED, url=url,
             reason="--no-fetch was passed, so no site was assessed")
     return condition_mod.assess(url)
+
+
+def _images_for(business: Business, presence, args) -> images_mod.ImageSet:
+    """Their own photographs first, stock second, and nothing at all if asked.
+
+    Their own is not merely preferred, it is a different product: a page showing a business
+    its own shopfront is the version that gets a reply. Stock is the fallback that keeps a
+    page from looking like a wireframe, and it is labelled on the page as what it is.
+    """
+
+    if args.images == "none" or not args.fetch:
+        return images_mod.ImageSet(
+            COULD_NOT_LOOK_FOR_IMAGES,
+            reason=("--images none was passed" if args.images == "none"
+                    else "--no-fetch was passed, so no image source was contacted"))
+    sets = []
+    if args.images in ("both", "subject") and presence.url and not presence.is_social_only:
+        sets.append(images_mod.from_subject(presence.url, limit=args.image_count))
+    if args.images in ("both", "stock"):
+        city = business.get("city")
+        query = business.kind.value.replace("_", " ")
+        if isinstance(city, Fact):
+            # The trade alone; the town is deliberately NOT in the query. A stock photo
+            # found by searching "barber Letterkenny" is still not Letterkenny, and a
+            # picture that looks local is a stronger false claim than one that does not.
+            pass
+        sets.append(images_mod.Openverse().search(query, limit=args.image_count))
+    if not sets:
+        return images_mod.ImageSet(COULD_NOT_LOOK_FOR_IMAGES,
+                                   reason=f"--images {args.images} selected no source for "
+                                          f"this business")
+    return images_mod.gather(*sets)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -89,8 +122,10 @@ def run(args: argparse.Namespace) -> int:
             if args.dry:
                 tally.prepared.append(f"{label} — {decision.reason} (dry run, nothing written)")
                 continue
+            image_set = _images_for(business, presence, args)
             folder = dossier.write(business, presence, condition, decision,
-                                   out_dir=out_dir, operator=operator)
+                                   out_dir=out_dir, operator=operator,
+                                   images=image_set, fetch_images=args.fetch)
             if not register.record(business.identity):
                 tally.unrecorded.append(label)
             tally.prepared.append(f"{label} -> {folder}")
@@ -156,6 +191,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-fetch", dest="fetch", action="store_false",
                         help="do not fetch any business's website; every site condition "
                              "becomes UNDETERMINED and nothing with a site is prepared")
+    parser.add_argument("--images", choices=("both", "subject", "stock", "none"),
+                        default="both",
+                        help="where photographs come from: 'subject' takes them from the "
+                             "business's own site with robots.txt honoured, 'stock' uses "
+                             "Openverse under licences permitting commercial use and "
+                             "modification, and every stock image is labelled on the page "
+                             "as not being their premises")
+    parser.add_argument("--image-count", type=int, default=2,
+                        help="how many photographs to gather per business")
     parser.add_argument("--dry", action="store_true",
                         help="decide everything, write nothing, record nothing")
     return run(parser.parse_args(argv))
