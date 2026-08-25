@@ -72,3 +72,10 @@ data/heartbeat.json
 # subjects of live opportunities travel through them, so neither belongs in a public repo.
 data/announced.json
 data/notifications.json
+
+# Prospector's output and its register. Both carry the names, addresses and phone numbers
+# of real businesses that have not asked to be in a public repository, and the register in
+# particular is a list of who has been approached. Same rule as the seen register above:
+# the data is gitignored, the code that produces it is not.
+data/prepared.json
+dossiers/

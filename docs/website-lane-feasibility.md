@@ -113,3 +113,39 @@ function produces something real before starting a fifth.** Four lanes exist and
 yet produced a pound. This one is attractive precisely because it looks like it would
 produce something quickly, which is the reason to be suspicious of the impulse rather than
 to act on it.
+
+---
+
+## Built, 2026-08-25: `prospector/`
+
+The question came back sharper — point it at a county or a country, let it read the public
+listings, and let it hand over a finished site before anyone asks — so the half that
+transfers was extracted and made to run. `prospector/` is that, and its README is the
+entry point.
+
+It is deliberately **not** part of the money lanes and imports nothing from `lib/`. What
+moved was doctrine, not code: a third state at every stage, a cascade where a scored
+prospect list would have gone, a register that reports `UNCHECKED` rather than `NEW`, a
+deliverable that stops one step short of the irreversible act, and a refusal to let an
+automation sign for a judgement. It is standard library only, has its own tests, and is
+laid out as a self-contained package so it can be lifted into its own repository with a
+copy or a `git subtree split` whenever that is wanted.
+
+**What it does today.** Reads businesses in a named area from OpenStreetMap via Overpass;
+distinguishes "the map lists no website" from "this business has no website" and refuses
+to state the second; fetches any listed site and reports named, checkable defects rather
+than a score; decides in an ordered cascade; and writes a folder per business holding a
+sample site, the evidence behind every word on it, and a draft note. It sends nothing, and
+a test asserts that no module in the package can.
+
+**What it does not do, and the honest reasons.** There is no search backend, so absence is
+never established — that is the single highest-value addition and it is a paid dependency,
+not an afternoon. There are no photographs, because they belong to the business. There is
+no generated prose, because a plausible invented sentence about somebody's own business is
+worse than a blank space. And there is still no outcome loop, so nothing in it knows
+whether any of this works; the reply that never comes is `UNKNOWN`, not a no.
+
+The two objections from the assessment above stand and are not solved by code. The pitch
+still rests on a demand forecast, and volume still turns a generous piece of speculative
+work into a bulk mailing. Both are decisions for a named person, which is why the tool
+hands over a folder rather than sending anything.
