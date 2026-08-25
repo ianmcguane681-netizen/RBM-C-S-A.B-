@@ -74,6 +74,11 @@ def _evidence_markdown(business: Business, presence: Presence,
                   "was run, because no search backend is configured.", ""]
     if condition is not None:
         lines += ["## The site they have", "", "```", condition.describe(), "```", ""]
+        report = getattr(condition, "report", None)
+        if report is not None:
+            lines += ["### Against the standard", "",
+                      "Every criterion, met or not. The definitions and the argument for "
+                      "them are in `STANDARD.md`.", "", "```", report.describe(), "```", ""]
     lines += ["## Decision", "", "```", decision.describe(), "```", ""]
     return "\n".join(lines)
 
@@ -214,6 +219,7 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         "images": [_serialise(image) for image in (considered or images.images)],
         "images_status": images.status,
         "images_reason": images.reason,
+        "standard": _serialise(getattr(condition, "report", None)),
     }
     (folder / "evidence.json").write_text(json.dumps(evidence, indent=1, default=str),
                                           encoding="utf-8")

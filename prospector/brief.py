@@ -93,6 +93,18 @@ def write_brief(business: Business, presence: Presence, decision: Decision,
                           f"unless the page says otherwise."]
         lines.append("")
 
+    report = getattr(decision, "report", None)
+    lines += ["## The standard this page has to meet", "",
+              "`STANDARD.md` lists twenty criteria in four tiers. The reference render in "
+              "`index.html` meets every one the evidence supports, and whatever replaces "
+              "it has to as well — the tool decided this business's own site was deficient "
+              "using these criteria, so a sample that fails them is indefensible. The "
+              "mobile tier is checked by `python -m prospector.verify`.", "",
+              "- a `tel:` link, not a phone number as text. Most of the traffic is a phone",
+              "- no fixed pixel width anywhere, and a viewport tag that allows zoom",
+              "- hours and address where somebody standing in the street can read them",
+              "- `LocalBusiness` JSON-LD built from the facts above, and nothing else",
+              "- one `<h1>`, a `<title>`, a description, a `lang`, an icon", ""]
     lines += ["## Hard constraints — the page fails verification without these", "",
               "1. A banner, visible without scrolling, saying it is an **unofficial "
               "sample** prepared by " + operator + ", **not affiliated** with " + name + ".",

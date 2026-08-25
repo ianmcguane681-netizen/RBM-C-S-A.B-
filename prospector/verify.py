@@ -35,6 +35,11 @@ with a business's name is a picture of premises that are not theirs, presented a
 **The banner.** A sample that does not say it is a sample is a forgery of somebody's web
 presence. It is checked here as well as generated, because the page may not have come from
 this program at all.
+
+**And the mobile tier of the standard.** A page pitched at a business whose own site fails
+`VIEWPORT` cannot itself fail `VIEWPORT`. The conversion criteria are not enforced here,
+because those depend on facts that may not exist; the mobile ones depend only on whoever
+built the page.
 """
 from __future__ import annotations
 
@@ -46,6 +51,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Iterable
 
+from prospector import standard
 from prospector.locales import CATALOGUE, Locale
 from prospector.states import COULD_NOT_VERIFY, LICENSED_STOCK, UNSOURCED_CLAIMS, VERIFIED
 
@@ -239,10 +245,32 @@ def verify(page_html: str, evidence: dict, *, operator: str = "",
 
     problems += _image_problems(parser.images, evidence, lowered,
                                 locale_label=locale.text("stock_caption"))
+    problems += _standard_problems(page_html)
 
     if problems:
         return Verdict(UNSOURCED_CLAIMS, tuple(problems))
     return Verdict(VERIFIED)
+
+
+def _standard_problems(page_html: str) -> list[Problem]:
+    """The page must meet the mobile tier of the standard it judged their site by.
+
+    Only that tier. The conversion criteria depend on facts that may not exist — a business
+    whose hours nobody recorded cannot have hours on its sample page, and failing the page
+    for that would punish it for the evidence being thin. The mobile criteria depend on
+    nothing but the person who built the page, which is what makes them fair to enforce
+    here and what makes failing them indefensible in an email about somebody else's site.
+    """
+
+    report = standard.assess(page_html, byte_size=len(page_html.encode("utf-8")))
+    problems = []
+    for assessment in report.assessments:
+        if assessment.tier == standard.MOBILE and assessment.state == standard.FAILS:
+            problems.append(Problem(
+                "FAILS_THE_STANDARD",
+                f"{assessment.criterion.title.lower()} — {assessment.detail}. This is a "
+                f"criterion the tool used to judge their site deficient"))
+    return problems
 
 
 def _image_problems(srcs: Iterable[str], evidence: dict, lowered_text: str,

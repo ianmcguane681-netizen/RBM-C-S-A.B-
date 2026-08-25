@@ -1,32 +1,24 @@
-"""What is wrong with the site they already have — as named, checkable defects, never a
-score.
+"""Fetching the site they already have, and handing it to the standard.
 
-The temptation here is a number: page weight, mobile, HTTPS, freshness, accessibility,
-summed out of a hundred, with a threshold above which a business becomes a prospect. The
-parent repository argues at length why that is a category error, and the argument does not
-weaken by moving domain. Two of its points land especially hard here.
-
-**A weighted sum treats a disqualifier as a deduction.** A site that does not load at all
-is not "scoring poorly on availability"; it is the only finding that matters, and any
-scheme that lets four good dimensions carry it past a threshold will eventually send a
-polite note about mobile layout to a business whose domain has expired.
-
-**And an unmeasured dimension has no honest score.** A page that timed out has no mobile
-verdict, no HTTPS verdict and no content verdict. Scored as zero it manufactures four
-defects out of one failure; dropped from the average it *raises* the total, because less
-was looked at.
-
-So: named findings, each one independently checkable by the recipient, and a verdict that
-is one of three things. `SERVICEABLE` is worded to avoid implying praise — there is no
-machine-checkable definition of a good website, and this module does not have a view on
-whether a site is good. It has a view on whether a specific, stated defect is present.
+This file used to hold the checks as well. They live in `standard.py` now, because "what
+is wrong with this site" turned out to be the question the whole tool rests on, and a list
+of ad-hoc regexes buried in a fetcher is not a thing anybody can agree to or argue with.
+What is left here is the part that is genuinely about fetching: how many attempts before a
+failure is a fact, what a 403 to an automated request means, and how to tell whether the
+same site answers over HTTPS.
 
 ## What a single failed fetch means
 
-Nothing, on its own. A site that times out once has not been shown to be down, and
-"your website is offline" is the most embarrassing sentence in an outreach note when it is
-wrong. A defect of unreachability requires the same failure twice, with a gap; anything
-less is `UNDETERMINED`, which does not surface.
+Nothing, on its own. A site that times out once has not been shown to be down, and "your
+website is offline" is the most embarrassing sentence in an outreach note when it is wrong.
+Unreachability requires the same failure twice, with a gap; anything less is not a finding.
+
+## A 403 grades the checker, not the site
+
+Cloudflare and its relatives answer an unknown user agent with a challenge. A page that
+refuses to talk to this fetcher may be perfectly good for a person with a browser, so it is
+`UNDETERMINED` and does not surface. The alternative is a tool that preferentially
+approaches businesses whose sites are well defended, which is exactly backwards.
 """
 from __future__ import annotations
 
@@ -37,8 +29,9 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from html.parser import HTMLParser
-from typing import Sequence
+from typing import Any, Sequence
+
+from prospector import standard
 
 from prospector.states import DEFICIENT, SERVICEABLE, UNDETERMINED
 
@@ -57,15 +50,6 @@ TIMEOUT = 15.0
 #: Severity. An observation is true, worth telling a person, and not a reason to pitch.
 DEFECT = "DEFECT"
 OBSERVATION = "OBSERVATION"
-
-_PARKED_PHRASES = (
-    "this domain is for sale", "buy this domain", "domain for sale",
-    "parked free, courtesy of", "this site is under construction",
-    "under construction", "coming soon", "default web page", "welcome to nginx",
-    "apache2 ubuntu default page", "future home of something quite cool",
-    "account suspended", "index of /",
-)
-
 
 @dataclass(frozen=True, slots=True)
 class Finding:
@@ -86,6 +70,10 @@ class Condition:
     reason: str = ""
     final_url: str = ""
     http_status: int | None = None
+    #: Every criterion in the standard, met or failed or not assessed. The findings above
+    #: are the failures; this is the whole picture, and it is what the dossier records so
+    #: a person can see what was checked rather than only what was wrong.
+    report: Any = None
 
     @property
     def defects(self) -> tuple[Finding, ...]:
@@ -104,53 +92,6 @@ class Condition:
         for finding in self.findings:
             lines.append(f"  {finding.severity:11} {finding.code}: {finding.detail}")
         return "\n".join(lines)
-
-
-class _Page(HTMLParser):
-    """Just enough of the document to check the things worth checking, from the stdlib.
-
-    A parser dependency would be the fifth thing on a list of dependencies this package is
-    trying not to have. `html.parser` handles real-world tag soup adequately for asking
-    'is there a viewport meta tag' and 'how much text is on this page'.
-    """
-
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.viewport = False
-        self.title = ""
-        self.text_chars = 0
-        self.image_count = 0
-        self.link_hosts: set[str] = set()
-        self._in_title = False
-        self._skip = 0
-
-    def handle_starttag(self, tag, attrs):
-        values = dict(attrs)
-        if tag == "meta" and (values.get("name") or "").lower() == "viewport":
-            self.viewport = True
-        elif tag == "title":
-            self._in_title = True
-        elif tag == "img":
-            self.image_count += 1
-        elif tag in ("script", "style"):
-            self._skip += 1
-        elif tag == "a":
-            href = (values.get("href") or "").lower()
-            match = re.match(r"https?://([^/]+)/?", href)
-            if match:
-                self.link_hosts.add(match.group(1))
-
-    def handle_endtag(self, tag):
-        if tag == "title":
-            self._in_title = False
-        elif tag in ("script", "style") and self._skip:
-            self._skip -= 1
-
-    def handle_data(self, data):
-        if self._in_title:
-            self.title += data.strip()
-        elif not self._skip:
-            self.text_chars += len(data.strip())
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,7 +140,7 @@ def _https_available(url: str, fetcher) -> bool | None:
 
 
 def assess(url: str, *, fetcher=fetch, retry_pause: float = 2.0) -> Condition:
-    """Fetch the site and name what is wrong with it, or say it could not be assessed."""
+    """Fetch the site, run the standard over it, and report what it fails."""
 
     if not url or "://" not in url:
         return Condition(UNDETERMINED, url=url, reason="not a URL this checker can fetch")
@@ -216,81 +157,39 @@ def assess(url: str, *, fetcher=fetch, retry_pause: float = 2.0) -> Condition:
             # domain listed on the map whose DNS is gone is usually a lapsed registration,
             # which is a business that has lost its website without necessarily knowing.
             unresolved = "gaierror" in second.error or "not known" in second.error
-            code = "DOMAIN_DOES_NOT_RESOLVE" if unresolved else "UNREACHABLE"
+            report = standard.assess("", url=url, reached=False, status=None,
+                                     https_available=None, byte_size=0)
             detail = ("the domain does not resolve at all, on two attempts — the "
                       "registration may have lapsed") if unresolved else (
                       f"two attempts, both failed: {second.error}")
-            return Condition(DEFICIENT, url=url,
+            code = "DOMAIN_DOES_NOT_RESOLVE" if unresolved else "UNREACHABLE"
+            return Condition(DEFICIENT, url=url, report=report,
                              findings=(Finding(code, DEFECT, detail),))
         first = second
 
-    findings: list[Finding] = []
     status = first.status or 0
-    if status >= 500:
-        return Condition(DEFICIENT, url=url, http_status=status, final_url=first.final_url,
-                         findings=(Finding("SERVER_ERROR", DEFECT,
-                                           f"the site answered HTTP {status}"),))
     if status in (403, 429):
-        # Being refused by a bot defence says nothing about the site's quality, and a
-        # cascade that graded it would be grading its own user agent.
         return Condition(UNDETERMINED, url=url, http_status=status,
                          reason=f"the site answered HTTP {status} to an automated request; "
                                 f"a person opening it in a browser may see a working site")
-    if status >= 400:
-        findings.append(Finding("NOT_FOUND", DEFECT,
-                                f"the listed address answered HTTP {status}"))
 
-    body = first.body or ""
-    lowered = body.lower()
-    if not body.strip():
-        findings.append(Finding("EMPTY_PAGE", DEFECT, "the page returned no content"))
-    for phrase in _PARKED_PHRASES:
-        if phrase in lowered:
-            findings.append(Finding("PLACEHOLDER", DEFECT,
-                                    f"the page reads as a placeholder: {phrase!r}"))
-            break
-
-    page = _Page()
-    try:
-        page.feed(body)
-    except Exception as exc:  # noqa: BLE001 - malformed markup is a finding, not a crash
-        findings.append(Finding("MALFORMED", OBSERVATION, f"the markup would not parse: {exc!r}"))
-
-    if body and not page.viewport:
-        findings.append(Finding("NO_MOBILE_VIEWPORT", DEFECT,
-                                "no viewport meta tag, so the page is served to phones at "
-                                "desktop width"))
-    https = _https_available(url, fetcher)
-    if https is False:
-        findings.append(Finding("NO_HTTPS", DEFECT,
-                                "the site does not answer over HTTPS, so browsers mark it "
-                                "'Not secure'"))
-    elif https is None:
-        findings.append(Finding("HTTPS_UNKNOWN", OBSERVATION,
-                                "whether the site supports HTTPS could not be established"))
-    # Guarded on there being nothing else, because a 404 page and a placeholder page are
-    # also short, and reporting three findings for one fault reads as three faults.
-    if body and page.text_chars < 200 and not findings:
-        findings.append(Finding("ALMOST_NO_CONTENT", DEFECT,
-                                f"only {page.text_chars} characters of text on the page"))
-    # The LATEST year in any copyright notice, not the first. A footer reading
-    # "© 2001-2026" starts with a year that means nothing; taking it as the site's age
-    # would flag every well-maintained site on the internet, which is the sort of finding
-    # that trains a reader to stop reading findings.
-    years: list[int] = []
-    for notice in re.finditer(r"(?:©|&copy;|copyright)", lowered):
-        window = lowered[notice.start():notice.start() + 60]
-        years += [int(y) for y in re.findall(r"(?:19|20)\d{2}", window)]
-    if years:
-        latest = max(years)
-        if latest < _this_year() - 1:
-            findings.append(Finding("DATED_NOTICE", OBSERVATION,
-                                    f"the newest copyright year on the page is {latest}"))
-    if not page.title.strip() and body:
-        findings.append(Finding("NO_TITLE", DEFECT,
-                                "the page has no <title>, so it appears in search results "
-                                "and browser tabs with no name"))
-
-    verdict = DEFICIENT if any(f.severity == DEFECT for f in findings) else SERVICEABLE
-    return Condition(verdict, url=url, findings=tuple(findings), http_status=status,
-                     final_url=first.final_url)
+    report = standard.assess(first.body or "", url=url, status=status, reached=True,
+                             https_available=_https_available(url, fetcher),
+                             byte_size=len(first.body or ""))
+    findings = tuple(
+        Finding(assessment.code,
+                DEFECT if assessment.tier in standard.APPROACHABLE_TIERS else OBSERVATION,
+                f"{assessment.criterion.title} — {assessment.detail}")
+        for assessment in report.failures())
+    if report.blocked and not report.approachable_failures:
+        # Something that decides the verdict could not be evaluated, and nothing that could
+        # be evaluated failed. That is not a site in good order; it is a site nobody looked
+        # at properly.
+        unknown = ", ".join(a.code for a in report.by_state(standard.NOT_ASSESSED)
+                            if a.tier in standard.APPROACHABLE_TIERS)
+        return Condition(UNDETERMINED, url=url, http_status=status, report=report,
+                         findings=findings, final_url=first.final_url,
+                         reason=f"these criteria could not be evaluated: {unknown}")
+    verdict = DEFICIENT if report.approachable_failures else SERVICEABLE
+    return Condition(verdict, url=url, findings=findings, http_status=status,
+                     final_url=first.final_url, report=report)

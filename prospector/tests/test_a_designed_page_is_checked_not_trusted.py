@@ -27,7 +27,8 @@ EVIDENCE = {
     "images": [],
 }
 
-GOOD = ('<html><head><meta name="robots" content="noindex, nofollow"></head><body>'
+GOOD = ('<html lang="en"><head><meta name="robots" content="noindex, nofollow">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1"></head><body>'
         '<p>Unofficial sample prepared by Ian McGuane. Not affiliated with Bridge End '
         'Barbers.</p><h1>Bridge End Barbers</h1><p>Main Street</p>'
         '<p>+353 74 912 0001</p></body></html>')

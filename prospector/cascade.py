@@ -163,20 +163,28 @@ def _defect_claim_key(condition: Condition) -> str:
 
     Order matters more than it looks. A dead domain and a missing viewport tag can both be
     true of the same site, and opening with the viewport would waste the one sentence that
-    was going to be read.
+    was going to be read. It follows the standard's tiers: does it load, does it work on a
+    phone, can a visitor act — and never a craft finding, which is why no branch here
+    mentions one.
     """
 
     codes = {f.code for f in condition.defects}
     if "DOMAIN_DOES_NOT_RESOLVE" in codes:
         return "claim_domain_gone"
-    if "UNREACHABLE" in codes or "SERVER_ERROR" in codes:
+    if "UNREACHABLE" in codes or {"LOADS"} & codes:
         return "claim_unreachable"
-    if "PLACEHOLDER" in codes or "EMPTY_PAGE" in codes or "NOT_FOUND" in codes:
+    if {"NOT_A_PLACEHOLDER", "NOT_AN_ERROR"} & codes:
         return "claim_placeholder"
-    if "NO_MOBILE_VIEWPORT" in codes:
+    if {"VIEWPORT", "ZOOM_ALLOWED", "NO_FIXED_WIDTH", "NO_LEGACY_MARKUP"} & codes:
         return "claim_no_viewport"
-    if "NO_HTTPS" in codes:
+    if "NOT_HEAVY" in codes:
+        return "claim_slow"
+    if "HTTPS" in codes:
         return "claim_no_https"
+    if "PHONE_TAPPABLE" in codes:
+        return "claim_no_tel_link"
+    if {"HOURS_PRESENT", "ADDRESS_PRESENT"} & codes:
+        return "claim_no_hours"
     return "claim_generic"
 
 

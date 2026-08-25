@@ -60,11 +60,12 @@ REQUIRED = (
     "hours_note", "map_link", "missing_heading", "gap_photos_title", "gap_photos_body",
     "gap_words_title", "gap_words_body", "gap_services_title", "gap_services_body",
     "sources_intro", "attribution_note", "prepared_by", "stock_caption", "own_caption",
-    "where_attached", "where_url",
+    "where_attached", "where_url", "call_action",
     "stock_alt", "own_alt", "note_greeting", "note_body", "note_signoff",
     "claim_no_site_found", "claim_no_site_listed", "claim_social_only",
     "claim_domain_gone", "claim_unreachable", "claim_placeholder", "claim_no_viewport",
-    "claim_no_https", "claim_generic",
+    "claim_no_https", "claim_no_tel_link", "claim_no_hours", "claim_slow",
+    "claim_generic",
 )
 
 
@@ -133,6 +134,7 @@ ENGLISH = {
                     "like. It is not affiliated with, endorsed by, or connected to "
                     "{name}, and nothing on it was supplied by them."),
     "not_affiliated_marker": "not affiliated with",
+    "call_action": "Call us",
     "find_us": "Find us",
     "opening_hours": "Opening hours",
     "hours_note": ("Recorded in the public listing in this form. Confirm before this page "
@@ -188,6 +190,9 @@ ENGLISH = {
     "claim_no_https": ("Your site is served over plain HTTP, so browsers show visitors a "
                        "'Not secure' warning before they read a word. Here is a version "
                        "without it."),
+    "claim_no_tel_link": ("Your number is on your site as text rather than something to tap, so anyone looking on a phone has to copy it out — and most of them just leave. Here is a version they can call from."),
+    "claim_no_hours": ("Your opening hours are not on your site, and 'are they open now' is the first thing people check before they set off. Here is a page carrying what is listed publicly."),
+    "claim_slow": ("Your site takes a long time to appear on a phone connection, and most people looking for you are on one. Here is a page that loads straight away."),
     "claim_generic": "I noticed a few fixable things about your site, and built an example.",
 }
 
@@ -199,6 +204,7 @@ FRENCH = {
                     "pour {name}. Elle n'est ni affiliée à {name}, ni approuvée par cette "
                     "entreprise, et aucun élément n'a été fourni par elle."),
     "not_affiliated_marker": "n'est ni affiliée",
+    "call_action": "Nous appeler",
     "find_us": "Nous trouver",
     "opening_hours": "Horaires d'ouverture",
     "hours_note": ("Enregistrés sous cette forme dans l'annuaire public. À vérifier avant "
@@ -259,6 +265,9 @@ FRENCH = {
     "claim_no_https": ("Votre site est servi en HTTP simple : les navigateurs affichent "
                        "donc « Non sécurisé » à vos visiteurs avant qu'ils n'aient lu un "
                        "mot. En voici une version sans cet avertissement."),
+    "claim_no_tel_link": ("Votre numéro figure sur votre site en texte simple et non en lien cliquable : depuis un téléphone, il faut le recopier, et la plupart des gens abandonnent. Voici une version depuis laquelle ils peuvent appeler."),
+    "claim_no_hours": ("Vos horaires ne sont pas sur votre site, et « est-ce ouvert maintenant » est la première chose que les gens vérifient avant de se déplacer. Voici une page qui reprend ce qui est indiqué publiquement."),
+    "claim_slow": ("Votre site met longtemps à s'afficher sur une connexion mobile, et c'est de là que viennent la plupart des visiteurs. Voici une page qui s'affiche tout de suite."),
     "claim_generic": ("J'ai remarqué quelques points corrigibles sur votre site, et j'ai "
                       "préparé un exemple."),
 }
@@ -270,6 +279,7 @@ SPANISH = {
                     "afiliada a {name} ni cuenta con su respaldo, y la empresa no ha "
                     "aportado nada de lo que aquí aparece."),
     "not_affiliated_marker": "no está afiliada",
+    "call_action": "Llámanos",
     "find_us": "Dónde estamos",
     "opening_hours": "Horario",
     "hours_note": ("Registrado así en el directorio público. Confírmelo antes de que esta "
@@ -325,6 +335,9 @@ SPANISH = {
     "claim_no_https": ("Su web se sirve por HTTP sin cifrar, así que el navegador avisa a "
                        "sus visitantes de que «no es segura» antes de que lean una "
                        "palabra. Aquí tiene una versión sin ese aviso."),
+    "claim_no_tel_link": ("Su número aparece en la web como texto y no como enlace: desde el móvil hay que copiarlo a mano, y la mayoría se va. Aquí tiene una versión desde la que pueden llamar."),
+    "claim_no_hours": ("Su horario no está en la web, y «¿estarán abiertos ahora?» es lo primero que se comprueba antes de salir de casa. Aquí tiene una página con lo que consta públicamente."),
+    "claim_slow": ("Su web tarda mucho en aparecer con datos móviles, y desde el móvil le busca la mayoría. Aquí tiene una página que carga al instante."),
     "claim_generic": ("He visto algunas cosas de su web que tienen arreglo fácil, y he "
                       "preparado un ejemplo."),
 }
@@ -336,6 +349,7 @@ GERMAN = {
                     "könnte. Sie ist nicht mit {name} verbunden und nicht von dort "
                     "genehmigt; nichts darauf stammt von dem Betrieb selbst."),
     "not_affiliated_marker": "nicht mit",
+    "call_action": "Rufen Sie uns an",
     "find_us": "So finden Sie uns",
     "opening_hours": "Öffnungszeiten",
     "hours_note": ("In dieser Form im öffentlichen Verzeichnis eingetragen. Bitte prüfen, "
@@ -395,6 +409,9 @@ GERMAN = {
     "claim_no_https": ("Ihre Website läuft über einfaches HTTP, deshalb warnen Browser "
                        "Ihre Besucher mit „Nicht sicher“, bevor die ein Wort gelesen "
                        "haben. Hier ist eine Fassung ohne diese Warnung."),
+    "claim_no_tel_link": ("Ihre Nummer steht auf der Website als Text und nicht als Link zum Antippen; vom Handy aus muss man sie abtippen, und die meisten lassen es dann. Hier ist eine Fassung, von der aus man anrufen kann."),
+    "claim_no_hours": ("Ihre Öffnungszeiten stehen nicht auf der Website, und „haben die jetzt offen“ ist das Erste, was Leute vor dem Losfahren prüfen. Hier ist eine Seite mit dem, was öffentlich eingetragen ist."),
+    "claim_slow": ("Ihre Website braucht über Mobilfunk sehr lange, bis überhaupt etwas zu sehen ist — und über das Handy sucht Sie die Mehrheit. Hier ist eine Seite, die sofort da ist."),
     "claim_generic": ("Mir sind ein paar leicht behebbare Dinge an Ihrer Website "
                       "aufgefallen, und ich habe ein Beispiel gebaut."),
 }
@@ -407,6 +424,7 @@ ITALIAN = {
                     "per {name}. Non è affiliata a {name} né approvata da {name}, e nulla "
                     "di ciò che vi compare è stato fornito dall'attività."),
     "not_affiliated_marker": "non è affiliata",
+    "call_action": "Chiamaci",
     "find_us": "Dove siamo",
     "opening_hours": "Orari di apertura",
     "hours_note": ("Registrati in questa forma nell'elenco pubblico. Da verificare prima "
@@ -464,6 +482,9 @@ ITALIAN = {
     "claim_no_https": ("Il vostro sito viaggia su HTTP semplice, perciò i browser mostrano "
                        "ai visitatori l'avviso «non sicuro» prima ancora che leggano una "
                        "parola. Ecco una versione senza quell'avviso."),
+    "claim_no_tel_link": ("Il vostro numero è sul sito come testo e non come collegamento da toccare: dal telefono va ricopiato a mano, e quasi tutti rinunciano. Ecco una versione da cui si può chiamare."),
+    "claim_no_hours": ("Gli orari non sono sul vostro sito, e «saranno aperti adesso?» è la prima cosa che si controlla prima di uscire. Ecco una pagina con quanto risulta pubblicamente."),
+    "claim_slow": ("Il vostro sito impiega molto a comparire sotto rete mobile, ed è dal telefono che vi cerca la maggior parte delle persone. Ecco una pagina che si apre subito."),
     "claim_generic": ("Ho notato alcune cose facilmente sistemabili sul vostro sito, e ho "
                       "preparato un esempio."),
 }
@@ -475,6 +496,7 @@ PORTUGUESE = {
                     "está associada a {name} nem foi aprovada por {name}, e nada do que "
                     "aqui aparece foi fornecido pelo negócio."),
     "not_affiliated_marker": "não está associada",
+    "call_action": "Ligue-nos",
     "find_us": "Onde estamos",
     "opening_hours": "Horário",
     "hours_note": ("Registado desta forma no directório público. Confirme antes de esta "
@@ -530,6 +552,9 @@ PORTUGUESE = {
     "claim_no_https": ("O seu site é servido em HTTP simples, por isso os navegadores "
                        "avisam os visitantes de que «não é seguro» antes de lerem uma "
                        "palavra. Aqui está uma versão sem esse aviso."),
+    "claim_no_tel_link": ("O seu número está no site como texto e não como ligação para tocar: no telemóvel é preciso copiá-lo à mão, e a maioria desiste. Aqui tem uma versão a partir da qual podem ligar."),
+    "claim_no_hours": ("O seu horário não está no site, e «estarão abertos agora?» é a primeira coisa que se confirma antes de sair de casa. Aqui tem uma página com o que consta publicamente."),
+    "claim_slow": ("O seu site demora muito a aparecer com dados móveis, e é pelo telemóvel que a maioria o procura. Aqui tem uma página que carrega de imediato."),
     "claim_generic": ("Reparei nalgumas coisas facilmente corrigíveis no seu site, e "
                       "preparei um exemplo."),
 }
@@ -541,6 +566,7 @@ DUTCH = {
                     "eruit zou kunnen zien. Ze is niet verbonden aan {name} en niet door "
                     "{name} goedgekeurd; niets erop is door het bedrijf aangeleverd."),
     "not_affiliated_marker": "niet verbonden aan",
+    "call_action": "Bel ons",
     "find_us": "Waar u ons vindt",
     "opening_hours": "Openingstijden",
     "hours_note": ("Zo vastgelegd in het openbare register. Controleer dit voordat deze "
@@ -600,6 +626,9 @@ DUTCH = {
     "claim_no_https": ("Uw site loopt over gewoon HTTP, dus browsers waarschuwen "
                        "bezoekers met 'niet veilig' voordat ze een woord gelezen hebben. "
                        "Hier is een versie zonder die waarschuwing."),
+    "claim_no_tel_link": ("Uw nummer staat op de site als tekst en niet als aantikbare link: op een telefoon moet je het overtypen, en de meesten haken dan af. Hier is een versie waarvandaan ze kunnen bellen."),
+    "claim_no_hours": ("Uw openingstijden staan niet op de site, en 'zijn ze nu open' is het eerste wat mensen nakijken voordat ze op pad gaan. Hier is een pagina met wat openbaar vermeld staat."),
+    "claim_slow": ("Uw site heeft over mobiel internet lang nodig voordat er iets verschijnt, en via de telefoon zoekt het merendeel u op. Hier is een pagina die meteen laadt."),
     "claim_generic": ("Er vielen me een paar makkelijk te verhelpen dingen op aan uw site, "
                       "en ik heb een voorbeeld gemaakt."),
 }
@@ -611,6 +640,7 @@ IRISH = {
                     "Níl sé ceangailte le {name} ná ceadaithe ag {name}, agus níor chuir "
                     "an gnó féin aon rud ar fáil dó."),
     "not_affiliated_marker": "níl sé ceangailte le",
+    "call_action": "Glaoigh orainn",
     "find_us": "Teacht orainn",
     "opening_hours": "Uaireanta oscailte",
     "hours_note": ("Taifeadta sa bhfoirm seo sa liosta poiblí. Deimhnigh iad sula "
@@ -671,6 +701,9 @@ IRISH = {
     "claim_no_https": ("Cuirtear do shuíomh ar fáil trí HTTP simplí, agus mar sin "
                        "tugann brabhsálaithe rabhadh 'Not secure' do chuairteoirí sula "
                        "léann siad focal. Seo leagan gan an rabhadh sin."),
+    "claim_no_tel_link": ("Tá d'uimhir ar do shuíomh mar théacs seachas mar rud is féidir a bhrú, agus mar sin caithfidh duine ar fhón í a chóipeáil — imíonn a bhformhór. Seo leagan ar féidir glaoch uaidh."),
+    "claim_no_hours": ("Níl d'uaireanta oscailte ar do shuíomh, agus 'an bhfuil siad oscailte anois' an chéad rud a sheiceálann daoine sula dtagann siad. Seo leathanach leis an eolas atá liostaithe go poiblí."),
+    "claim_slow": ("Tógann do shuíomh tamall fada le teacht aníos ar nasc fóin, agus is ar fhón atá formhór na ndaoine do do chuardach. Seo leathanach a lódálann láithreach."),
     "claim_generic": ("Thug mé faoi deara cúpla rud atá inseasctha ar do shuíomh, agus "
                       "thóg mé sampla."),
 }

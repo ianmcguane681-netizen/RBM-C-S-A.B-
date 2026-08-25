@@ -130,7 +130,8 @@ def test_an_unlabelled_stock_photograph_fails_verification():
                     "business's premises.", "attribution": "by Somebody, CC BY 4.0.",
                     "creator": "Somebody"}],
     }
-    page = ('<html><head><meta name=robots content="noindex, nofollow"></head><body>'
+    page = ('<html lang="en"><head><meta name=robots content="noindex, nofollow">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1"></head><body>'
             '<p>Unofficial sample, not affiliated with them. Ian McGuane.</p>'
             '<h1>Invented Bakery</h1><img src="images/stock-1.jpg" alt="A bakery">'
             '<p>by Somebody, CC BY 4.0.</p></body></html>')
@@ -149,7 +150,8 @@ def test_a_labelled_and_attributed_stock_photograph_passes():
                     "label": "Stock photograph — not this business's premises.",
                     "attribution": "by Somebody, CC BY 4.0.", "creator": "Somebody"}],
     }
-    page = ('<html><head><meta name=robots content="noindex, nofollow"></head><body>'
+    page = ('<html lang="en"><head><meta name=robots content="noindex, nofollow">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1"></head><body>'
             '<p>Unofficial sample, not affiliated with them. Ian McGuane.</p>'
             '<h1>Invented Bakery</h1><img src="images/stock-1.jpg" alt="A bakery">'
             '<figcaption>Stock photograph — not this business\'s premises</figcaption>'
@@ -162,7 +164,8 @@ def test_a_photograph_nobody_recorded_fails_verification():
 
     evidence = {"language": "en", "business": {"name": {"value": "Invented Bakery"}, "kind": {"value": "bakery"},
                              "fields": {}, "raw": {"tags": {}}}, "images": []}
-    page = ('<html><head><meta name=robots content="noindex"></head><body>'
+    page = ('<html lang="en"><head><meta name=robots content="noindex">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1"></head><body>'
             '<p>Unofficial sample, not affiliated. Ian McGuane.</p>'
             '<img src="https://somewhere-else.example/nice.jpg"></body></html>')
     verdict = verify(page, evidence, operator="Ian McGuane")

@@ -49,15 +49,15 @@ def test_a_site_that_could_not_be_assessed_blocks_rather_than_scoring_low():
 
 
 def test_observations_alone_never_justify_an_approach():
-    """A dated copyright notice is true, interesting, and not a reason to email anyone.
+    """A missing meta description is true, worth knowing, and not a reason to email anyone.
 
     Severity is the whole difference between a finding worth telling a person and a finding
     worth acting on, and a scheme that summed findings would lose it.
     """
 
     only_observations = Condition(SERVICEABLE, url="https://fine.example", findings=(
-        Finding("DATED_NOTICE", OBSERVATION, "newest copyright year is 2019"),
-        Finding("HTTPS_UNKNOWN", OBSERVATION, "could not be established")))
+        Finding("META_DESCRIPTION", OBSERVATION, "no meta description"),
+        Finding("STRUCTURED_DATA", OBSERVATION, "no LocalBusiness JSON-LD")))
     decision = cascade.decide(_business(**CONTACTABLE), NEW_SIGHTING,
                               Presence(SITE_LISTED, url="https://fine.example"),
                               only_observations)
@@ -66,9 +66,9 @@ def test_observations_alone_never_justify_an_approach():
 
 def test_one_defect_among_many_observations_still_prepares():
     mixed = Condition(DEFICIENT, url="https://broken.example", findings=(
-        Finding("DATED_NOTICE", OBSERVATION, "2019"),
-        Finding("NO_HTTPS", DEFECT, "plain HTTP only"),
-        Finding("HTTPS_UNKNOWN", OBSERVATION, "unclear")))
+        Finding("TITLE", OBSERVATION, "no <title>"),
+        Finding("HTTPS", DEFECT, "plain HTTP only"),
+        Finding("FAVICON", OBSERVATION, "no favicon")))
     decision = cascade.decide(_business(**CONTACTABLE), NEW_SIGHTING,
                               Presence(SITE_LISTED, url="https://broken.example"), mixed)
     assert decision.status == cascade.PREPARE

@@ -118,6 +118,38 @@ trace to `evidence.json` — an invented phone number, a founding year, a price,
 run", "award-winning", a claim hidden in alt text, a photograph nobody recorded, a missing
 sample banner, a page that would be indexed. `COULD_NOT_VERIFY` is a failure, not a pass.
 
+## The standard: what counts as a site that needs replacing
+
+The whole tool rests on one judgement, so it is written down in **`STANDARD.md`**: twenty
+named criteria in four tiers, each checkable, each with a reason a business owner would
+accept.
+
+```
+BLOCKING     loads · not an error · not a placeholder · HTTPS
+MOBILE       viewport · zoom allowed · no fixed width · no legacy markup · not heavy
+CONVERSION   tappable phone · address · opening hours · a contact path
+CRAFT        title · description · one h1 · LocalBusiness JSON-LD · og tags · icon · lang
+```
+
+**A business is approached only over a failure in the first three tiers.** Craft failures
+are recorded and never pitched — tiers one to three cost the owner customers, tier four
+makes a developer wince, and a cold email to a stranger about their missing structured
+data is how this whole activity gets a reputation.
+
+Mobile sits above conversion because that is where the traffic is: most people looking for
+a local business are on a phone, standing somewhere, deciding whether to walk in or call.
+The highest-value single finding the tool produces is a phone number that is text rather
+than a `tel:` link — invisible on a desktop, costing calls every day on a phone.
+
+Each criterion returns `MEETS`, `FAILS` or `NOT_ASSESSED`, and the third blocks rather
+than passing. Nothing is summed, because a total is exactly what would let a site that
+does not work on a phone pass on the strength of its meta description.
+
+**The tool meets its own standard.** `standard.assess` runs over the page this package
+generates and a test asserts it meets every criterion the evidence supports. Emailing
+somebody about their viewport tag with a page attached that renders at desktop width
+deserves the reply it would get.
+
 ## Photographs
 
 Two sources, each with a different obligation, and neither is allowed on the page
@@ -145,10 +177,10 @@ thing that did not come from evidence, which is the defect the whole package ref
 
 **No score.** Not for prospects, not for websites. A weighted sum treats a disqualifier as
 a deduction, and an unmeasured dimension has no honest number: scored zero it invents
-defects, dropped from the average it raises the total because less was looked at. Findings
-are named, checkable, and either a `DEFECT` or an `OBSERVATION`. `SERVICEABLE` means no
-named defect was found — never that a site is good, which is not a machine-checkable
-property.
+defects, dropped from the average it raises the total because less was looked at. See
+`STANDARD.md` for the twenty criteria and the tiers that replace a total. `SERVICEABLE`
+means no named defect was found — never that a site is good, which is not a machine-
+checkable property.
 
 **No invented copy.** Everything printed on a sample page came from a `Fact` with a source
 attached, and `EVIDENCE.md` in each folder lists every one of them. Where a real site
