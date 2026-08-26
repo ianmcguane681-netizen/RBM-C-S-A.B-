@@ -22,6 +22,7 @@ from prospector.business import Business, Fact
 from prospector.countries import COUNTRY_KNOWN, Country, from_tags, lookup
 from prospector.countries import UNKNOWN as COUNTRY_UNKNOWN
 from prospector.locales import LANGUAGE_AVAILABLE, choose
+from prospector.history import History, Run
 from prospector.seen import Register
 from prospector.sources import overpass
 from prospector.states import (COULD_NOT_LOOK, COULD_NOT_LOOK_FOR_IMAGES, LOOKED,
@@ -188,12 +189,18 @@ def run(args: argparse.Namespace, stream=None, errors=None) -> int:
 
     print(discovery.describe(), file=out)
     if discovery.status != LOOKED:
-        # Nothing below this line would be true, so nothing below this line runs.
+        # Nothing below this line would be true, so nothing below this line runs. The run
+        # is still recorded: a history with only the successful scans in it makes a flaky
+        # source look reliable and hides "the scan of Mayo died" behind "Mayo was quiet".
+        History(Path(args.history)).record(Run(
+            area=args.area, started=discovery.at, finished=discovery.at,
+            outcome=discovery.status, operator=operator))
         return 1
 
     register = Register(Path(args.register))
     out_dir = Path(args.out) / dossier.slug(args.area)
     tally = Tally()
+    started_at = discovery.at
     rates, currency, costs_note = costs_mod.load(args.costs)
     costing = costs_mod.cost_of_one_site(rates, currency=currency)
 
@@ -237,6 +244,14 @@ def run(args: argparse.Namespace, stream=None, errors=None) -> int:
 
     _report(discovery, tally, out_dir, dry=args.dry, out=out)
     if not args.dry:
+        recorded = History(Path(args.history)).record(Run(
+            area=args.area, started=started_at, finished=discovery.at,
+            prepared=len(tally.prepared), refused=len(tally.refused),
+            indeterminate=len(tally.indeterminate), outcome=discovery.status,
+            digest=str(out_dir / webatron.DIGEST), operator=operator))
+        if not recorded:
+            print(f"HISTORY        NOT RECORDED — {args.history} could not be written, so "
+                  f"this run will not appear in what has been scanned", file=out)
         digest = webatron.write_digest(
             tally.briefings, out_dir=out_dir, operator=operator, costing=costing,
             area=args.area, refused=tally.refused, indeterminate=tally.indeterminate)
@@ -313,6 +328,10 @@ def main(argv: list[str] | None = None, stream=None, errors=None) -> int:
     parser.add_argument("--no-fetch", dest="fetch", action="store_false",
                         help="do not fetch any business's website; every site condition "
                              "becomes UNDETERMINED and nothing with a site is prepared")
+    parser.add_argument("--history", default=str(History.__init__.__defaults__[0]),
+                        help="where completed runs are recorded, so a scanning cadence can "
+                             "be decided from what actually happened rather than guessed "
+                             "in advance")
     parser.add_argument("--costs", default=str(costs_mod.CONFIG),
                         help="rates for the costing on every briefing. Anything absent is "
                              "UNPRICED rather than zero, so the first run tells you what "

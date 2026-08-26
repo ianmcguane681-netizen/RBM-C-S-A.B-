@@ -172,8 +172,14 @@ _LOAD_BEARING = ("stylesheet", "font", "image")
 
 def capture(url: str, *, out_path: Path | str | None = None,
             viewport: tuple[int, int] = PHONE, timeout_ms: int = 30000,
-            full_page: bool = True) -> Capture:
-    """Open `url` at phone size, measure it, and write a PNG if `out_path` is given."""
+            full_page: bool = True, settle_ms: int = 0) -> Capture:
+    """Open `url` at phone size, measure it, and write a PNG if `out_path` is given.
+
+    `settle_ms` waits after the load event before measuring. Zero by default, because a
+    small business site is HTML and waiting would only make the timings flatter than what
+    a visitor gets. Pages that assemble themselves from their own API afterwards — a
+    dashboard, an app — need a moment or the screenshot is of a page mid-build.
+    """
 
     ok, reason = available()
     if not ok:
@@ -216,6 +222,8 @@ def capture(url: str, *, out_path: Path | str | None = None,
                     if response.status >= 400
                     and response.request.resource_type in _LOAD_BEARING else None))
                 page.goto(url, wait_until="load", timeout=timeout_ms)
+                if settle_ms:
+                    page.wait_for_timeout(settle_ms)
                 measurements = {
                     "scroll_width": page.evaluate("document.documentElement.scrollWidth"),
                     "inner_width": page.evaluate("window.innerWidth"),

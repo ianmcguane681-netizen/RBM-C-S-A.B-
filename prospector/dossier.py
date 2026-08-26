@@ -44,6 +44,7 @@ from prospector.images import Image, SUBJECT_OWN, ImageSet, download
 from prospector.locales import CATALOGUE, Locale
 from prospector.presence import Presence
 from prospector.site import render
+from prospector import standard
 from prospector.states import (COULD_NOT_LOOK_FOR_IMAGES, IMAGES_FOUND, SUBJECT_SUPPLIED,
                                SUPPLIED)
 from prospector.verify import verify
@@ -312,6 +313,53 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         f"designed page replaces the reference render:\n\n"
         f"```bash\npython -m prospector.verify {folder}\n```\n", encoding="utf-8")
     return folder
+
+
+def rebuild(folder: Path | str, *, operator: str, engagement: Engagement | None = None,
+            shoot_sample: bool = False) -> Path:
+    """Build this dossier again from its own evidence, picking up anything new.
+
+    This is the revisions loop and the publishing step in one call, and it deliberately
+    reads from `evidence.json` rather than from the map: the corrections a business sent
+    in live in that file, and a rebuild that went back to OpenStreetMap would quietly undo
+    them. `OWNER-SUPPLIED.json` is re-read on the way through, so a rebuild after a reply
+    is how their words and their photographs reach the page.
+    """
+
+    folder = Path(folder)
+    evidence = json.loads((folder / "evidence.json").read_text(encoding="utf-8"))
+    business = Business.from_evidence(evidence.get("business") or {})
+    presence_data = evidence.get("presence") or {}
+    presence = Presence(presence_data.get("status", ""), presence_data.get("url", ""),
+                        bool(presence_data.get("is_social_only")),
+                        presence_data.get("reason", ""))
+    decision_data = evidence.get("decision") or {}
+    decision = Decision(decision_data.get("status", "PREPARE"),
+                        decision_data.get("stage", ""), decision_data.get("reason", ""),
+                        decision_data.get("claim_key", ""),
+                        decision_data.get("opening_claim", ""))
+    condition = None
+    report = standard.rehydrate(evidence.get("standard"))
+    if report is not None or evidence.get("condition"):
+        condition_data = evidence.get("condition") or {}
+        condition = Condition(condition_data.get("status", "UNDETERMINED"),
+                              url=condition_data.get("url", ""), report=report,
+                              reason=condition_data.get("reason", ""))
+    images = ImageSet(
+        evidence.get("images_status", "NO_IMAGE_FOUND"),
+        tuple(Image(**{k: v for k, v in row.items() if k in Image.__slots__})
+              for row in (evidence.get("images") or []) if row.get("local_path")),
+        evidence.get("images_reason", ""))
+    country_data = evidence.get("country") or {}
+    country = Country(country_data.get("status", "COUNTRY_UNKNOWN"),
+                      country_data.get("code", ""), country_data.get("name", ""),
+                      tuple(country_data.get("languages", ())),
+                      country_data.get("regime", "UNKNOWN_REGIME"),
+                      country_data.get("basis", ""))
+    return write(business, presence, condition, decision, out_dir=folder.parent,
+                 operator=operator, site_url=presence.url, images=images,
+                 fetch_images=False, locale=evidence.get("language", "en"),
+                 country=country, engagement=engagement, shoot_sample=shoot_sample)
 
 
 def _sample_report(folder: Path, capture: Any):

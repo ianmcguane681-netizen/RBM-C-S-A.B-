@@ -29,6 +29,29 @@ Pick a county, press **Scan**, watch the log as it runs, open the briefings it p
 Same code path as the command line — the button builds an argv and calls `cli.main`, so
 there is no second implementation to drift.
 
+Everything else is on it too:
+
+- **Dossiers on disk**, read from the evidence files rather than from the log — because the
+  log says what a run reported and the disk says what exists, and those diverge the moment
+  a run is interrupted. Each row opens the briefing, the site, the before-and-after and the
+  note, and carries two actions: **rebuild** (pick up what the business sent back in
+  `OWNER-SUPPLIED.json`) and **record**.
+- **Engagements** — every business's stage, on whose say-so, and whether a live site is
+  being watched. Recording an authorisation from the page is writing down what a person
+  said; the same constructor refuses an automation, and `LIVE` still needs an authorisation
+  that permits `PUBLISH`.
+- **Live sites**, with **check now** — one watch run against the recorded baseline.
+- **The money**, with the unpriced lines named on the page rather than hidden in a total.
+- **Recent runs**, and next to the county picker, *"last scanned 6 days ago · 4 prepared"*.
+
+### On the cadence, which nobody has decided yet
+
+There is no scheduler, and that is the honest state of it rather than a gap. The run
+history is recorded instead — every scan, its area, its counts and its outcome, failures
+included — so the question "how often is a county worth re-scanning" gets answered from
+what actually happened. A county that yields four in March and nothing in April has told
+you something a number invented today would not.
+
 **Loopback only, and the bind address is not configurable.** The page serves contact
 details for real businesses and, on the costing panel, what an hour of your time is worth.
 Reaching it from another machine is a tunnel, not a flag.

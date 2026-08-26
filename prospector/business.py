@@ -61,6 +61,28 @@ class Business:
     #: printed on a page.
     raw: Mapping[str, Any] = field(default_factory=dict)
 
+    @classmethod
+    def from_evidence(cls, data: dict) -> "Business":
+        """A `Business` back from what `evidence.json` recorded.
+
+        Every fact keeps the source it was recorded with — including the ones a business
+        supplied about itself, which is the whole point of rebuilding from the file rather
+        than from the map: a rebuild that quietly reverted to OpenStreetMap would undo the
+        corrections somebody sent in.
+        """
+
+        def fact(value):
+            if isinstance(value, dict) and value.get("value"):
+                return Fact(value["value"], value.get("source", "unrecorded"),
+                            value.get("retrieved_at", ""))
+            return ABSENT
+
+        fields = {key: fact(value) for key, value in (data.get("fields") or {}).items()}
+        return cls(identity=data.get("identity", ""), name=fact(data.get("name")),
+                   kind=fact(data.get("kind")), website=fact(data.get("website")),
+                   fields={k: v for k, v in fields.items() if isinstance(v, Fact)},
+                   raw=data.get("raw") or {})
+
     def get(self, key: str) -> Fact | str:
         """The fact under `key`, or `ABSENT`. Never `None`, and never an empty string.
 

@@ -91,3 +91,8 @@ data/watch/
 # what they charge, which is not public-repository material. costs.example.json is the
 # committed shape.
 data/costs.json
+
+# Prospector's run history: which areas were scanned, when, and what came of each. Names
+# no business, but it is a record of where somebody has been working and it is the input
+# to any future scanning cadence, so it stays out of a public repository.
+data/runs.json

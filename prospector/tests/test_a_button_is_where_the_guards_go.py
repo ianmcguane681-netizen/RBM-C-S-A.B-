@@ -31,12 +31,15 @@ FIXTURE = str(PACKAGE / "fixtures/synthetic-area.overpass.json")
 @pytest.fixture()
 def dashboard(tmp_path):
     runner = Runner(out_dir=tmp_path / "dossiers", register=tmp_path / "prepared.json",
-                    costs=PACKAGE / "costs.example.json", operator="Ian McGuane")
+                    costs=PACKAGE / "costs.example.json", operator="Ian McGuane",
+                    engagements=tmp_path / "engagements.json",
+                    history=tmp_path / "runs.json", watch_dir=tmp_path / "watch")
     runner._argv = lambda **options: [  # noqa: SLF001 - the fixture stands in for a network
         "--area", "Invented Town", "--operator", "Ian McGuane", "--from-file", FIXTURE,
         "--out", str(runner.out_dir), "--register", str(runner.register),
         "--images", "none", "--browser", "never", "--no-fetch",
-        "--costs", str(PACKAGE / "costs.example.json")]
+        "--costs", str(PACKAGE / "costs.example.json"),
+        "--history", str(runner.history)]
     server = serve(runner, 0)
     port = server.server_address[1]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -210,3 +213,178 @@ def test_the_scan_is_the_same_code_path_as_the_command_line():
     assert callable(cli.main)
     source = (PACKAGE / "dashboard.py").read_text(encoding="utf-8")
     assert "cli.main(" in source
+
+
+# ---------------------------------------------------------------------------------------
+# Everything else on the page: the ledgers, the money, and the two actions that are allowed
+# ---------------------------------------------------------------------------------------
+
+def test_recording_what_a_person_said_is_allowed_and_being_that_person_is_not(dashboard):
+    """The dashboard writes down a decision. It cannot make one.
+
+    A named person authorising publication is exactly the record the gate wants, and typing
+    it in is data entry. What the page cannot do is supply the name itself, so the same
+    constructor refusal applies here as on the command line.
+    """
+
+    runner, base = dashboard
+    status, payload = _post(base, "/api/record", {
+        "identity": "node/1", "name": "Bridge End Barbers", "status": "AUTHORISED",
+        "by": "agent: webatron", "role": "owner", "via": "email", "on": "2026-08-27"})
+    assert status == 400
+    assert "names an automation" in payload["message"]
+
+    status, payload = _post(base, "/api/record", {
+        "identity": "node/1", "name": "Bridge End Barbers", "status": "AUTHORISED",
+        "by": "Cathy Doherty", "role": "owner", "via": "email 2026-08-27",
+        "on": "2026-08-27"})
+    assert status == 200 and payload["ok"]
+    rows = _get(base, "/api/engagements")["engagements"]
+    assert rows[0]["by"] == "Cathy Doherty"
+
+
+def test_an_authorisation_with_no_medium_is_refused_on_the_page_too(dashboard):
+    runner, base = dashboard
+    status, payload = _post(base, "/api/record", {
+        "identity": "node/1", "by": "Cathy Doherty", "role": "owner", "via": "",
+        "on": "2026-08-27"})
+    assert status == 400
+    assert "how it was given" in payload["message"]
+
+
+def test_marking_a_business_live_needs_the_authorisation_first(dashboard):
+    runner, base = dashboard
+    status, payload = _post(base, "/api/record", {"identity": "node/2", "status": "LIVE"})
+    assert status == 400
+    assert "needs an authorisation" in payload["message"]
+
+
+def test_an_unreadable_engagement_ledger_is_shown_as_unknown_rather_than_empty(dashboard):
+    """An empty list would read as "nobody has replied", which is a different fact."""
+
+    runner, base = dashboard
+    runner.engagements.parent.mkdir(parents=True, exist_ok=True)
+    runner.engagements.write_text("{ not json", encoding="utf-8")
+    rows = _get(base, "/api/engagements")["engagements"]
+    assert rows and rows[0]["status"] == "UNKNOWN"
+
+
+def test_rebuilding_a_dossier_picks_up_what_the_business_sent_back(dashboard):
+    """The revisions loop, from a button. Their words reach the page; nothing is invented."""
+
+    runner, base = dashboard
+    _post(base, "/api/scan", {"area": "Donegal"})
+    _settle(runner)
+    folder = next(runner.out_dir.glob("*/*/evidence.json")).parent
+    handover = folder / "OWNER-SUPPLIED.json"
+    handover.write_text(json.dumps({
+        "from": {"person": "Cathy Doherty", "role": "owner", "medium": "email",
+                 "on": "2026-08-27"},
+        "copy": {"about": "Two chairs, no appointments, and the kettle is on."}}),
+        encoding="utf-8")
+    relative = str(folder.relative_to(runner.out_dir))
+    status, payload = _post(base, "/api/rebuild", {"relative": relative})
+    assert status == 200 and payload["ok"], payload
+    assert "kettle is on" in (folder / "index.html").read_text(encoding="utf-8")
+
+
+def test_a_rebuild_outside_the_dossier_directory_is_refused(dashboard):
+    _, base = dashboard
+    status, payload = _post(base, "/api/rebuild", {"relative": "../../../etc"})
+    assert status == 400
+    assert payload["message"] == "no such dossier"
+
+
+def test_the_money_panel_says_what_has_not_been_priced(dashboard, tmp_path):
+    """The panel exists because the largest line is the one that gets left out."""
+
+    runner, base = dashboard
+    runner.costs = tmp_path / "nothing.json"
+    costs = _get(base, "/api/costs")
+    assert not costs["complete"]
+    assert "labour" in costs["unpriced"]
+    assert "does not exist" in costs["note"]
+
+
+def test_a_run_is_recorded_in_the_history_and_shown_against_the_area(dashboard):
+    """So a cadence can come out of what happened rather than out of a guess."""
+
+    runner, base = dashboard
+    _post(base, "/api/scan", {"area": "Donegal"})
+    _settle(runner)
+    history = _get(base, "/api/history")
+    assert history["runs"], "the run should be recorded"
+    assert history["runs"][0]["area"] == "Invented Town"
+    assert history["runs"][0]["outcome"] == "LOOKED"
+
+
+def test_an_area_nobody_has_scanned_says_so_rather_than_showing_nothing(dashboard):
+    runner, base = dashboard
+    areas = _get(base, "/api/history")["areas"]
+    assert areas["Mayo"]["status"] == "NEVER_SCANNED"
+
+
+def test_an_unreadable_history_is_not_read_as_never_scanned(dashboard):
+    """Which would send somebody over the same county the day the file went missing."""
+
+    runner, base = dashboard
+    runner.history.parent.mkdir(parents=True, exist_ok=True)
+    runner.history.write_text("{ not a list", encoding="utf-8")
+    areas = _get(base, "/api/history")["areas"]
+    assert areas["Mayo"]["status"] == "UNKNOWN"
+
+
+def test_a_live_site_with_no_baseline_is_not_watched_rather_than_fine(dashboard):
+    runner, base = dashboard
+    _post(base, "/api/record", {
+        "identity": "node/1", "name": "Bridge End Barbers", "status": "AUTHORISED",
+        "by": "Cathy Doherty", "role": "owner", "via": "email", "on": "2026-08-27",
+        "live_url": "https://bridgeendbarbers.example"})
+    watched = _get(base, "/api/watch")["watched"]
+    assert watched and watched[0]["status"] == "NOT_WATCHED"
+    assert "not the same as nothing having changed" in watched[0]["detail"]
+
+
+def test_the_page_actually_runs_in_a_browser(dashboard):
+    """A page that serves a 200 and then dies on a syntax error looks fine from Python.
+
+    This test exists because that happened: an escape sequence in the template rendered as
+    a real newline, the script broke on the first line that used it, and every panel sat
+    on its placeholder while the API behind it answered perfectly. Nothing in a Python
+    test could see it.
+    """
+
+    from prospector import browser
+
+    if not browser.available()[0]:
+        pytest.skip("Playwright is not installed here")
+
+    from playwright.sync_api import sync_playwright
+
+    runner, base = dashboard
+    runner.out_dir.mkdir(parents=True, exist_ok=True)
+    errors: list[str] = []
+    launch = {"args": ["--no-sandbox", "--disable-dev-shm-usage"]}
+    executable = browser.chromium_path()
+    if executable:
+        launch["executable_path"] = executable
+    proxy = __import__("os").environ.get("HTTPS_PROXY")
+    if proxy:
+        launch["proxy"] = {"server": proxy, "bypass": "localhost,127.0.0.1,::1"}
+    with sync_playwright() as engine:
+        chrome = engine.chromium.launch(**launch)
+        try:
+            page = chrome.new_page()
+            page.on("pageerror", lambda exc: errors.append(str(exc)))
+            page.goto(base + "/", wait_until="load", timeout=20000)
+            page.wait_for_timeout(2000)
+            options = page.eval_on_selector("#area", "el => el.options.length")
+            status = page.inner_text("#status")
+            money = page.inner_text("#costs")
+        finally:
+            chrome.close()
+
+    assert errors == [], errors
+    assert options == len(ireland.ALL), "the county picker did not populate"
+    assert status in (IDLE, FINISHED, RUNNING, FAILED)
+    assert "COST OF ONE SITE" in money, "the money panel never loaded"
