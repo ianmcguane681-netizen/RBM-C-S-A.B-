@@ -18,6 +18,48 @@ python -m pytest prospector/tests -q
 Standard library only, with one optional extra: Playwright, for the browser stage below.
 No model SDK, no HTTP client, no HTML parser, no framework.
 
+## The dashboard
+
+```bash
+python -m prospector.dashboard --operator "Ian McGuane"
+# Webatron on http://127.0.0.1:8765
+```
+
+Pick a county, press **Scan**, watch the log as it runs, open the briefings it produced.
+Same code path as the command line — the button builds an argv and calls `cli.main`, so
+there is no second implementation to drift.
+
+**Loopback only, and the bind address is not configurable.** The page serves contact
+details for real businesses and, on the costing panel, what an hour of your time is worth.
+Reaching it from another machine is a tunnel, not a flag.
+
+**There is no send button and no publish button.** Not disabled — absent, and the tests
+check the routes rather than the wording. A dashboard is exactly where those two become
+one-click actions, and one click is the wrong number for both. There is no stop button
+either, because there is no honest one: a half-killed scan leaves dossiers part-written
+and a register that disagrees with the disk. Use the limit.
+
+Four states, not two: `IDLE` (nobody has looked yet), `RUNNING`, `FINISHED` — which with
+nothing prepared is a real answer and reads as one — and `FAILED`, with the traceback on
+the page rather than in a terminal nobody was watching.
+
+## Ireland
+
+`ireland.py` carries the 31 local authorities and the six northern counties, spelled as
+OpenStreetMap spells them, with the four traps that each cost a run:
+
+- **Cork, Galway, Limerick and Waterford are each two areas.** The city is its own
+  authority and is *not* inside the county. Scanning "County Cork" and expecting Cork City
+  is the likeliest way to conclude a county is empty when it is not.
+- **Dublin is four**: Dublin City, Fingal, South Dublin, Dún Laoghaire–Rathdown.
+- **Tipperary is one now** — the ridings merged in 2014 and both old names still appear.
+- **The North is a different country for the rules that matter here**: PECR rather than the
+  Irish ePrivacy implementation, sterling, UK postcodes. A northern scan is run as `GB`
+  without being asked, and the dashboard groups those areas separately.
+
+Scan county by county rather than "Ireland": Overpass runs on donated hardware, and a run
+that dies halfway leaves you unable to tell an empty county from an interrupted one.
+
 ## Webatron: one folder per business, one page to read first
 
 Every run ends with `WEBATRON.md` — the whole run in one file — and a `BRIEFING.html` in

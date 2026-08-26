@@ -195,8 +195,13 @@ def capture(url: str, *, out_path: Path | str | None = None,
             if proxy:
                 # The browser is a separate process and does not read the environment the
                 # way an HTTP client does, so the proxy is passed explicitly rather than
-                # left to luck.
-                launch["proxy"] = {"server": proxy}
+                # left to luck — with the loopback bypassed, because a proxy asked to
+                # relay a request to 127.0.0.1 refuses it, and the first thing anybody
+                # renders locally is a file they just wrote or a page they are serving.
+                no_proxy = os.environ.get("NO_PROXY") or os.environ.get("no_proxy") or ""
+                bypass = ",".join(part for part in
+                                  ["localhost", "127.0.0.1", "::1", no_proxy] if part)
+                launch["proxy"] = {"server": proxy, "bypass": bypass}
             browser = engine.chromium.launch(**launch)
             try:
                 page = browser.new_page(viewport={"width": width, "height": height},

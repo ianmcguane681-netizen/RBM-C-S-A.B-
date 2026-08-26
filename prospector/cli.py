@@ -160,14 +160,16 @@ def _brief(business, presence, condition, decision, folder, language, operator, 
     return prepared
 
 
-def run(args: argparse.Namespace) -> int:
+def run(args: argparse.Namespace, stream=None, errors=None) -> int:
+    out = stream or sys.stdout
+    err = errors or sys.stderr
     operator = args.operator.strip()
     lowered = operator.lower()
     if lowered in REFUSED_OPERATORS or any(lowered.startswith(prefix)
                                            for prefix in AUTOMATION_PREFIXES):
         print(f"REFUSED: --operator {operator!r} names an automation. A sample site carries "
               f"a real business's name and must be signed by the person who stands over "
-              f"sending it.", file=sys.stderr)
+              f"sending it.", file=err)
         return 2
 
     if args.from_file:
@@ -184,7 +186,7 @@ def run(args: argparse.Namespace) -> int:
         discovery = overpass.discover(args.area, limit=args.limit,
                                       transport=overpass._Transport(args.endpoint))
 
-    print(discovery.describe())
+    print(discovery.describe(), file=out)
     if discovery.status != LOOKED:
         # Nothing below this line would be true, so nothing below this line runs.
         return 1
@@ -233,59 +235,60 @@ def run(args: argparse.Namespace) -> int:
         else:
             tally.indeterminate.append(f"{label} — [{decision.stage}] {decision.reason}")
 
-    _report(discovery, tally, out_dir, dry=args.dry)
+    _report(discovery, tally, out_dir, dry=args.dry, out=out)
     if not args.dry:
         digest = webatron.write_digest(
             tally.briefings, out_dir=out_dir, operator=operator, costing=costing,
             area=args.area, refused=tally.refused, indeterminate=tally.indeterminate)
-        print(f"{webatron.NAME:14} {digest}")
+        print(f"{webatron.NAME:14} {digest}", file=out)
         if costs_note:
-            print(f"{'':14} costs: {costs_note}")
+            print(f"{'':14} costs: {costs_note}", file=out)
         if args.notify_command:
             sent, how = webatron.notify(args.notify_command, digest)
-            print(f"{'NOTIFY':14} {'sent' if sent else 'NOT SENT — ' + how}")
+            print(f"{'NOTIFY':14} {'sent' if sent else 'NOT SENT — ' + how}", file=out)
     return 0
 
 
-def _report(discovery, tally: Tally, out_dir: Path, *, dry: bool) -> None:
-    print()
+def _report(discovery, tally: Tally, out_dir: Path, *, dry: bool, out=None) -> None:
+    out = out or sys.stdout
+    print(file=out)
     ok, reason = browser.available()
     if ok:
         print("BROWSER        available: mobile criteria were measured in a phone-sized "
-              "window, and screenshots were taken")
+              "window, and screenshots were taken", file=out)
     else:
         # Said once, loudly, because every mobile criterion below is markup-only and that
         # is a weaker claim than the report would otherwise look like it is making.
-        print(f"BROWSER        NOT AVAILABLE — {reason}")
-        print("               Mobile checks are markup-only for this run. That is not the "
-              "same as them passing.")
-    print(f"PREPARED       {len(tally.prepared)}")
+        print(f"BROWSER        NOT AVAILABLE — {reason}", file=out)
+        print("               Mobile checks are markup-only for this run. That is not "
+              "the same as them passing.", file=out)
+    print(f"PREPARED       {len(tally.prepared)}", file=out)
     for line in tally.prepared:
-        print(f"  {line}")
-    print(f"REFUSED        {len(tally.refused)}   (a stage said no, and named itself)")
+        print(f"  {line}", file=out)
+    print(f"REFUSED        {len(tally.refused)}   (a stage said no, and named itself)", file=out)
     for line in tally.refused:
-        print(f"  {line}")
+        print(f"  {line}", file=out)
     print(f"INDETERMINATE  {len(tally.indeterminate)}   (could not be evaluated — NOT a "
-          f"refusal, and NOT nothing)")
+          f"refusal, and NOT nothing)", file=out)
     for line in tally.indeterminate:
-        print(f"  {line}")
+        print(f"  {line}", file=out)
     if tally.unrecorded:
         # Loud, because the consequence lands next week rather than now: an unrecorded
         # preparation is a business this will prepare and approach for a second time.
-        print(f"\nNOT RECORDED IN THE REGISTER  {len(tally.unrecorded)}")
+        print(f"\nNOT RECORDED IN THE REGISTER  {len(tally.unrecorded)}", file=out)
         print("  These were prepared and the register could not be written, so a later "
-              "run will prepare them again:")
+              "run will prepare them again:", file=out)
         for line in tally.unrecorded:
-            print(f"  {line}")
-    print()
+            print(f"  {line}", file=out)
+    print(file=out)
     if dry:
-        print("Dry run: nothing was written and nothing was recorded.")
+        print("Dry run: nothing was written and nothing was recorded.", file=out)
     else:
         print(f"Dossiers in {out_dir}. Nothing has been sent to anybody — each folder "
-              f"holds a draft note for you to read, edit and send yourself.")
+              f"holds a draft note for you to read, edit and send yourself.", file=out)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, stream=None, errors=None) -> int:
     parser = argparse.ArgumentParser(
         prog="prospector",
         description="Find businesses whose web presence is absent or broken, and build "
@@ -344,4 +347,4 @@ def main(argv: list[str] | None = None) -> int:
                         help="how many photographs to gather per business")
     parser.add_argument("--dry", action="store_true",
                         help="decide everything, write nothing, record nothing")
-    return run(parser.parse_args(argv))
+    return run(parser.parse_args(argv), stream=stream, errors=errors)
