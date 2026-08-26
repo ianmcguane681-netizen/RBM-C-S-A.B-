@@ -149,3 +149,22 @@ The two objections from the assessment above stand and are not solved by code. T
 still rests on a demand forecast, and volume still turns a generous piece of speculative
 work into a bulk mailing. Both are decisions for a named person, which is why the tool
 hands over a folder rather than sending anything.
+
+---
+
+## Extracted, 2026-08-26: the `webatron` repository
+
+`prospector/` was lifted out into a standalone repository, which is what it was laid out
+for. What went with it: the package, its 183 tests, `STANDARD.md`, a `CLAUDE.md` carrying
+the doctrine that actually applies there, a `pyproject.toml` with two console scripts and
+no runtime dependencies, and a CI workflow that runs the suite and checks two properties
+the code claims about itself — standard library only, and no mail path.
+
+The extraction is a copy rather than a move, and **that is a decision somebody has to make
+rather than a state to leave alone**. Two copies of a package drift, the tests stop being
+the same tests, and a fix lands in one of them. Either this directory comes out once the
+new repository is real, or this one becomes the copy nobody edits and says so at the top.
+Leaving both live and unlabelled is the option that costs the most later.
+
+Nothing else in this repository imports `prospector`, so removing it is a deletion rather
+than a refactor whenever that is wanted.
