@@ -1,4 +1,4 @@
-# Prospector
+# Prospector — the Webatron pipeline
 
 Point it at an area. It reads the public business directory for that area, works out which
 businesses have no website listed or a website with something demonstrably wrong with it,
@@ -18,10 +18,84 @@ python -m pytest prospector/tests -q
 Standard library only, with one optional extra: Playwright, for the browser stage below.
 No model SDK, no HTTP client, no HTML parser, no framework.
 
+## Webatron: one folder per business, one page to read first
+
+Every run ends with `WEBATRON.md` — the whole run in one file — and a `BRIEFING.html` in
+each dossier, answering the four questions in the order they get asked:
+
+1. **What did you build, and can I see it** — both screenshots, and links to every file
+2. **Who exactly am I contacting, and how** — every published route, in the order to try
+   them, each with its source
+3. **Why should their site be this one** — criterion by criterion, both pages measured by
+   the same standard, including the ones the sample does *not* fix
+4. **What does this cost me** — build, deploy, secure, watch, with every unpriced line
+   named rather than left out
+
+```bash
+python -m prospector --area "County Donegal" --operator "Ian McGuane" \
+    --costs data/costs.json --notify-command "my-telegram-send {digest}"
+```
+
+**Webatron proposes and never authorises.** It cannot send — there is no mail path in this
+package and a test asserts the absence. It cannot publish — that needs an `Authorisation`
+naming a person at the business. And it cannot sign a page: `--operator` refuses
+`webatron`, `prospector`, and the `agent:`/`ai:`/`bot:` prefixes, because a page carrying
+a stranger's business name is signed by whoever stands over sending it.
+
+### The case is two measurements, not adjectives
+
+Modern, clean, fast, mobile-friendly — everything the last person to email this business
+also said. Instead both pages go through the same twenty-three criteria and every point
+prints both sides:
+
+[MOBILE] It is built for a phone screen theirs: no viewport tag, so phones render the page
+at desktop width and shrink it ours: meta viewport is set to the device width why: most
+local searches are on a phone
+
+Nobody has to be persuaded of anything — they can open their own site on their own phone.
+And **where the sample does not fix something, the case says so**: a pitch that only lists
+wins reads like every other pitch; one that says "these three are fixed, this fourth needs
+you" reads like somebody who actually looked. For a business with no site listed at all,
+the case is what the page does that nothing does for them today — worded from what was
+established, so a silent directory reads as "nothing listed for them", never "you have no
+website".
+
+### Contacts: business channels, published by the business
+
+Phone, email, contact form, the social account on their own listing, the trading address —
+in the order to try them, each with its source. **It will not assemble a person**: no
+looking up the director, no guessing `firstname@`, no personal mobile off a Facebook post.
+A named individual's work address is still personal data; `info@shop.ie` mostly is not,
+and that difference is the difference between business development and something a
+recipient would rightly be annoyed about. Where a business has itself published "ask for
+Cathy", that is a fact with a source and it is recorded.
+
+### The money, with the largest line refusing to be forgotten
+
+```
+COST OF ONE SITE (EUR)
+  Your time, build and revisions       EUR 360.00 once    6h build + 2h revisions at EUR 45/h
+  Domain registration                   EUR 19.99 /year   varies by TLD and registrar
+  Hosting                                EUR 0.00 /month  a free tier is a price with conditions
+  ...
+  FIRST YEAR                           EUR 403.99
+```
+
+Unset lines are `UNPRICED`, never zero, and a costing with one refuses to call itself
+complete: it reports *"at least €X, plus 3 lines nobody has priced: labour, domain,
+hosting"*. Leaving labour out is how a site appears to cost twelve euro and a person ends
+up working for four euro an hour and calling it margin. Copy `costs.example.json` to
+`data/costs.json`.
+
+**No revenue anywhere in it.** What a site is worth to somebody is a negotiation; what a
+retainer is worth next quarter is a forecast, and this package refuses those for the same
+reason the parent repository does.
+
 ## What it does, stage by stage
 
 ```
-discover ─► seen ─► presence ─► condition ─► decide ─► images ─► brief ─► verify ─► you
+discover ─► seen ─► presence ─► condition ─► decide ─► images ─► brief ─► verify ─►
+                                                      contacts ─► case ─► costs ─► you
    │          │         │           │           │         │         │        │
 OSM via    have I    is there    what is     PREPARE   theirs,   what to   nothing
 Overpass   already   a site      wrong       REFUSED   or CC-    design,   on the

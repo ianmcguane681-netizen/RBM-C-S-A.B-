@@ -86,3 +86,8 @@ dossiers/
 # code that produces it is not.
 data/engagements.json
 data/watch/
+
+# Prospector's rates. Not subjects, but it is what an hour of somebody's time is worth and
+# what they charge, which is not public-repository material. costs.example.json is the
+# committed shape.
+data/costs.json

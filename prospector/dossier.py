@@ -247,10 +247,12 @@ def write(business: Business, presence: Presence, condition: Condition | None,
     # exists, because one of the two pictures is of it.
     their_capture = getattr(condition, "capture", None)
     sample_shot = ""
+    sample_capture = None
     if shoot_sample:
         shot = browser.capture((folder / "index.html").resolve().as_uri(),
                                out_path=folder / "sample-mobile.png")
         sample_shot = Path(shot.screenshot_path).name if shot.screenshot_path else ""
+        sample_capture = shot
     if their_capture is not None and getattr(their_capture, "screenshot_path", ""):
         source = Path(their_capture.screenshot_path)
         if source.exists():
@@ -288,6 +290,11 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         "images_status": images.status,
         "images_reason": images.reason,
         "standard": _serialise(getattr(condition, "report", None)),
+        # The sample put through the same criteria as their site. Stored rather than
+        # recomputed because the case Webatron makes is exactly these two reports side by
+        # side, and a case built from a different measurement than the one on file is a
+        # case nobody can check.
+        "sample_standard": _serialise(_sample_report(folder, sample_capture)),
         "capture": _serialise(their_capture),
         "sample_screenshot": sample_shot,
     }
@@ -305,6 +312,17 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         f"designed page replaces the reference render:\n\n"
         f"```bash\npython -m prospector.verify {folder}\n```\n", encoding="utf-8")
     return folder
+
+
+def _sample_report(folder: Path, capture: Any):
+    """The standard, run over the page this package just wrote."""
+
+    from prospector import standard
+
+    html = (folder / "index.html").read_text(encoding="utf-8")
+    return standard.assess(html, url=str(folder / "index.html"), status=200,
+                           reached=True, https_available=True,
+                           byte_size=len(html.encode("utf-8")), capture=capture)
 
 
 def _with_screenshot_name(capture, name: str):

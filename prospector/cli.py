@@ -14,8 +14,10 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from prospector import (browser, cascade, condition as condition_mod, dossier,
-                        images as images_mod, presence as presence_mod)
+from prospector import (browser, cascade, case as case_mod, condition as condition_mod,
+                        contacts as contacts_mod, costs as costs_mod, dossier,
+                        images as images_mod, presence as presence_mod, standard,
+                        webatron)
 from prospector.business import Business, Fact
 from prospector.countries import COUNTRY_KNOWN, Country, from_tags, lookup
 from prospector.countries import UNKNOWN as COUNTRY_UNKNOWN
@@ -23,16 +25,21 @@ from prospector.locales import LANGUAGE_AVAILABLE, choose
 from prospector.seen import Register
 from prospector.sources import overpass
 from prospector.states import (COULD_NOT_LOOK, COULD_NOT_LOOK_FOR_IMAGES, LOOKED,
-                               NO_SITE_FOUND, SITE_LISTED, SITE_REACHED)
+                               NO_SITE_FOUND, NO_SITE_LISTED, SITE_LISTED, SITE_REACHED)
 
 #: Refused as an operator name, in the parent repository's list and for its reason: the
 #: sample page is signed, the signature is an attribution to a person, and a person is the
 #: only thing that can stand over an approach to a stranger's business.
 AUTOMATION_PREFIXES = ("agent:", "ai:", "model:", "automation:", "bot:", "system:")
 
+#: And the name of this package's own agent, because the temptation is real once it has
+#: one. Webatron assembles the briefing; a person signs the page and sends the mail.
+REFUSED_OPERATORS = ("webatron", "prospector")
+
 
 @dataclass
 class Tally:
+    briefings: list = field(default_factory=list)
     prepared: list[str] = field(default_factory=list)
     refused: list[str] = field(default_factory=list)
     indeterminate: list[str] = field(default_factory=list)
@@ -114,10 +121,50 @@ def _country_for(business: Business, discovery, args) -> Country:
     return COUNTRY_UNKNOWN
 
 
+def _brief(business, presence, condition, decision, folder, language, operator, costing):
+    """Assemble everything Webatron has to say about one business, and write the briefing.
+
+    The two reports come off disk rather than being recomputed, so the case is made from
+    the same measurements the dossier recorded. A case built from a fresh assessment could
+    disagree with `EVIDENCE.md` and there would be no way to tell which was right.
+    """
+
+    import json
+
+    their_report = getattr(condition, "report", None)
+    our_report = None
+    try:
+        evidence = json.loads((folder / "evidence.json").read_text(encoding="utf-8"))
+        our_report = standard.rehydrate(evidence.get("sample_standard"))
+        if their_report is None:
+            their_report = standard.rehydrate(evidence.get("standard"))
+    except (OSError, ValueError):
+        pass
+
+    prepared = webatron.Prepared(
+        identity=business.identity, name=business.name_in(language.locale.code).value,
+        folder=folder, contacts=contacts_mod.assemble(business),
+        case=case_mod.build(
+            their_report, our_report,
+            has_site=presence.status not in (NO_SITE_FOUND, NO_SITE_LISTED),
+            established_absence=presence.may_claim_no_website,
+            no_site_reason=("a search found no website for this business"
+                            if presence.may_claim_no_website else
+                            "no website is listed for them in the public directories, "
+                            "which is not the same as them having none")),
+        presence_status=presence.status, language=language.locale.code,
+        language_reviewed=language.locale.reviewed,
+        unknowns=tuple(f.detail for f in getattr(condition, "findings", ())
+                       if f.code == "INDETERMINATE"))
+    webatron.write_briefing(prepared, operator=operator, costing=costing, folder=folder)
+    return prepared
+
+
 def run(args: argparse.Namespace) -> int:
     operator = args.operator.strip()
     lowered = operator.lower()
-    if any(lowered.startswith(prefix) for prefix in AUTOMATION_PREFIXES):
+    if lowered in REFUSED_OPERATORS or any(lowered.startswith(prefix)
+                                           for prefix in AUTOMATION_PREFIXES):
         print(f"REFUSED: --operator {operator!r} names an automation. A sample site carries "
               f"a real business's name and must be signed by the person who stands over "
               f"sending it.", file=sys.stderr)
@@ -145,6 +192,8 @@ def run(args: argparse.Namespace) -> int:
     register = Register(Path(args.register))
     out_dir = Path(args.out) / dossier.slug(args.area)
     tally = Tally()
+    rates, currency, costs_note = costs_mod.load(args.costs)
+    costing = costs_mod.cost_of_one_site(rates, currency=currency)
 
     for business in discovery.businesses:
         label = f"{business.name.value} ({business.identity})"
@@ -177,12 +226,24 @@ def run(args: argparse.Namespace) -> int:
             unreviewed = "" if language.locale.reviewed else "  UNREVIEWED TRANSLATION"
             tally.prepared.append(f"{label} [{language.locale.code}] -> {folder}"
                                   f"{unreviewed}")
+            tally.briefings.append(_brief(business, presence, condition, decision, folder,
+                                          language, operator, costing))
         elif decision.status == cascade.REFUSED:
             tally.refused.append(f"{label} — [{decision.stage}] {decision.reason}")
         else:
             tally.indeterminate.append(f"{label} — [{decision.stage}] {decision.reason}")
 
     _report(discovery, tally, out_dir, dry=args.dry)
+    if not args.dry:
+        digest = webatron.write_digest(
+            tally.briefings, out_dir=out_dir, operator=operator, costing=costing,
+            area=args.area, refused=tally.refused, indeterminate=tally.indeterminate)
+        print(f"{webatron.NAME:14} {digest}")
+        if costs_note:
+            print(f"{'':14} costs: {costs_note}")
+        if args.notify_command:
+            sent, how = webatron.notify(args.notify_command, digest)
+            print(f"{'NOTIFY':14} {'sent' if sent else 'NOT SENT — ' + how}")
     return 0
 
 
@@ -249,6 +310,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-fetch", dest="fetch", action="store_false",
                         help="do not fetch any business's website; every site condition "
                              "becomes UNDETERMINED and nothing with a site is prepared")
+    parser.add_argument("--costs", default=str(costs_mod.CONFIG),
+                        help="rates for the costing on every briefing. Anything absent is "
+                             "UNPRICED rather than zero, so the first run tells you what "
+                             "you have not decided. See costs.example.json")
+    parser.add_argument("--notify-command", default="",
+                        help="a command to hand the digest to, with {digest} substituted. "
+                             "There is no mail path in this package; this runs whatever "
+                             "you already use, and reports its exit code rather than "
+                             "swallowing it")
     parser.add_argument("--browser", choices=("auto", "never"), default="auto",
                         help="open each site in a phone-sized browser to measure what "
                              "actually renders and to screenshot it beside the sample. "

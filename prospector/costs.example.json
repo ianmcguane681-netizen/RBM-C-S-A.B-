@@ -1,0 +1,13 @@
+{
+  "_read_me": "Copy to data/costs.json and put your own numbers in. Anything absent is UNPRICED, not zero — that is deliberate, so the first costing tells you what you have not decided. Delete a key to un-price it again.",
+  "currency": "EUR",
+  "build_hours": 6,
+  "revision_hours": 2,
+  "hourly_rate": 45,
+  "domain_per_year": 19.99,
+  "hosting_per_month": 0,
+  "tls_per_year": 0,
+  "email_per_month": 1.5,
+  "monitoring_per_month": 0.5,
+  "acquisition_per_prospect": 0
+}

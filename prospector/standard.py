@@ -478,6 +478,27 @@ def _fixed_widths(document: _Document) -> list[int]:
     return widths
 
 
+def rehydrate(data: Any) -> Report | None:
+    """A `Report` back from what `evidence.json` stored, or `None` where there is none.
+
+    Reading the measurement off disk rather than taking it again is what keeps a briefing
+    and its evidence file talking about the same page: a fresh assessment could disagree
+    with the record, and there would be no way to tell which one was right.
+    """
+
+    if not isinstance(data, dict) or not data.get("assessments"):
+        return None
+    assessments = []
+    for row in data["assessments"]:
+        code = row.get("code")
+        if code in BY_CODE:
+            assessments.append(Assessment(code, row.get("state", NOT_ASSESSED),
+                                          row.get("detail", "")))
+    if not assessments:
+        return None
+    return Report(tuple(assessments), url=data.get("url", ""), reason=data.get("reason", ""))
+
+
 def assess(html: str, *, url: str = "", status: int | None = None,
            https_available: bool | None = None, reached: bool | None = None,
            byte_size: int | None = None, capture: Any = None) -> Report:
