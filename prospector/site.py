@@ -36,11 +36,11 @@ from __future__ import annotations
 import html
 import json
 import re
-from typing import Sequence
+from typing import Any, Mapping, Sequence
 
 from prospector.business import Business, Fact
 from prospector.locales import CATALOGUE, NUMBER_LAST, RTL, Locale
-from prospector.states import SUBJECT_OWN
+from prospector.states import SUBJECT_OWN, SUBJECT_SUPPLIED
 
 #: Fields that become the contact block, in the order a person reads them.
 _CONTACT_ORDER = (("phone", "Phone"), ("email", "Email"))
@@ -171,6 +171,7 @@ h2{font-size:clamp(26px,4.4vw,38px);line-height:1.15;letter-spacing:-.015em;marg
 font-weight:600}
 h3{font-size:17px;margin:0 0 5px;font-weight:600}
 .lede{color:var(--muted);max-width:56ch;margin:0 0 26px}
+.big-lede{color:var(--ink);font-size:clamp(20px,3vw,26px);line-height:1.45;max-width:34ch}
 .hours{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
 font-size:16px;margin:0}
 .note{color:var(--muted);font-size:13.5px;margin:12px 0 0}
@@ -267,10 +268,19 @@ def _map_href(business: Business) -> str:
     return f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=18/{lat}/{lon}"
 
 
+def _caption_for(image, locale: Locale) -> tuple[str, str]:
+    if image.provenance == SUBJECT_SUPPLIED:
+        # The only provenance with no question attached: they own it and they sent it.
+        return locale.text("supplied_caption"), locale.text("own_alt")
+    if image.provenance == SUBJECT_OWN:
+        return locale.text("own_caption"), locale.text("own_alt")
+    return locale.text("stock_caption"), locale.text("stock_alt")
+
+
 def _figure(image, locale: Locale) -> str:
     src = image.local_path or image.url
-    if image.provenance == SUBJECT_OWN:
-        caption, alt = locale.text("own_caption"), locale.text("own_alt")
+    if image.provenance in (SUBJECT_OWN, SUBJECT_SUPPLIED):
+        caption, alt = _caption_for(image, locale)
     else:
         caption, alt = locale.text("stock_caption"), locale.text("stock_alt")
     return (f'<figure><img src="{_esc(src)}" alt="{_esc(alt)}" loading="lazy">'
@@ -278,17 +288,40 @@ def _figure(image, locale: Locale) -> str:
 
 
 def render(business: Business, *, operator: str, sources: Sequence[str] = (),
-           images: Sequence = (), locale: Locale | str = "en") -> str:
-    """One self-contained page. `operator` is the person whose sample this is."""
+           images: Sequence = (), locale: Locale | str = "en",
+           copy: Mapping[str, str] | None = None, authorisation: Any = None) -> str:
+    """One self-contained page.
+
+    `copy` is what the business itself sent back — see `handover.py`. It is printed as
+    written. Nothing here composes, improves or extends it, because a sentence about a
+    business written by anything other than that business is invention however good it
+    sounds.
+
+    `authorisation` turns the sample into their site. Passing one removes the "unofficial
+    sample" banner and the `noindex` — the moment a page stops being speculative work and
+    becomes a business's public face — so it is validated rather than believed, and a
+    record that does not permit publishing raises instead of quietly rendering a sample.
+    """
 
     if not operator.strip():
         raise ValueError("a sample page must name the person who prepared it")
+    published = False
+    if authorisation is not None:
+        from prospector.engagement import NotAuthorised, PUBLISH
+
+        if not getattr(authorisation, "permits", lambda scope: False)(PUBLISH):
+            raise NotAuthorised(
+                "the authorisation passed to render() does not permit PUBLISH, so the "
+                "sample banner cannot come off. Publishing is the one thing in this "
+                "package that a flag does not decide.")
+        published = True
     if isinstance(locale, str):
         # A code with no strings raises rather than falling back: `locales.choose` is where
         # an unavailable language is turned into a refusal, and reaching here with one
         # means that stage was skipped.
         locale = CATALOGUE[locale]
 
+    copy = dict(copy or {})
     display = business.name_in(locale.code)
     name = display.value
     trade = business.kind.value.replace("_", " ")
@@ -347,9 +380,25 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
     credits = "".join(f"<li>{_esc(image.attribution)}</li>" for image in images
                       if image.attribution)
 
+    # A gap the business has already filled is not a gap. The section disappears entirely
+    # once they have answered all of it, which is what the page becoming theirs looks like.
+    supplied_photo = any(getattr(i, "provenance", "") == SUBJECT_SUPPLIED for i in images)
+    filled = {"gap_photos_title": supplied_photo,
+              "gap_words_title": bool(copy.get("about")),
+              "gap_services_title": bool(copy.get("services"))}
     gaps = "".join(f'<div class="gap"><h3>{_esc(locale.text(title))}</h3>'
                    f'<p>{_esc(locale.text(body))}</p></div>'
-                   for title, body in _GAP_KEYS)
+                   for title, body in _GAP_KEYS if not filled.get(title))
+
+    # Their words, printed as written.
+    words = ""
+    if copy.get("about"):
+        words += (f'<section class="wrap"><p class="lede serif big-lede">'
+                  f'{_esc(copy["about"])}</p></section>')
+    if copy.get("services"):
+        words += (f'<section class="wrap"><h2 class="serif">'
+                  f'{_esc(locale.text("gap_services_title"))}</h2>'
+                  f'<p class="lede">{_esc(copy["services"])}</p></section>')
 
     visit_rows = []
     if address:
@@ -377,6 +426,10 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
     description = ", ".join(part for part in
                             (name, trade, city.value if isinstance(city, Fact) else "")
                             if part)
+    # The ODbL attribution is a licence condition on OpenStreetMap data, so it appears
+    # exactly when OSM data is still on the page — which after a handover is often not the
+    # case, the business having corrected everything themselves.
+    osm_sourced = any("openstreetmap" in str(s).lower() for s in sources)
     source_items = "".join(f"<li>{_esc(s)}</li>" for s in sources)
     kicker = " &middot; ".join(_esc(p) for p in
                                (trade, city.value if isinstance(city, Fact) else "") if p)
@@ -386,7 +439,7 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
+{'' if published else '<meta name="robots" content="noindex, nofollow">'}
 <meta name="description" content="{_esc(description)}">
 <meta property="og:title" content="{_esc(name)}">
 <meta property="og:description" content="{_esc(description)}">
@@ -399,8 +452,8 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
 </script>
 </head>
 <body>
-<div class="banner"><strong>{_esc(locale.text("banner_lead"))}</strong>
-{_esc(locale.text("banner_body", operator=operator, name=name))}</div>
+{'' if published else f'''<div class="banner"><strong>{_esc(locale.text("banner_lead"))}</strong>
+{_esc(locale.text("banner_body", operator=operator, name=name))}</div>'''}
 <div class="wrap">
   <div class="top"><span class="mark serif">{_esc(name)}</span>{tel}</div>
 </div>
@@ -418,17 +471,19 @@ def render(business: Business, *, operator: str, sources: Sequence[str] = (),
 </header>
 {facts}
 {gallery}
-<section class="wrap">
+{words}
+{f'''<section class="wrap">
   <h2 class="serif">{_esc(locale.text("missing_heading"))}</h2>
   <div class="gaps">{gaps}</div>
-</section>
+</section>''' if gaps else ""}
 {visit}
 <footer><div class="wrap">
   <p>{_esc(locale.text("sources_intro"))}</p>
   <ul>{source_items}</ul>
   {f'<ul>{credits}</ul>' if credits else ''}
-  <p>{_esc(locale.text("attribution_note"))}</p>
-  <p>{_esc(locale.text("prepared_by", operator=operator))}</p>
+  {f'<p>{_esc(locale.text("attribution_note"))}</p>' if osm_sourced else ''}
+  <p>{_esc(locale.text("prepared_by", operator=operator)) if not published
+       else _esc(f"Built by {operator} for {name}.")}</p>
 </div></footer>
 {f'<nav class="callbar">{tel}</nav>' if tel else ''}
 </body>

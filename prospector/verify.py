@@ -32,6 +32,12 @@ here has spoken to, and none of them can be sourced from a map.
 photograph must carry its label — because an unlabelled stock photograph on a page headed
 with a business's name is a picture of premises that are not theirs, presented as theirs.
 
+**The banner, in whichever direction applies.** A sample that does not say it is a sample
+is a forgery of somebody's web presence — and a published site that still says it is a
+sample is an embarrassment on their own front page, so the check inverts once an
+authorisation exists. A page whose evidence says "published" with no record of who
+authorised it is the loudest finding this module has.
+
 **The banner.** A sample that does not say it is a sample is a forgery of somebody's web
 presence. It is checked here as well as generated, because the page may not have come from
 this program at all.
@@ -150,6 +156,9 @@ def _evidence_values(evidence: dict) -> list[str]:
             values.append(str(entry["value"]))
     raw = (business.get("raw") or {}).get("tags") or {}
     values += [str(v) for v in raw.values()]
+    # What the business itself sent back. Their sentences are evidence with a source, so a
+    # phrase inside them is sourced — "family-run" written by the family is a fact.
+    values += [str(v) for v in (evidence.get("copy") or {}).values() if v]
     return values
 
 
@@ -195,24 +204,45 @@ def verify(page_html: str, evidence: dict, *, operator: str = "",
 
     banner = locale.text("banner_lead").lower().rstrip(".")
     disclaimer = locale.text("not_affiliated_marker").lower()
-    if banner not in lowered:
-        problems.append(Problem("NO_SAMPLE_BANNER",
-                                f"the page does not say it is an unofficial sample "
-                                f"({banner!r} in {locale.name}). A page carrying a "
-                                f"business's name that does not say this is a forgery of "
-                                f"their web presence"))
-    if disclaimer not in lowered:
-        problems.append(Problem("NO_DISCLAIMER",
-                                f"the page does not disclaim affiliation with the business "
-                                f"({disclaimer!r} in {locale.name})"))
-    if operator and operator.lower() not in lowered:
-        problems.append(Problem("UNSIGNED",
-                                f"the page does not name {operator}, so nobody is standing "
-                                f"behind it"))
-    if "noindex" not in parser.robots:
-        problems.append(Problem("INDEXABLE",
-                                "the page does not ask search engines to leave it alone, "
-                                "so a sample about somebody's business could outrank them"))
+    published = bool(evidence.get("published"))
+    if published:
+        # The checks invert. A live site carrying "unofficial sample" is an embarrassment
+        # on the business's own front page, and a live site nobody can index is a site
+        # nobody can find — which is most of what they are paying for.
+        authorisation = evidence.get("authorisation") or {}
+        if not (authorisation.get("person") and authorisation.get("medium")):
+            problems.append(Problem(
+                "PUBLISHED_WITHOUT_AUTHORISATION",
+                "the evidence says this page is published and carries no record of who "
+                "at the business authorised it. That record is the only thing separating "
+                "a live site from a page put on the internet under somebody's name"))
+        if banner in lowered:
+            problems.append(Problem("BANNER_ON_A_LIVE_SITE",
+                                    "the published page still carries the sample banner"))
+        if "noindex" in parser.robots:
+            problems.append(Problem("LIVE_BUT_HIDDEN",
+                                    "the published page tells search engines to ignore "
+                                    "it, so nobody will find the business through it"))
+    else:
+        if banner not in lowered:
+            problems.append(Problem("NO_SAMPLE_BANNER",
+                                    f"the page does not say it is an unofficial sample "
+                                    f"({banner!r} in {locale.name}). A page carrying a "
+                                    f"business's name that does not say this is a forgery "
+                                    f"of their web presence"))
+        if disclaimer not in lowered:
+            problems.append(Problem("NO_DISCLAIMER",
+                                    f"the page does not disclaim affiliation with the "
+                                    f"business ({disclaimer!r} in {locale.name})"))
+        if operator and operator.lower() not in lowered:
+            problems.append(Problem("UNSIGNED",
+                                    f"the page does not name {operator}, so nobody is "
+                                    f"standing behind it"))
+        if "noindex" not in parser.robots:
+            problems.append(Problem("INDEXABLE",
+                                    "the page does not ask search engines to leave it "
+                                    "alone, so a sample about somebody's business could "
+                                    "outrank them"))
 
     for match in set(_PHONE.findall(text)):
         digits = _digits(match)

@@ -245,6 +245,56 @@ one: a rural county carries a fraction of its businesses and far fewer website t
 does not make the tool wrong; it makes `NO_SITE_LISTED` mean less than it looks like it
 means, which is why nothing here promotes it to a claim about the business.
 
+## After the yes: revisions, publishing, monitoring
+
+The sample is full of labelled gaps on purpose — those gaps are what gets a reply, and the
+reply is where the business becomes a customer.
+
+**Revisions arrive as evidence.** Each dossier carries `OWNER-SUPPLIED.json`. What the
+owner said goes in it, with their name and how they said it, and the next build merges it:
+their corrections outrank the map (the map is what a passer-by recorded, sometimes years
+ago), their photographs replace the stock ones with no licence question attached, and
+their words fill the copy gaps. **The rule about invented copy does not move** — a
+sentence about the business written by anything other than the business is still refused.
+What changes is that the sentences now exist and have somebody's name on them. Content in
+that file with no `from.person` and `from.medium` is `HANDOVER_UNREADABLE`, not
+"supplied".
+
+**Publishing is a named person's decision, and there is no `force=True`.**
+
+```bash
+python -m prospector.engagement --identity node/1001 --name "Bridge End Barbers" \
+    --by "Cathy Doherty" --role owner --via "email 2026-08-27" --on 2026-08-27 \
+    --scope PUBLISH --scope MONITOR --evidence mail/cathy-2026-08-27.eml
+```
+
+That record is the only thing that removes the "unofficial sample" banner and the
+`noindex`. `render()` validates it rather than trusting a flag; an authorisation naming
+`agent:`, `ai:`, `model:`, `automation:`, `bot:` or `system:` is refused in the
+constructor, as the parent repository refuses them for ratifying a board decision. A
+`MONITOR` authorisation does not publish anything — agreeing to have a site watched is not
+agreeing to have it published. And the verifier inverts once a page is live: a published
+page carrying the sample banner, or telling search engines to ignore it, or with no record
+of who authorised it, all fail.
+
+**Monitoring is a promise, so silence has to mean something.**
+
+```bash
+python -m prospector.watch --url https://bridgeendbarbers.ie \
+    --baseline data/watch/bridge-end-barbers.json      # exit 1 when a person is needed
+```
+
+INTACT · IMPROVED · REGRESSED · GONE · UNREADABLE · NOT_WATCHED
+
+A regression is a named criterion that was passing and now fails — never a score going
+down — because whoever reads the message has to know what to fix. An outage does not
+overwrite the baseline, or the recovery would report twenty improvements and the outage
+would vanish. An unreadable baseline is not a quiet state: it means the watch is not
+running, which is the thing a paying client would want to know that day. And the
+certificate expiry is checked, because it is the most common way a working small site
+becomes a frightening one overnight — reported as `None` when it cannot be read, never as
+plenty of time.
+
 ## Known limits
 
 - **Coverage is the binding constraint.** Expect a county to yield tens of usable
@@ -257,9 +307,16 @@ means, which is why nothing here promotes it to a claim about the business.
 - **Country coverage in the table is EU/EEA, UK, US, CA, AU, NZ.** Anywhere else resolves
   to `COUNTRY_UNKNOWN`, which refuses to guess a language and prints the strict sending
   rule.
-- **No outcome loop.** Nothing here records whether an approach was answered, and silence
-  is `UNKNOWN` rather than a refusal. Any future "which counties are worth working" number
-  has to be built on that distinction or it will be a story about what people did not say.
+- **No outcome loop.** The engagement ledger records what a business agreed to, and
+  nothing records whether an unanswered approach was read, refused or missed. Silence is
+  `UNKNOWN`, not a no. Any future "which counties are worth working" number has to be
+  built on that distinction or it will be a story about what people did not say.
+- **No hosting and no DNS.** Publishing here means the page is authorised and built; it
+  does not put it on a server or point a domain at it. Those need credentials for a
+  registrar and a host, which is a decision and a set of secrets, not a missing function.
+- **No revenue projection, deliberately.** The ledger holds what was agreed. What a
+  retainer is worth next quarter is a forecast, and the parent repository refuses those
+  across every lane for the same reason: nothing here can establish it.
 - **Opening hours are printed in OSM syntax, verbatim.** Expanding `Tu-Fr 09:00-18:00; PH
   off` into English means interpreting a small language with edge cases, and an
   interpretation error publishes wrong opening times over a business's name.

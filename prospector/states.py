@@ -92,6 +92,14 @@ COULD_NOT_LOOK_FOR_IMAGES = "COULD_NOT_LOOK_FOR_IMAGES"
 #: Where a photograph came from, which decides what the page is obliged to say about it.
 SUBJECT_OWN = "SUBJECT_OWN"
 LICENSED_STOCK = "LICENSED_STOCK"
+#: Sent by the business itself after the first approach. The only provenance with no
+#: question attached to it: they own it and they handed it over.
+SUBJECT_SUPPLIED = "SUBJECT_SUPPLIED"
+
+# What the business sent back, if anything.
+SUPPLIED = "SUPPLIED"
+NOTHING_SUPPLIED = "NOTHING_SUPPLIED"
+HANDOVER_UNREADABLE = "HANDOVER_UNREADABLE"
 
 # Verification of a page against the evidence behind it.
 VERIFIED = "VERIFIED"

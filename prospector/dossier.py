@@ -27,10 +27,11 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict, is_dataclass
+from typing import Any
 from datetime import datetime, timezone
 from pathlib import Path
 
-from prospector import browser
+from prospector import browser, handover as handover_mod
 from prospector.brief import write_brief
 from prospector.comparison import render as render_comparison
 from prospector.business import Business, Fact
@@ -38,11 +39,13 @@ from prospector.cascade import Decision
 from prospector.condition import Condition
 from prospector.countries import Country
 from prospector.countries import UNKNOWN as COUNTRY_UNKNOWN
-from prospector.images import SUBJECT_OWN, ImageSet, download
+from prospector.engagement import Engagement, NotAuthorised
+from prospector.images import Image, SUBJECT_OWN, ImageSet, download
 from prospector.locales import CATALOGUE, Locale
 from prospector.presence import Presence
 from prospector.site import render
-from prospector.states import COULD_NOT_LOOK_FOR_IMAGES, IMAGES_FOUND
+from prospector.states import (COULD_NOT_LOOK_FOR_IMAGES, IMAGES_FOUND, SUBJECT_SUPPLIED,
+                               SUPPLIED)
 from prospector.verify import verify
 
 
@@ -62,7 +65,8 @@ def _serialise(obj):
 
 
 def _evidence_markdown(business: Business, presence: Presence,
-                       condition: Condition | None, decision: Decision) -> str:
+                       condition: Condition | None, decision: Decision,
+                       handover: Any = None) -> str:
     lines = [f"# Evidence — {business.name.value}", "",
              f"Prepared {datetime.now(timezone.utc).isoformat(timespec='seconds')}.", "",
              "## Every fact on the page, and where it came from", ""]
@@ -74,6 +78,10 @@ def _evidence_markdown(business: Business, presence: Presence,
         lines += ["> **Do not write that this business has no website.** What was "
                   "established is that the public listing does not carry one. No search "
                   "was run, because no search backend is configured.", ""]
+    if handover is not None and handover.status == SUPPLIED:
+        lines += ["## What the business told us", "", "```", handover.describe(), "```",
+                  "", "These outrank the map wherever the two disagree, and the fields "
+                  "above carry the owner as their source.", ""]
     if condition is not None:
         lines += ["## The site they have", "", "```", condition.describe(), "```", ""]
         report = getattr(condition, "report", None)
@@ -150,7 +158,7 @@ def write(business: Business, presence: Presence, condition: Condition | None,
           site_url: str = "", images: ImageSet | None = None,
           fetch_images: bool = True, max_images: int = 2,
           locale: Locale | str = "en", country: Country = COUNTRY_UNKNOWN,
-          shoot_sample: bool = False) -> Path:
+          shoot_sample: bool = False, engagement: Engagement | None = None) -> Path:
     """Write the folder for one business and return its path."""
 
     if isinstance(locale, str):
@@ -158,6 +166,23 @@ def write(business: Business, presence: Presence, condition: Condition | None,
     folder = Path(out_dir) / f"{slug(business.name.value)}--{slug(business.identity)}"
     folder.mkdir(parents=True, exist_ok=True)
     sources = sorted({fact.source for fact in business.known().values()})
+
+    # What the business sent back, if anything. Read before the page is built, because
+    # their corrections outrank the map and their photographs replace the stock ones.
+    folder.mkdir(parents=True, exist_ok=True)
+    handover_mod.template_for(folder)
+    reply = handover_mod.read(folder)
+    if reply.status == SUPPLIED:
+        business = handover_mod.merge(business, reply)
+        supplied = tuple(
+            Image(url=name, provenance=SUBJECT_SUPPLIED, retrieved_at=reply.on or "supplied",
+                  local_path=name, source_page=reply.source)
+            for name in reply.photos if (folder / name).exists())
+        if supplied:
+            # In front of everything else: a photograph of the actual shop, sent by the
+            # person who owns it, is the best image this page will ever have.
+            images = ImageSet(IMAGES_FOUND,
+                              supplied + tuple(getattr(images, "images", ())))
 
     found = images or ImageSet(status="NO_IMAGE_FOUND", reason="no image search was run")
     #: What the page may show: only images actually on disk beside it. `considered` keeps
@@ -201,16 +226,23 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         # opens the dossier. The absence belongs in VERIFY.md and the brief, in words.
         image_dir.rmdir()
 
+    # The one place a sample turns into a business's public face. `render` validates the
+    # authorisation rather than trusting this flag, and raises where it does not permit
+    # publishing.
+    authorisation = None
+    if engagement is not None and engagement.may_publish:
+        authorisation = engagement.authorisation
     (folder / "index.html").write_text(
         render(business, operator=operator, sources=sources, images=images.images,
-               locale=locale),
+               locale=locale, copy=reply.copy, authorisation=authorisation),
         encoding="utf-8")
     (folder / "BRIEF.md").write_text(
         write_brief(business, presence, decision, images, operator=operator,
                     locale=locale, country=country),
         encoding="utf-8")
     (folder / "EVIDENCE.md").write_text(
-        _evidence_markdown(business, presence, condition, decision), encoding="utf-8")
+        _evidence_markdown(business, presence, condition, decision, reply),
+        encoding="utf-8")
     # The screenshots, and the page that puts them side by side. Written after index.html
     # exists, because one of the two pictures is of it.
     their_capture = getattr(condition, "capture", None)
@@ -248,6 +280,11 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         "condition": _serialise(condition),
         "decision": _serialise(decision),
         "images": [_serialise(image) for image in (considered or images.images)],
+        "published": authorisation is not None,
+        "authorisation": _serialise(authorisation),
+        "engagement": engagement.status if engagement is not None else "SAMPLE",
+        "copy": dict(reply.copy),
+        "handover": _serialise(reply),
         "images_status": images.status,
         "images_reason": images.reason,
         "standard": _serialise(getattr(condition, "report", None)),

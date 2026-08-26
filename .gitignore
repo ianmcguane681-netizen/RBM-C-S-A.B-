@@ -79,3 +79,10 @@ data/notifications.json
 # the data is gitignored, the code that produces it is not.
 data/prepared.json
 dossiers/
+
+# Prospector's engagement ledger and its monitoring baselines. The first is a list of real
+# businesses, what they agreed to and who at that business agreed it; the second is one
+# file per live client site. Same rule as the seen register: the data is gitignored, the
+# code that produces it is not.
+data/engagements.json
+data/watch/
