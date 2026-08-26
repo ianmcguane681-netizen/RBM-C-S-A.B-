@@ -21,7 +21,8 @@ FIXTURE = str(PACKAGE / "fixtures/synthetic-area.overpass.json")
 def _run(tmp_path, *extra):
     code = cli.main(["--area", "Invented Town", "--operator", "Ian McGuane",
                      "--from-file", FIXTURE, "--out", str(tmp_path / "dossiers"),
-                     "--register", str(tmp_path / "prepared.json"), "--no-fetch", *extra])
+                     "--register", str(tmp_path / "prepared.json"), "--no-fetch",
+                     "--browser", "never", *extra])
     return code
 
 

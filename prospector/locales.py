@@ -60,7 +60,7 @@ REQUIRED = (
     "hours_note", "map_link", "missing_heading", "gap_photos_title", "gap_photos_body",
     "gap_words_title", "gap_words_body", "gap_services_title", "gap_services_body",
     "sources_intro", "attribution_note", "prepared_by", "stock_caption", "own_caption",
-    "where_attached", "where_url", "call_action",
+    "where_attached", "where_url", "call_action", "note_screenshot",
     "stock_alt", "own_alt", "note_greeting", "note_body", "note_signoff",
     "claim_no_site_found", "claim_no_site_listed", "claim_social_only",
     "claim_domain_gone", "claim_unreachable", "claim_placeholder", "claim_no_viewport",
@@ -163,6 +163,7 @@ ENGLISH = {
     "own_alt": "Photograph from the business's own website",
     "where_attached": "in the attached file",
     "where_url": "at {url}",
+    "note_screenshot": ("I have also attached a screenshot of your current site as it renders on a phone, beside the sample at the same size. Nothing is drawn on either — you can check it on your own phone in a minute."),
     "note_greeting": "Hello,",
     "note_body": ("It is {where}. It is a sample rather than a finished site: the "
                   "details on it are the ones listed publicly, the photographs are either "
@@ -234,6 +235,7 @@ FRENCH = {
     "own_alt": "Photo provenant du site de l'entreprise",
     "where_attached": "dans le fichier joint",
     "where_url": "ici : {url}",
+    "note_screenshot": ("J'ai aussi joint une capture de votre site actuel tel qu'il s'affiche sur un téléphone, à côté de l'exemple à la même taille. Rien n'a été ajouté sur l'une ni sur l'autre — vous pouvez le vérifier en une minute sur votre propre téléphone."),
     "note_greeting": "Bonjour,",
     "note_body": ("Elle se trouve {where}. C'est un exemple et non un site terminé : "
                   "les informations sont celles qui figurent publiquement, les photos sont "
@@ -307,6 +309,7 @@ SPANISH = {
     "own_alt": "Foto de la web del propio negocio",
     "where_attached": "en el archivo adjunto",
     "where_url": "en {url}",
+    "note_screenshot": ("También adjunto una captura de su web actual tal como se ve en un móvil, junto al ejemplo al mismo tamaño. No hay nada dibujado encima de ninguna de las dos: puede comprobarlo en su propio móvil en un minuto."),
     "note_greeting": "Hola:",
     "note_body": ("Está {where}. Es un ejemplo, no un sitio terminado: los datos son "
                   "los que figuran públicamente, las fotos son suyas o de archivo "
@@ -379,6 +382,7 @@ GERMAN = {
     "own_alt": "Foto von der Website des Betriebs",
     "where_attached": "in der angehängten Datei",
     "where_url": "unter {url}",
+    "note_screenshot": ("Beigefügt ist außerdem ein Bildschirmfoto Ihrer jetzigen Website, so wie sie auf einem Handy erscheint, daneben das Beispiel in derselben Größe. In keines der beiden ist etwas eingezeichnet — Sie können es in einer Minute auf Ihrem eigenen Handy nachsehen."),
     "note_greeting": "Guten Tag,",
     "note_body": ("Sie liegt {where}. Es ist ein Beispiel, keine fertige Website: "
                   "die Angaben sind die öffentlich eingetragenen, die Fotos sind entweder "
@@ -453,6 +457,7 @@ ITALIAN = {
     "own_alt": "Foto dal sito dell'attività",
     "where_attached": "nel file allegato",
     "where_url": "qui: {url}",
+    "note_screenshot": ("Allego anche una schermata del vostro sito attuale così come appare su un telefono, accanto all'esempio nella stessa dimensione. Su nessuna delle due è stato disegnato nulla: potete verificarlo in un minuto sul vostro telefono."),
     "note_greeting": "Buongiorno,",
     "note_body": ("Si trova {where}. È un esempio, non un sito finito: i dati sono "
                   "quelli pubblicati negli elenchi, le foto sono vostre oppure di "
@@ -524,6 +529,7 @@ PORTUGUESE = {
     "own_alt": "Fotografia do site do próprio negócio",
     "where_attached": "no ficheiro em anexo",
     "where_url": "em {url}",
+    "note_screenshot": ("Junto também uma captura do seu site actual tal como aparece num telemóvel, ao lado do exemplo no mesmo tamanho. Não há nada desenhado por cima de nenhuma delas — pode confirmar no seu próprio telemóvel num minuto."),
     "note_greeting": "Olá,",
     "note_body": ("Está {where}. É um exemplo e não um site terminado: os dados são os "
                   "que constam publicamente, as fotografias são suas ou de banco "
@@ -596,6 +602,7 @@ DUTCH = {
     "own_alt": "Foto van de eigen website van het bedrijf",
     "where_attached": "in het bijgevoegde bestand",
     "where_url": "op {url}",
+    "note_screenshot": ("Ik heb ook een schermafbeelding bijgevoegd van uw huidige site zoals die op een telefoon verschijnt, naast het voorbeeld op hetzelfde formaat. Op geen van beide is iets ingetekend — u kunt het in een minuut op uw eigen telefoon nakijken."),
     "note_greeting": "Goedendag,",
     "note_body": ("U vindt hem {where}. Het is een voorbeeld en geen afgeronde website: "
                   "de gegevens zijn de openbaar vermelde, de foto's zijn van u of "
@@ -670,6 +677,7 @@ IRISH = {
     "own_alt": "Grianghraf ó shuíomh an ghnó féin",
     "where_attached": "sa chomhad atá ceangailte",
     "where_url": "ag {url}",
+    "note_screenshot": ("Tá seatgrafa de do shuíomh reatha mar a fheictear ar fhón ceangailte agam freisin, taobh leis an sampla ar an méid céanna. Níl aon rud tarraingthe ar cheachtar acu — is féidir leat é a sheiceáil ar do ghuthán féin i gceann nóiméid."),
     "note_greeting": "Dia duit,",
     "note_body": ("Tá sé {where}. Sampla atá ann seachas suíomh críochnaithe: is iad na "
                   "sonraí atá liostaithe go poiblí atá air, is leatsa na grianghraif nó is "

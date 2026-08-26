@@ -134,7 +134,7 @@ sans-serif;overflow-x:hidden}
 .wrap{width:100%;max-width:66rem;margin:0 auto;padding:0 clamp(20px,5vw,40px)}
 a{color:var(--accent)}
 .banner{background:var(--warn-bg);border-bottom:1px solid var(--warn-line);
-color:var(--warn-ink);padding:11px clamp(20px,5vw,40px);font-size:13.5px;line-height:1.5}
+color:var(--warn-ink);padding:11px clamp(20px,5vw,40px);font-size:13.5px;line-height:1.55}
 .banner strong{font-weight:650}
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;
 padding:18px 0;border-bottom:1px solid var(--line)}
@@ -155,14 +155,14 @@ h1{font-size:clamp(38px,8.5vw,68px);line-height:1.04;letter-spacing:-.02em;
 margin:0 0 14px;font-weight:600}
 .trade{font-size:clamp(17px,2.4vw,21px);color:var(--muted);margin:0 0 26px;max-width:30ch}
 .hero.has-photo .trade{color:#ddd3c6}
-.herocredit{font-size:12.5px;color:var(--muted);margin:0 0 18px;max-width:52ch}
+.herocredit{font-size:12px;color:var(--muted);margin:0 0 18px;max-width:52ch}
 .hero.has-photo .herocredit{color:#c9bfb2}
 .actions{display:flex;flex-wrap:wrap;gap:10px}
 .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
 border-top:1px solid var(--line);background:var(--band)}
 .fact{padding:20px clamp(20px,5vw,28px);border-right:1px solid var(--line)}
 .fact:last-child{border-right:0}
-.fact dt{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+.fact dt{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
 margin:0 0 6px}
 .fact dd{margin:0;font-size:17px;font-weight:550;line-height:1.4;overflow-wrap:anywhere}
 .fact dd a{text-decoration:none}
@@ -186,7 +186,7 @@ figcaption{color:var(--muted);font-size:12.5px;padding:10px 14px}
 .rows{border-top:1px solid var(--line)}
 .row{display:flex;flex-wrap:wrap;gap:6px 24px;padding:14px 0;
 border-bottom:1px solid var(--line)}
-.row dt{width:9rem;color:var(--muted);font-size:12.5px;letter-spacing:.1em;
+.row dt{width:9rem;color:var(--muted);font-size:12px;letter-spacing:.1em;
 text-transform:uppercase;margin:3px 0 0}
 .row dd{margin:0;flex:1 1 14rem;overflow-wrap:anywhere}
 footer{padding:36px 0 120px;border-top:1px solid var(--line);color:var(--muted);

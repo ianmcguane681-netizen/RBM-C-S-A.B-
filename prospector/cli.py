@@ -14,8 +14,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from prospector import (cascade, condition as condition_mod, dossier, images as images_mod,
-                        presence as presence_mod)
+from prospector import (browser, cascade, condition as condition_mod, dossier,
+                        images as images_mod, presence as presence_mod)
 from prospector.business import Business, Fact
 from prospector.countries import COUNTRY_KNOWN, Country, from_tags, lookup
 from prospector.countries import UNKNOWN as COUNTRY_UNKNOWN
@@ -39,12 +39,28 @@ class Tally:
     unrecorded: list[str] = field(default_factory=list)
 
 
-def _check_condition(url: str, *, fetch: bool) -> condition_mod.Condition | None:
+def _check_condition(url: str, *, fetch: bool, capture=None) -> condition_mod.Condition | None:
     if not fetch:
         return condition_mod.Condition(
             condition_mod.UNDETERMINED, url=url,
             reason="--no-fetch was passed, so no site was assessed")
-    return condition_mod.assess(url)
+    return condition_mod.assess(url, capture=capture)
+
+
+def _capture_site(url: str, identity: str, args, out_dir: Path):
+    """A phone-sized render of their site, when a browser is available and wanted.
+
+    The screenshot is the pitch and the measurements are the three criteria markup cannot
+    answer, so this is worth a browser launch per business. It is skipped rather than
+    faked when Playwright is not installed, and the run says so once.
+    """
+
+    if args.browser == "never" or not args.fetch or not url:
+        return None
+    ok, _ = browser.available()
+    if not ok:
+        return None
+    return browser.capture(url, out_path=out_dir / "shots" / f"{dossier.slug(identity)}.png")
 
 
 def _images_for(business: Business, presence, args) -> images_mod.ImageSet:
@@ -136,7 +152,8 @@ def run(args: argparse.Namespace) -> int:
         presence = presence_mod.assess(business)
         condition = None
         if presence.status in (SITE_LISTED, SITE_REACHED) and not presence.is_social_only:
-            condition = _check_condition(presence.url, fetch=args.fetch)
+            shot = _capture_site(presence.url, business.identity, args, out_dir)
+            condition = _check_condition(presence.url, fetch=args.fetch, capture=shot)
         country = _country_for(business, discovery, args)
         language = choose(args.language, country_languages=country.languages,
                           country=country.name)
@@ -153,7 +170,8 @@ def run(args: argparse.Namespace) -> int:
             folder = dossier.write(business, presence, condition, decision,
                                    out_dir=out_dir, operator=operator,
                                    images=image_set, fetch_images=args.fetch,
-                                   locale=language.locale, country=country)
+                                   locale=language.locale, country=country,
+                                   shoot_sample=args.browser != "never")
             if not register.record(business.identity):
                 tally.unrecorded.append(label)
             unreviewed = "" if language.locale.reviewed else "  UNREVIEWED TRANSLATION"
@@ -170,6 +188,16 @@ def run(args: argparse.Namespace) -> int:
 
 def _report(discovery, tally: Tally, out_dir: Path, *, dry: bool) -> None:
     print()
+    ok, reason = browser.available()
+    if ok:
+        print("BROWSER        available: mobile criteria were measured in a phone-sized "
+              "window, and screenshots were taken")
+    else:
+        # Said once, loudly, because every mobile criterion below is markup-only and that
+        # is a weaker claim than the report would otherwise look like it is making.
+        print(f"BROWSER        NOT AVAILABLE — {reason}")
+        print("               Mobile checks are markup-only for this run. That is not the "
+              "same as them passing.")
     print(f"PREPARED       {len(tally.prepared)}")
     for line in tally.prepared:
         print(f"  {line}")
@@ -221,6 +249,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-fetch", dest="fetch", action="store_false",
                         help="do not fetch any business's website; every site condition "
                              "becomes UNDETERMINED and nothing with a site is prepared")
+    parser.add_argument("--browser", choices=("auto", "never"), default="auto",
+                        help="open each site in a phone-sized browser to measure what "
+                             "actually renders and to screenshot it beside the sample. "
+                             "'auto' uses Playwright where it is installed and says so "
+                             "when it is not; the mobile criteria it decides are never "
+                             "assumed to pass")
     parser.add_argument("--language", default="",
                         help="the language to build in, e.g. fr, de, ga. Omitted, it is "
                              "taken from the country; a language this package has no "

@@ -15,7 +15,8 @@ python -m prospector --area "Invented Town"  --operator "Ian McGuane" \
 python -m pytest prospector/tests -q
 ```
 
-Standard library only. No model SDK, no HTTP client, no HTML parser, no framework.
+Standard library only, with one optional extra: Playwright, for the browser stage below.
+No model SDK, no HTTP client, no HTML parser, no framework.
 
 ## What it does, stage by stage
 
@@ -127,8 +128,11 @@ accept.
 ```
 BLOCKING     loads · not an error · not a placeholder · HTTPS
 MOBILE       viewport · zoom allowed · no fixed width · no legacy markup · not heavy
+             · no sideways scroll † · readable text † · paints quickly †
 CONVERSION   tappable phone · address · opening hours · a contact path
 CRAFT        title · description · one h1 · LocalBusiness JSON-LD · og tags · icon · lang
+
+† measured by opening the page in a phone-sized browser
 ```
 
 **A business is approached only over a failure in the first three tiers.** Craft failures
@@ -149,6 +153,30 @@ does not work on a phone pass on the strength of its meta description.
 generates and a test asserts it meets every criterion the evidence supports. Emailing
 somebody about their viewport tag with a page attached that renders at desktop width
 deserves the reply it would get.
+
+## The browser stage, and the thing you actually send
+
+```bash
+pip install playwright && playwright install chromium    # optional
+```
+
+With it, each site is opened in Chromium at 390×844 and measured, and two screenshots are
+taken: **their site on a phone, and the sample at the same size.** `COMPARISON.html` puts
+them side by side with the named failures underneath. That page is the pitch, and it
+persuades by not arguing — nothing is drawn on either picture, both are dated and
+labelled, and the findings are things the owner can check on their own phone in a minute.
+
+Without it, those three criteria are `NOT_ASSESSED` and the run says so: **markup-only is
+a weaker claim and is stated as one.** An unopened page is never a page that passed.
+
+The measured criteria catch what markup cannot, including the case markup gets backwards:
+a page with no viewport tag lays out at ~980px and lets the phone shrink the whole thing,
+so nothing overflows its own layout — a naive check passes it while the visitor reads 5px
+text. Both criteria measure against the screen rather than the layout.
+
+A capture whose stylesheets did not load is `CAPTURE_INCOMPLETE` and decides nothing. The
+screenshot is kept for a person to look at, and it never goes in a comparison: a render of
+somebody's site with its CSS missing is a picture of a bad day, not of their website.
 
 ## Photographs
 

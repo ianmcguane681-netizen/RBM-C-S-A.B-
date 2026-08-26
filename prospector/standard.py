@@ -49,11 +49,18 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from html.parser import HTMLParser
-from typing import Sequence
+from typing import Any, Sequence
+
+from prospector.browser import MIN_READABLE_PX, SCROLL_SLACK_PX, SLOW_PAINT_MS
 
 MEETS = "MEETS"
 FAILS = "FAILS"
 NOT_ASSESSED = "NOT_ASSESSED"
+
+#: How the page was looked at. Printed on every report, because "the layout fits a phone"
+#: and "nothing in the markup says the layout does not fit a phone" are different claims.
+RENDERED = "RENDERED"
+MARKUP_ONLY = "MARKUP_ONLY"
 
 BLOCKING = "BLOCKING"
 MOBILE = "MOBILE"
@@ -78,6 +85,12 @@ class Criterion:
     title: str
     why: str
     how: str
+    #: Whether deciding this needs a real browser. These are the criteria markup cannot
+    #: answer: a page can carry a perfect viewport tag and still push a table sideways off
+    #: the screen. Where no browser is available they are NOT_ASSESSED, and — unlike every
+    #: other unassessed criterion — they do not block, because the absence of a browser is
+    #: a stated condition of the whole run rather than something unknown about this site.
+    needs_browser: bool = False
 
 
 CRITERIA: tuple[Criterion, ...] = (
@@ -122,6 +135,22 @@ CRITERIA: tuple[Criterion, ...] = (
               "screen for several seconds on a phone signal, and people leave.",
               "HTML document size, and the number of render-blocking scripts and "
               "stylesheets in the head."),
+
+    Criterion("NO_SIDEWAYS_SCROLL", MOBILE, "Nothing hangs off the side of a phone screen",
+              "Sideways scrolling is the most visible way a site says it was never meant "
+              "for the phone in your hand, and it is what a viewport tag is supposed to "
+              "prevent but often does not.",
+              "The document is measured in a 390px browser window: its scroll width must "
+              "not exceed the window.", needs_browser=True),
+    Criterion("READABLE_TEXT", MOBILE, "The text can be read without pinching",
+              "Body text under about 11px on a phone is text nobody reads standing up.",
+              "The computed font size of the smallest run of body text, measured in the "
+              "browser.", needs_browser=True),
+    Criterion("PAINTS_QUICKLY", MOBILE, "Something appears quickly",
+              "A blank screen for several seconds loses the visitor before the site has "
+              "said anything at all.",
+              "First contentful paint, measured in the browser, or the load event where "
+              "paint timing is unavailable.", needs_browser=True),
 
     Criterion("PHONE_TAPPABLE", CONVERSION, "The phone number can be tapped to call",
               "On a phone, a number that is not a tel: link has to be memorised, "
@@ -222,13 +251,32 @@ class Report:
 
     @property
     def blocked(self) -> bool:
-        """Whether a criterion that decides the verdict could not be evaluated."""
+        """Whether a criterion that decides the verdict could not be evaluated.
+
+        Browser criteria are excluded. Not because they matter less — they are the most
+        direct evidence in the standard — but because their absence is a fact about the
+        machine this ran on, stated once in `depth`, rather than something unknown about
+        this particular site. Blocking on them would mean a run without Playwright
+        installed could never conclude anything about anybody.
+        """
 
         return any(a.state == NOT_ASSESSED and a.tier in APPROACHABLE_TIERS
+                   and not a.criterion.needs_browser
                    for a in self.assessments)
 
+    @property
+    def depth(self) -> str:
+        """`RENDERED` when a browser measured the page, `MARKUP_ONLY` when one did not."""
+
+        browser_states = {a.state for a in self.assessments if a.criterion.needs_browser}
+        return RENDERED if browser_states - {NOT_ASSESSED} else MARKUP_ONLY
+
     def describe(self) -> str:
-        lines = []
+        lines = [f"{self.depth}"
+                 + ("  — a phone-sized browser opened the page and measured it"
+                    if self.depth == RENDERED else
+                    "  — read from the markup; no browser opened the page, so the mobile "
+                    "measurements were not taken")]
         for tier in TIERS:
             in_tier = [a for a in self.assessments if a.tier == tier]
             if not in_tier:
@@ -432,8 +480,12 @@ def _fixed_widths(document: _Document) -> list[int]:
 
 def assess(html: str, *, url: str = "", status: int | None = None,
            https_available: bool | None = None, reached: bool | None = None,
-           byte_size: int | None = None) -> Report:
+           byte_size: int | None = None, capture: Any = None) -> Report:
     """Every criterion against one fetched page.
+
+    `capture` is a `browser.Capture` where one was taken. Only a complete capture decides
+    anything: a render whose stylesheets did not arrive is a picture of a bad day, not of
+    the page, and judging somebody's work by it would be a misrepresentation.
 
     `reached`, `status` and `https_available` come from the fetcher rather than the
     document, because whether a site answered is not a fact about its markup. `None` for
@@ -489,7 +541,8 @@ def assess(html: str, *, url: str = "", status: int | None = None,
 
     if not parsed:
         for code in ("VIEWPORT", "ZOOM_ALLOWED", "NO_FIXED_WIDTH", "NO_LEGACY_MARKUP",
-                     "NOT_HEAVY", "PHONE_TAPPABLE", "ADDRESS_PRESENT", "HOURS_PRESENT",
+                     "NOT_HEAVY", "NO_SIDEWAYS_SCROLL", "READABLE_TEXT", "PAINTS_QUICKLY",
+                     "PHONE_TAPPABLE", "ADDRESS_PRESENT", "HOURS_PRESENT",
                      "CONTACT_PATH", "TITLE", "META_DESCRIPTION", "HEADING",
                      "STRUCTURED_DATA", "SOCIAL_PREVIEW", "FAVICON", "LANG"):
             record(code, NOT_ASSESSED, "the document could not be parsed")
@@ -555,6 +608,60 @@ def assess(html: str, *, url: str = "", status: int | None = None,
     else:
         record("NOT_HEAVY", MEETS,
                f"{byte_size // 1024} KB, {document.head_scripts_blocking} blocking scripts")
+
+    # --- MOBILE, measured rather than read ---------------------------------------
+    usable = bool(capture is not None and getattr(capture, "usable", False))
+    if not usable:
+        why = (getattr(capture, "reason", "") or getattr(capture, "status", "")
+               if capture is not None else "no browser stage ran")
+        for code in ("NO_SIDEWAYS_SCROLL", "READABLE_TEXT", "PAINTS_QUICKLY"):
+            record(code, NOT_ASSESSED, f"no usable render: {why}")
+    else:
+        # Measured against the DEVICE width, not the layout width. A page with no viewport
+        # tag lays itself out at ~980px and lets the phone scale the result down, so
+        # nothing overflows its own layout and the naive comparison calls it a pass. What
+        # the person holding the phone gets is a shrunken desktop page.
+        scroll, device = capture.scroll_width, capture.width
+        layout = capture.inner_width
+        if scroll is None or not device:
+            record("NO_SIDEWAYS_SCROLL", NOT_ASSESSED, "the widths were not measured")
+        elif scroll > device + SCROLL_SLACK_PX:
+            shrunk = (f", which the phone then scales down to fit"
+                      if layout and layout > device + SCROLL_SLACK_PX else "")
+            record("NO_SIDEWAYS_SCROLL", FAILS,
+                   f"the page lays out {scroll}px wide on a {device}px phone screen{shrunk}")
+        else:
+            record("NO_SIDEWAYS_SCROLL", MEETS, f"lays out inside a {device}px screen")
+
+        smallest = capture.smallest_font_px
+        shrink = getattr(capture, "shrink", 1.0)
+        if smallest is None:
+            record("READABLE_TEXT", NOT_ASSESSED, "no body text was measured")
+        else:
+            # What the eye gets, not what the stylesheet says: 13px in a layout the phone
+            # has squeezed to 40% is 5px on the glass.
+            effective = round(smallest * shrink, 1)
+            if effective < MIN_READABLE_PX:
+                scaled = (f" ({smallest}px in a layout the phone shrinks to "
+                          f"{shrink * 100:.0f}%)") if shrink < 0.99 else ""
+                record("READABLE_TEXT", FAILS,
+                       f"body text {effective}px on the screen{scaled}, which is text "
+                       f"nobody reads standing up")
+            else:
+                record("READABLE_TEXT", MEETS, f"smallest body text {effective}px on screen")
+
+        paint = capture.first_paint_ms
+        measure = "first paint"
+        if paint is None:
+            paint, measure = capture.load_ms, "the load event"
+        if paint is None:
+            record("PAINTS_QUICKLY", NOT_ASSESSED, "no timing was recorded")
+        elif paint > SLOW_PAINT_MS:
+            record("PAINTS_QUICKLY", FAILS,
+                   f"{measure} at {paint / 1000:.1f}s — a blank screen for that long "
+                   f"loses the visitor before the site has said anything")
+        else:
+            record("PAINTS_QUICKLY", MEETS, f"{measure} at {paint / 1000:.1f}s")
 
     # --- CONVERSION --------------------------------------------------------------
     tel_links = [href for href, _ in document.links if href.lower().startswith("tel:")]

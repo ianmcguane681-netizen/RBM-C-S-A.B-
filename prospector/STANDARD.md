@@ -4,10 +4,10 @@ This is the standard. It exists because "their website is bad" is a matter of ta
 somebody writes the criteria down, and a tool that approaches strangers on the strength of
 an aesthetic judgement has no answer when one of them asks what exactly is wrong with it.
 
-Twenty criteria, in four tiers, each one checkable and each one with a reason a business
-owner would accept. **No score.** A weighted total lets a site that does not work on a
-phone pass on the strength of its meta description, and an unmeasured criterion has no
-honest number — scored zero it invents faults, dropped from the average it flatters.
+Twenty-three criteria, in four tiers, each one checkable and each one with a reason a
+business owner would accept. **No score.** A weighted total lets a site that does not work
+on a phone pass on the strength of its meta description, and an unmeasured criterion has
+no honest number — scored zero it invents faults, dropped from the average it flatters.
 
 The rule the tiers exist to produce:
 
@@ -51,6 +51,11 @@ every day on a phone.
 | `NO_FIXED_WIDTH` | No fixed pixel width ≥ 700px on a top-level container, in CSS or inline, and no wide table layout | Forces sideways scrolling on every phone |
 | `NO_LEGACY_MARKUP` | Framesets, Flash objects, `marquee`, or a fixed-width table layout with `font`/`center` tags | Cannot be made to adapt to a small screen |
 | `NOT_HEAVY` | HTML over 600 KB, or more than 8 render-blocking scripts in the head | Several seconds of blank screen on a phone signal, and people leave |
+| `NO_SIDEWAYS_SCROLL` † | Measured in a 390px window: the document must lay out inside the screen | The most visible way a site says it was never meant for the phone in your hand |
+| `READABLE_TEXT` † | The smallest run of body text, **as it lands on the glass** — 13px in a layout the phone shrinks to 39% is 5px | Text nobody reads standing up |
+| `PAINTS_QUICKLY` † | First contentful paint, or the load event where paint timing is unavailable | A blank screen for several seconds loses the visitor before the site has said anything |
+
+† Measured by opening the page in a phone-sized browser. See **The browser stage** below.
 
 `font` and `center` on their own are untidy, not broken, and do not fail anything. Plenty
 of usable pages carry one.
@@ -91,13 +96,42 @@ nothing did, and `UNDETERMINED` when something that would have decided it could 
 read. **`SERVICEABLE` is not praise.** It means no named defect was found. There is no
 machine-checkable definition of a good website and this file does not pretend to one.
 
-## What the standard cannot see
+## The browser stage
 
-No rendering happens. There is no browser, so there is no measurement of what actually
-paints, no Core Web Vitals, no screenshot, and no view of a layout that collapses at 360px
-for reasons invisible in the markup. What is checked is what can be read from the document
-and the response: tags, structure, sizes, links, and whether the things a person needs in
-order to act are present.
+The three marked criteria are opened in a real Chromium window at 390×844 — a phone in
+portrait — and measured. This is optional: Playwright is not a dependency of this package
+and Chromium is not installed by it.
+
+```bash
+pip install playwright && playwright install chromium
+```
+
+**Where no browser is available those criteria come back `NOT_ASSESSED`, never `MEETS`,**
+and the report is stamped `MARKUP_ONLY` instead of `RENDERED`. An unopened page is not a
+page that worked. Unusually, they are the one kind of unassessed criterion that does not
+block a run: the absence of a browser is a fact about the machine, stated once, rather
+than something unknown about this particular site.
+
+It earns its place twice over. The measurement catches what markup cannot: a page can
+carry a perfect viewport tag and still lay out 900px wide. And the subtle case markup gets
+exactly backwards — a page with **no** viewport tag lays out at ~980px and lets the phone
+scale the whole thing down, so nothing overflows its own layout and a naive check calls it
+a pass, while the person holding the phone reads 5px text. Both criteria measure against
+the screen, not the layout.
+
+**And it takes the photograph.** A screenshot of their site on a phone, beside the sample
+at the same size, is `COMPARISON.html` — the artefact that does the persuading, and it
+persuades by not arguing. Nothing is drawn on either picture, both are dated and labelled
+with the size, and a capture whose stylesheets did not load never appears: that is a
+picture of a bad day, not of their website, and putting it in an email would misrepresent
+their work.
+
+## What the standard still cannot see
+
+Core Web Vitals under real network conditions, anything behind a cookie wall or a login,
+whether the copy is any good, and whether the business is well served by what it has. What
+is checked is what can be read from the document and the response, plus what one phone-
+sized render shows.
 
 Which means a site can meet all twenty criteria and still be ugly, confusing or wrong.
 That is a judgement for a person, and this tool does not make it — it finds the sites that

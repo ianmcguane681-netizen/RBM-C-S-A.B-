@@ -30,7 +30,9 @@ from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from prospector import browser
 from prospector.brief import write_brief
+from prospector.comparison import render as render_comparison
 from prospector.business import Business, Fact
 from prospector.cascade import Decision
 from prospector.condition import Condition
@@ -85,7 +87,7 @@ def _evidence_markdown(business: Business, presence: Presence,
 
 def _note_markdown(business: Business, presence: Presence, decision: Decision,
                    operator: str, site_url: str = "", locale: Locale | None = None,
-                   country: Country = COUNTRY_UNKNOWN) -> str:
+                   country: Country = COUNTRY_UNKNOWN, has_shots: bool = False) -> str:
     locale = locale or CATALOGUE["en"]
     name = business.name_in(locale.code).value
     where = (locale.text("where_url", url=site_url) if site_url
@@ -96,6 +98,10 @@ def _note_markdown(business: Business, presence: Presence, decision: Decision,
     claim = (locale.text(decision.claim_key) if decision.claim_key
              else decision.opening_claim)
     body = locale.text("note_body", where=where)
+    if has_shots:
+        # Only when both pictures exist. A note promising an attachment that is not there
+        # is the one kind of error a recipient notices before they read anything else.
+        body += "\n\n" + locale.text("note_screenshot")
     caveat = ""
     if not locale.reviewed:
         caveat = (f"\n> **This note is in {locale.name} and nobody has checked it.** "
@@ -143,7 +149,8 @@ def write(business: Business, presence: Presence, condition: Condition | None,
           decision: Decision, *, out_dir: Path, operator: str,
           site_url: str = "", images: ImageSet | None = None,
           fetch_images: bool = True, max_images: int = 2,
-          locale: Locale | str = "en", country: Country = COUNTRY_UNKNOWN) -> Path:
+          locale: Locale | str = "en", country: Country = COUNTRY_UNKNOWN,
+          shoot_sample: bool = False) -> Path:
     """Write the folder for one business and return its path."""
 
     if isinstance(locale, str):
@@ -202,11 +209,35 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         write_brief(business, presence, decision, images, operator=operator,
                     locale=locale, country=country),
         encoding="utf-8")
-    (folder / "NOTE.md").write_text(
-        _note_markdown(business, presence, decision, operator, site_url, locale, country),
-        encoding="utf-8")
     (folder / "EVIDENCE.md").write_text(
         _evidence_markdown(business, presence, condition, decision), encoding="utf-8")
+    # The screenshots, and the page that puts them side by side. Written after index.html
+    # exists, because one of the two pictures is of it.
+    their_capture = getattr(condition, "capture", None)
+    sample_shot = ""
+    if shoot_sample:
+        shot = browser.capture((folder / "index.html").resolve().as_uri(),
+                               out_path=folder / "sample-mobile.png")
+        sample_shot = Path(shot.screenshot_path).name if shot.screenshot_path else ""
+    if their_capture is not None and getattr(their_capture, "screenshot_path", ""):
+        source = Path(their_capture.screenshot_path)
+        if source.exists():
+            (folder / "their-site-mobile.png").write_bytes(source.read_bytes())
+        their_capture = _with_screenshot_name(
+            their_capture, "their-site-mobile.png" if source.exists() else "")
+    if sample_shot:
+        (folder / "COMPARISON.html").write_text(
+            render_comparison(name=business.name_in(locale.code).value, operator=operator,
+                              their_capture=their_capture, sample_shot=sample_shot,
+                              report=getattr(condition, "report", None),
+                              site_url=presence.url),
+            encoding="utf-8")
+
+    (folder / "NOTE.md").write_text(
+        _note_markdown(business, presence, decision, operator, site_url, locale, country,
+                       has_shots=bool(sample_shot and (folder / "their-site-mobile.png").exists())),
+        encoding="utf-8")
+
     evidence = {
         "operator": operator,
         "language": locale.code,
@@ -220,6 +251,8 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         "images_status": images.status,
         "images_reason": images.reason,
         "standard": _serialise(getattr(condition, "report", None)),
+        "capture": _serialise(their_capture),
+        "sample_screenshot": sample_shot,
     }
     (folder / "evidence.json").write_text(json.dumps(evidence, indent=1, default=str),
                                           encoding="utf-8")
@@ -235,6 +268,14 @@ def write(business: Business, presence: Presence, condition: Condition | None,
         f"designed page replaces the reference render:\n\n"
         f"```bash\npython -m prospector.verify {folder}\n```\n", encoding="utf-8")
     return folder
+
+
+def _with_screenshot_name(capture, name: str):
+    """The same capture, pointing at the copy that now lives beside the page."""
+
+    from dataclasses import replace
+
+    return replace(capture, screenshot_path=name)
 
 
 def _with_relative_path(image):

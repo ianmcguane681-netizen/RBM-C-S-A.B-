@@ -164,7 +164,7 @@ def test_a_run_in_another_country_builds_in_that_countrys_language(tmp_path, cap
     code = cli.main(["--area", "Braga", "--operator", "Ian McGuane",
                      "--from-file", str(PACKAGE / "fixtures/synthetic-area-pt.overpass.json"),
                      "--out", str(tmp_path / "d"), "--register", str(tmp_path / "p.json"),
-                     "--images", "none", "--no-fetch"])
+                     "--images", "none", "--no-fetch", "--browser", "never"])
     assert code == 0
     out = capsys.readouterr().out
     assert "[pt]" in out

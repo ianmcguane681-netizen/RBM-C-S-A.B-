@@ -68,6 +68,8 @@ class Condition:
     url: str = ""
     findings: tuple[Finding, ...] = ()
     reason: str = ""
+    #: What the phone-sized browser saw, when one looked. Carries the screenshot path.
+    capture: Any = None
     final_url: str = ""
     http_status: int | None = None
     #: Every criterion in the standard, met or failed or not assessed. The findings above
@@ -139,8 +141,14 @@ def _https_available(url: str, fetcher) -> bool | None:
     return attempt.status is not None and attempt.status < 400
 
 
-def assess(url: str, *, fetcher=fetch, retry_pause: float = 2.0) -> Condition:
-    """Fetch the site, run the standard over it, and report what it fails."""
+def assess(url: str, *, fetcher=fetch, retry_pause: float = 2.0,
+           capture: Any = None) -> Condition:
+    """Fetch the site, run the standard over it, and report what it fails.
+
+    `capture` is a `browser.Capture` when a phone-sized browser was pointed at the same
+    URL. It decides the three criteria markup cannot answer, and it carries the screenshot
+    that turns "your site does not fit a phone" from an assertion into a picture.
+    """
 
     if not url or "://" not in url:
         return Condition(UNDETERMINED, url=url, reason="not a URL this checker can fetch")
@@ -158,7 +166,7 @@ def assess(url: str, *, fetcher=fetch, retry_pause: float = 2.0) -> Condition:
             # which is a business that has lost its website without necessarily knowing.
             unresolved = "gaierror" in second.error or "not known" in second.error
             report = standard.assess("", url=url, reached=False, status=None,
-                                     https_available=None, byte_size=0)
+                                     https_available=None, byte_size=0, capture=capture)
             detail = ("the domain does not resolve at all, on two attempts — the "
                       "registration may have lapsed") if unresolved else (
                       f"two attempts, both failed: {second.error}")
@@ -175,7 +183,7 @@ def assess(url: str, *, fetcher=fetch, retry_pause: float = 2.0) -> Condition:
 
     report = standard.assess(first.body or "", url=url, status=status, reached=True,
                              https_available=_https_available(url, fetcher),
-                             byte_size=len(first.body or ""))
+                             byte_size=len(first.body or ""), capture=capture)
     findings = tuple(
         Finding(assessment.code,
                 DEFECT if assessment.tier in standard.APPROACHABLE_TIERS else OBSERVATION,
@@ -192,4 +200,4 @@ def assess(url: str, *, fetcher=fetch, retry_pause: float = 2.0) -> Condition:
                          reason=f"these criteria could not be evaluated: {unknown}")
     verdict = DEFICIENT if report.approachable_failures else SERVICEABLE
     return Condition(verdict, url=url, findings=findings, http_status=status,
-                     final_url=first.final_url, report=report)
+                     final_url=first.final_url, report=report, capture=capture)
