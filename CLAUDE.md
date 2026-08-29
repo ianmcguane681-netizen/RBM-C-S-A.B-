@@ -38,9 +38,19 @@ Every one of these refuses the prefixes `agent:`, `ai:`, `model:`, `automation:`
 
 - **ratifying or publishing** a board decision (`board verify --by <name>`)
 - **declaring settlement equivalence** between two books (`lib/arb.EquivalenceDeclaration`)
-- **authoring a thesis** or holding a standing authority (`lib/thesis`, `lib/arb_reaper`)
+- **authoring a thesis** or holding a standing authority (`lib/thesis`, `lib/arb_reaper`,
+  `lib/flipper_reaper.BoundedAuthority`)
 - **re-arming a tripped breaker** (`lib/breakers.reset`)
 - **declaring a FORECAST criterion** (`lib/stocks_reaper.Criterion`)
+- **declaring a forecasting model, or promoting one to LIVE** (`lib/mispricing`)
+- **recording what a book's rules page says**, and whether two wordings settle alike
+  (`lib/rulebook.Clause`, `lib/rulebook.TopicDeclaration`)
+- **recording that you searched for a business and found nothing** (`lib/outreach.SearchLog`)
+
+The last two are the newest and the pattern is the same each time: **nothing here can
+retrieve it**. No source returns a book's terms and nothing can search the web, so an entry
+attributed to a machine is an entry nobody made — sitting in a store looking exactly like
+one somebody did, and unlocking either a placed bet or a message to a stranger.
 
 Do not route around these, do not add a `force=True`, and do not sign or attest as the user
 without an explicit instruction naming them. If a task seems to require it, say so instead.
@@ -60,9 +70,11 @@ without an explicit instruction naming them. If a task seems to require it, say 
 
 ```
 rbe_runtime/  board/  controlled_authority/   the review board engine (the original project)
-connectors/   evidence readers: chain, EDGAR, odds, Alpaca, and the two execution adapters
-lib/          the money side: reapers, breakers, sizing, thesis, outcomes, arb maths
-docs/         methodology profiles RBM-001..005, and docs/next-work.md
+connectors/   evidence readers: odds, EDGAR, Alpaca, football, weather, OSM, eBay, chain,
+              and the two execution adapters
+lib/          the money side: reapers, breakers, sizing, thesis, outcomes, arb maths,
+              settlement rulebooks, the mispricing model, outreach, the flipper
+docs/         methodology profiles RBM-001..005, the design documents, and next-work.md
 ```
 
 **`docs/next-work.md` is the live checkpoint** — current state, the open gaps in priority
@@ -71,16 +83,18 @@ order, and what is deliberately absent. Read it before planning anything.
 ## Commands
 
 ```bash
-python -m pytest -q          # must stay green; ~1000 tests
-python run.py --reap         # all three lanes; places where the lane's mode allows
+python -m pytest -q          # must stay green; ~1700 tests
+python run.py --reap         # every running lane; places where the lane's mode allows
 python run.py --reap --dry   # the same, sending nothing whatever the modes say
 python run.py --manual "why" # take the wheel: lanes keep running, you place
 python positions.py          # what is open; --settle feeds the breakers
 python run.py                # the orchestrator: what is due, what is held
 python preflight.py          # what each lane needs before it can read anything
+python rulebook.py           # the settlement rules two books agree and differ on
+python outreach.py           # local businesses worth a conversation, and the draft
 ```
 
-## Two lanes of work, one repo
+## Two kinds of work, one repo
 
 The **review board** convenes seats, locks evidence, and publishes auditable decisions. It
 can veto and can never authorise.
@@ -89,6 +103,19 @@ The **reapers** (`lib/*_reaper.py`) run the same gates without convening a board
 person spending their own money. They reach `READY` — a sized, permitted instruction — and
 the audit chain is what is lost, which every harvest says rather than letting a working
 decision be mistaken for a reviewed one.
+
+Four run: **arb**, **stocks**, **mispricing**, **flipper**. **Crypto is PARKED** — a fifth
+assembly status, carrying who parked it and the one line that undoes it, because a lane
+that simply vanished from `LANES` would be indistinguishable from one nobody ever wrote.
+**Outreach** is a lane and deliberately NOT one of these: it stakes nothing, so a ring-fence
+printed beside it on the money panel would be a control that does not exist.
+
+**The mispricing lane is the one exception to "no forecasts" and it is fenced accordingly.**
+An arb says two prices cannot both be right and claims nothing about the fixture; a
+mispricing says one price is wrong, which is a bet. It is admissible on the precedent
+`lib/stocks_reaper.Criterion` already sets — a FORECAST needs a named human — and it starts
+`PAPER`, evaluating everything and sizing nothing, until a person promotes it against a
+written account of a settled record.
 
 **Placing may be automatic, and `lib/operating.py` decides whether it is.** Three modes per
 lane: `AUTONOMOUS`, `OWNER_OPERATING_MANUALLY`, `HALTED`. Autonomy is asserted and never
@@ -105,7 +132,11 @@ can leave a phantom on rejection, which is visible and fixed in one command.
 key path, no signing library and no send method. Do not add one.
 
 **Bookmakers have no betting API.** bet365 and Sky Bet will not take an order from a program.
-The bet slip *is* the deliverable — this is not a missing adapter.
+The bet slip *is* the deliverable — this is not a missing adapter. The same fact, three more
+times: eBay takes no automated purchase worth relying on, Facebook Marketplace and DoneDeal
+have no public API at all, and **no scraper is to be written for any of them**. Nor is there
+an SMTP client anywhere near `lib/outreach.py`: the draft is the deliverable and a person
+presses send.
 
 ## Secrets
 

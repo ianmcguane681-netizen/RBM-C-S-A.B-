@@ -1,6 +1,18 @@
 # The flipper, designed
 
-Designed 2026-08-09, not yet built. Function 4 of the seven in `docs/target-functions.md`;
+**BUILT 2026-08-29**, to this document. `lib/flipper.py` holds the identity key, the
+comparable distribution, the fee arithmetic and the write-down; `lib/flipper_reaper.py` the
+lane; `connectors/ebay.py` the two comparable sources. Every property in "Tests to write"
+below is now a test in `tests/test_flipper.py` and `tests/test_flipper_reaper.py`.
+
+**What is NOT built, and why that was the right call:** the eBay completed-sales client.
+Question 1 at the top of this document is still unanswered, and which endpoint serves sold
+data — in what shape, under which scopes — depends on which programme the account is
+approved for. A client written against a guessed contract would look finished and return
+nothing. `EbaySoldSource` is the shape and it answers NOT_CONFIGURED; `RecordedComparables`
+reads sales typed in by hand, which is the same evidence at lower volume and works today.
+
+Designed 2026-08-09. Function 4 of the seven in `docs/target-functions.md`;
 the autonomy target is in `docs/end-state.md`. The next session can pick this up from cold.
 
 ## Scope, decided 2026-08-09, extended 2026-08-09 (evening)

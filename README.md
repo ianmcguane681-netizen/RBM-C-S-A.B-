@@ -14,11 +14,15 @@ Evidence must prove.
 Deterministic rules must decide.
 ```
 
-## Current state — 5 August 2026
+## Current state — 29 August 2026
 
-**1312 tests, 2 skipped.** Two things live here: the **review board engine** (the original
+**1734 tests, 2 skipped.** Two things live here: the **review board engine** (the original
 project, five methodology profiles, three published and ratified decisions) and the
 **reaper lanes** built on top of it, which run the same gates without convening a board.
+
+Four money lanes run — arb, stocks, mispricing, flipper — plus a non-money outreach lane.
+Crypto is `PARKED`: built, tested, and deliberately out of the rotation, which is a status
+rather than an absence. `docs/next-work.md` is the live checkpoint.
 
 ```
    RESEARCH ─────────────────────────────────────────►  EXECUTION
@@ -348,11 +352,14 @@ working decision be mistaken for a reviewed one.
 
 | lane | evidence | ends at |
 |---|---|---|
-| `arb` | aggregator odds, per-book | a bet slip: stakes to the penny, order to place them in, and the abort plan written **before** the first bet goes on |
+| `arb` | aggregator odds per book, and settlement clauses somebody read | a bet slip: stakes to the penny, order to place them in, and the abort plan written **before** the first bet goes on |
 | `stocks` | SEC filings, an Alpaca quote and 30 days of closes | a whole number of shares priced at the ask |
-| `crypto` | contract identity, upgradeability, a round trip | unsigned transactions to sign in your own wallet |
+| `mispricing` | league tables, weather, team news, against a de-vigged book price | a ticket saying THIS IS A BET, NOT A LOCK — or, while the model is PAPER, a record of what it would have done |
+| `flipper` | what comparable graded items actually SOLD for | an item to go and buy by hand, with the distribution and the fee arithmetic on it |
+| `outreach` | OpenStreetMap, one HTTP response per site, and a person's search | a drafted message with every claim it rests on. Nothing is sent |
+| ~~`crypto`~~ | **PARKED 2026-08-29** — built, tested, and out of the rotation | — |
 
-Four things hold the boundary:
+Six things hold the boundary:
 
 - **A lane cannot spend itself.** Per position 5% of its ring-fence, no more than 40% out
   at once across every live position, at most 8 concurrent, a 3% daily settled loss trips
@@ -379,6 +386,22 @@ Four things hold the boundary:
   path, no signing library and no send method. It computes the swap to the last byte,
   including the `amountOutMin` floor that stands between a swap and a sandwich, and an
   exact-amount approval rather than an unlimited one.
+- **The mispricing lane is the one forecast here, and it starts unable to spend.** An arb
+  claims nothing about the fixture; this claims a price is wrong. It is admissible on the
+  precedent the stocks lane already sets — a FORECAST needs a named human — and it is
+  `PAPER` until a person promotes it against a written account of a settled record. It
+  refuses an edge smaller than the disagreement between de-vig methods, an edge inside the
+  model's own stated error, and a fixture with a required input missing.
+- **The flipper's exit is never contracted, and asking prices cannot size.** A completed
+  sale is a transaction that happened; an active listing is somebody's hope. Below five
+  matching sales in ninety days the verdict is INDETERMINATE — not a low estimate, not a
+  wide range — and every suggestion carries the count, the window and the spread rather
+  than a price.
+- **Outreach refuses more approaches than it drafts.** OpenStreetMap can say a business
+  exists and cannot say whether it has a website, so its silence is a lead a person checks
+  rather than a finding. An address that reads as an individual's is refused on the
+  ePrivacy line, an unreadable suppression list refuses everybody, and there is no SMTP
+  client in this repository — the draft is the deliverable.
 
 ### Being told
 

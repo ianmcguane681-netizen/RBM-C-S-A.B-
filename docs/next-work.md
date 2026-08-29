@@ -1,131 +1,130 @@
-# Next work — checkpoint 2026-08-09
+# Next work — checkpoint 2026-08-29
 
-> **1436 tests, 2 skipped.** `main` is at the PR #9 merge; PR #10 carries the 8-9 August
-> work on top of it, and the notifier is now wired into all three lanes. **8 August was the first day all three money lanes ran against real sources**,
-> on Ian's own Windows machine, and almost everything below came out of that rather than out
-> of reading the code.
+> **1734 tests, 2 skipped.** Four money lanes run, one is parked, and a fifth non-money
+> lane joined them. Everything below the "TOMORROW" heading is what a person has to do
+> before any of it produces an instruction; everything in "Engineer" is what does not need
+> them.
 >
 > **Nothing is running on a cadence.** No supervisor has been started, so no lane has ever
-> run unattended and nothing is being missed while it is not.
+> run unattended and nothing is being missed while it is not. That is unchanged from the
+> 08-09 checkpoint and it is now the oldest open item here.
 >
-> **Tomorrow's plan is the section immediately below.** The rest of this file is history,
-> kept because the reasoning in it is why the code looks the way it does.
+> **Not one order, bet, purchase or message has been placed or sent** by this system or
+> through it, manually or otherwise.
 
 ---
 
-# TOMORROW — 2026-08-10
+# WHAT RUNS, AS OF 2026-08-29
 
-Ordered. Ian's items and the engineer's items are separated because they do not block each
-other and can run in parallel.
+| lane | what it claims | ceiling today | what lifts it |
+|---|---|---|---|
+| **arb** | two prices cannot both be right | INDETERMINATE on every candidate | read two books' rules pages once — `python rulebook.py` |
+| **stocks** | this filing disqualifies this name | READY | market hours and a watchlist |
+| **mispricing** | this price is wrong | REFUSED, because the model is PAPER | a season of paper forecasts, then a person promotes it |
+| **flipper** | this item is underpriced and will resell | COULD_NOT_LOOK | a watchlist file, and comparables typed in |
+| **outreach** | this business's web presence is worth a conversation | leads needing a search | thirty seconds each of somebody's search engine |
+| ~~crypto~~ | — | **PARKED 2026-08-29** | move `"crypto"` back into `lib.reaping.LANES` |
+
+**Crypto is parked, not deleted.** `PARKED` is a fifth assembly status beside CONFIGURED,
+NOT_CONFIGURED, UNREADABLE and REFUSED, and it appears everywhere a lane is listed — the
+reap report, the money panel, preflight, the API — carrying who parked it, when, why, and
+the one line that undoes it. NOT_CONFIGURED would have been the tempting reuse and is wrong
+in the usual direction: it means nobody set this up, which has an obvious remedy, where
+PARKED means somebody looked and decided. Nothing was removed; `assemble_crypto` and its
+tests are still here so the lane cannot come back untested.
+
+---
+
+# TOMORROW
+
+Ordered. Ian's items and the engineer's do not block each other.
 
 ## Ian
 
-**0. The venue fees, decided 08-09: do not pay them yet.** Smarkets wants £150 one-off for
-API access and Betfair about £299 for a live App Key — ~£450 before a bet goes on, and it
-buys automation rather than opportunity. The odds feed already carries both books, so the
-lane can find these and Ian can place them by hand for nothing. Pay once the lane has shown
-repeatable arbs at a real stake size; what the money then buys is automatic placing and,
-more valuably, automatic settlement from the exchanges' cleared-order APIs.
+**1. Two books' settlement rules, once.** This is unchanged from the 08-09 checkpoint and
+it is now the single highest-value hour anybody can spend on this repository: the arb lane
+reports INDETERMINATE on every candidate it finds until it is done, and it will keep doing
+so forever.
 
-**1. The arb rulebooks (his stated plan for tomorrow).**
-The method is proven — he read William Hill's and bet365's abandonment and postponement
-pages on 08-08 and found a real divergence. What is left is to do it for a pair the ODDS
-FEED ACTUALLY CARRIES. bet365 is not carried; 38 books are, including William Hill, Betfair,
+What changed is that there is now somewhere for the reading to go and something that checks
+it afterwards. `python rulebook.py --topics` lists the ten questions and why each one has
+cost somebody the stake; `--template` prints a file; `--record` takes it. Then the arb
+lane's settlement gate is backed by clauses rather than by one sentence, and three things
+stop it that could not before: the record contradicting the declaration, a disqualifying
+topic unread or stale, and a declaration that predates a re-reading.
+
+Pick a pair the odds feed actually carries — 38 books including William Hill, Betfair,
 Betfair Sportsbook, Paddy Power, Sky Bet, Smarkets, Ladbrokes, Coral, Pinnacle and
-BoyleSports. Two things to weigh while choosing: Betfair, Paddy Power and Sky Bet are all
-Flutter, so their rules agree BECAUSE they are one company and restriction risk is
-correlated; and two exchanges (Betfair, Smarkets) are the most likely pair to settle alike
-and the least likely to restrict a winning account. Set `arb.enabled` true, run
-`run.py --reap arb --dry` to get the exact declaration key, then write the declaration with
-the divergences recorded rather than omitted. `docs/crypto-thesis.md` shows the shape of an
-honest one.
+BoyleSports. bet365 is **not** carried. Two exchanges (Betfair, Smarkets) are the most
+likely pair to settle alike and the least likely to restrict a winning account; Betfair,
+Paddy Power and Sky Bet are all Flutter, so their rules agree BECAUSE they are one company
+and restriction risk is correlated.
 
-**2. Monday, not tomorrow: the stocks lane during market hours.** 15:30-22:00 Irish time.
-Six names now that the shares-outstanding collision is fixed. Expect MOD to refuse — it has
-a genuine split history and that refusal is correct.
+**2. The eBay sold-data question, still open from 08-09.** The developer account went for
+verification on 08-09 and the answer was expected 08-11. Nothing here records it. Until it
+lands, the flipper runs off comparables typed in by hand — which is the *same evidence at
+lower volume*, not a degraded substitute, because a sale read off a completed-listings page
+really happened. Five per item is a couple of minutes.
 
-**3. The eBay question — in flight.** The developer account went for verification on
-08-09 and takes a business day, so the two answers land **Tuesday 08-11**: whether the
-production keys can call SOLD data at all, and the real fee rate from the account rather
-than the published card-category one. Everything in `docs/flipper-design.md` is moot until
-the first one, and every threshold in it moves with the second.
+Also still open from that day: **the real fee rate, from the account rather than the
+published card.** The lane refuses to assemble without a fee schedule, deliberately, and
+every floor and threshold in it moves with the real number.
 
-**4. Raw-buy-then-grade: ANSWERED, out.** Scope extended the same evening to graded Pokémon
-alongside graded sports cards, on the same matchability argument. Ungraded games, consoles
-and electronics stay *later* with the criterion now written down — they enter when an exact
-identity key exists and condition has a third state, because "tested, working" in a listing
-is a seller's claim the lane cannot check.
+**3. The mispricing model is PAPER and should stay that way for a season.** It evaluates
+every fixture completely and can size nothing. Read what it would have done. Promoting it
+needs a written account of how the forecasts compared with the outcomes, and construction
+refuses `LIVE` without one — that is the guard that matters most, because every other guard
+in that lane can be satisfied by a model that is simply bad.
+
+Before enabling it at all, check `python preflight.py`: it and the arb lane buy the same
+prices from the same 500-a-month key, and an exhausted key reports no opportunity, which is
+indistinguishable from a quiet market for the rest of the month.
+
+**4. Outreach needs a town and a sender.** `python outreach.py --template`. Then the loop
+has thirty seconds of a person in it per business — OpenStreetMap can say a business exists
+and cannot say whether it has a website, and reading its silence as a finding would send a
+list of messages most of which open by telling somebody something false about their own
+business.
+
+**5. Two minutes, still not done since 08-09:** `~/.telegram/bot_token` and
+`~/.telegram/chat_id`. Every run still reports NOT_CONFIGURED, correctly, and
+`status.py`'s NOTIFICATIONS panel still says NEVER_SENT.
 
 ## Engineer
 
-**1. ~~Wire the notifier into the lanes.~~ DONE — `lib/announce.py`.** All four calls are
-in: READY, a tripped breaker, a lane blind three runs running, and the daily digest offered
-by the supervisor on every tick. Two things are worth knowing before changing any of it.
+**1. Start a supervisor.** The oldest item here and now the largest. Every lane is
+scheduled, every cadence is argued for, and nothing has ever run unattended.
 
-*The wire is in `lib/reaping.reap`, once, for every lane* — the same argument as
-`assemble` looping over `LANES` rather than naming three. A fourth lane is notified by
-existing. It runs after placing, because "a person places it" and "the broker did not
-answer" are different messages about one instruction and only one of them is ever true.
+**2. `data/monitor-ledger.json` still reports LOST** and has since the machine was set up.
+The receipt says 52 rows on 2026-08-02 and the data is absent, so every comparison the
+monitor would make is meaningless. Rebuild it or decide the monitor is not in use and say
+so somewhere.
 
-*What is suppressed, and the one place the doctrine inverts.* A standing opportunity is
-re-told every six hours rather than every run, keyed on lane and subject; a trip is told
-once per trip; an unresolved placement is keyed by the order and can never be deduped away
-by the READY message before it. But an unreadable memory suppresses **nothing** — failing
-toward stopping is about money moving, and here stopping means an opportunity nobody hears
-about, which is invisible where a duplicate message is merely a duplicate message.
+**3. Per-lane opportunity panels on the dashboard**, from the 08-09 checkpoint. The gate
+work is done; this is the panel underneath it. Five lanes now rather than three.
 
-Two things were finished after the first pass, and both were cases of the wire being in
-while the message under-reported. **The digest now says what each lane FOUND**, read from
-the journal, rather than how its process exited — `reap-arb COMPLETED` reported that
-something ran, which is not the claim the daily message exists to make. Three states stay
-apart on the way to a phone: found nothing, did not run, and journal unreadable. And **a
-breaker tripped by `positions.py --apply` is announced there**, not on the next reap: that
-trip happens at a keyboard, and for stocks the next reap is 24 hours away, so a stopped
-lane read as a quiet one for a day.
+**4. Portfolio pricing** — `docs/pricing-design.md`, designed and unbuilt. Expect roughly
+six of ten holdings to price and the four UCITS ETFs to mark UNPRICED, which is correct.
 
-**Still not wired, and deliberately left:** `monitor.py` (exit 4, a material change means a
-prior review may no longer hold) and `scan_arb.py`. Both produce work for a person rather
-than an instruction, and both would need a message type that does not exist yet — worth
-doing, worth designing rather than bolting on.
+**5. The mispricing lane's league prior is one number for every competition.** 1.4 goals per
+team per game, hard-coded, where it should come from the table in use — see the open items
+in `docs/mispricing-design.md`. It shows up as a systematic edge on unders in a low-scoring
+league.
 
-Still open on this: nothing has been sent to a real chat yet. `~/.telegram/bot_token` and
-`~/.telegram/chat_id` do not exist on Ian's machine, so every run reports NOT_CONFIGURED —
-correctly, and that is the last two minutes of the job (`bash deploy/setup-credentials.sh`,
-or `python deploy/setup_credentials.py` on Windows). Until then `status.py`'s NOTIFICATIONS
-panel says NEVER_SENT, which is the honest reading and not a failure.
+**6. Nothing records a forecast for later comparison.** The journal captures harvests, so
+the record exists in a form a person can read, and a purpose-built calibration file is what
+promotion out of PAPER should eventually be argued from.
 
-**2. The input surface for outcomes — `docs/recording-outcomes.md`, designed 08-09.**
-Recording is what feeds the breakers, and the only way in is a terminal. Ian asked for a
-place to confirm from a phone: for arb one tap saying both legs went on as sized (the slip
-knows the stakes) and settlement that is never win-or-loss; for the flipper a real form with
-what was paid and what it sold for. Needs a third key scope — `RECORD` appends outcomes and
-can do nothing else, because the command key must never reach browser storage. Telegram
-buttons are assessed and deliberately later: an inbound path makes the bot token a write
-credential to the ledger.
+## Deliberately not next
 
-**3. Per-lane opportunity panels on the dashboard.** Ian asked for the same detail the
-notifications carry to be visible in the UI, "some sections bigger than others if needs be".
-The gate work is done; this is the panel underneath it.
-
-**4. Portfolio pricing** — `docs/pricing-design.md`, designed and unbuilt. More relevant now
-that Alpaca answers: it is what turns CAPITAL AT COST from NOT_CONFIGURED into a real book.
-Three decisions already made in that document. Expect roughly six of ten holdings to price
-and the four UCITS ETFs to mark UNPRICED, which is the correct answer and not a gap.
-
-**5. `data/monitor-ledger.json` reports LOST** and has since the machine was set up. The
-receipt says it held 52 rows on 2026-08-02 and the data is absent, so every comparison the
-monitor would make is meaningless until it is rebuilt. Either rebuild it or decide the
-monitor is not in use and say so somewhere.
-
-## Deliberately not tomorrow
-
-- **Crypto** is parked. `docs/crypto-thesis.md` records both theses and why: the assets with
-  the best case (BTC, ETH) are the ones the ERC-20 gates structurally cannot see, AAVE is a
-  measured upgradeable proxy, and stablecoins do not fit a value thesis at all. The lane
-  still works as a veto and a monitor at zero further cost.
-- **The flipper build**, until the eBay sold-data question is answered.
+- **Crypto.** Parked, and the parking is visible in six places rather than being a gap.
+- **Autonomy on any lane.** Still not one order placed, manually or otherwise.
+- **A scraper for anything.** Facebook Marketplace, DoneDeal and bookmaker rules pages are
+  all refused by name, in the code and in tests, and none of them is a missing adapter.
+- **An SMTP client.** The outreach draft is the deliverable and a person presses send, the
+  same way `connectors/chain_exec.py` cannot sign.
 - **Levelling** — designed, waiting on three numbers from Ian.
-- **Autonomy on any lane.** Not one order has been placed, manually or otherwise.
+- **Raw-buy-then-grade** — answered and out, on 08-09.
 
 ---
 
