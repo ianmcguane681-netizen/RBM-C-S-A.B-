@@ -1,0 +1,35 @@
+[
+  {
+    "_note": "One completed sale. `kind` has no default: SOLD means somebody paid this, ASKING means somebody wanted it. Only SOLD is ever sized against, and a row that does not say which is skipped.",
+    "title": "Charizard Base Set Holo",
+    "qualifiers": [
+      "Base Set",
+      "1999",
+      "Unlimited"
+    ],
+    "grade": "9",
+    "grader": "PSA",
+    "price": 340.0,
+    "currency": "EUR",
+    "kind": "SOLD",
+    "sold_at": "2026-08-20",
+    "entered_by": "Your Name",
+    "url": "https://www.ebay.ie/itm/..."
+  },
+  {
+    "title": "Charizard Base Set Holo",
+    "qualifiers": [
+      "Base Set",
+      "1999",
+      "Unlimited"
+    ],
+    "grade": "9",
+    "grader": "PSA",
+    "price": 495.0,
+    "currency": "EUR",
+    "kind": "ASKING",
+    "sold_at": "2026-08-25",
+    "entered_by": "Your Name",
+    "url": "https://www.ebay.ie/itm/..."
+  }
+]

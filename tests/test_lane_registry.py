@@ -26,9 +26,15 @@ from lib.reaping import LANES, PARKED, PARKED_LANES, REFUSED, assemble
 
 @pytest.fixture
 def a_fourth_lane(monkeypatch):
-    """`flipper` — a real planned lane, deliberately with no builder written yet."""
+    """`media` — a real planned lane, deliberately with no builder written yet.
 
-    extended = LANES + ("flipper",)
+    This was `flipper` until 2026-08-29, when the flipper was built and stopped being a
+    worked example of a half-added lane. The replacement is the next name in
+    `lib/reaper.py`'s list of planned lanes, and it will need replacing again the day
+    somebody builds that one — which is the guard doing its job rather than a smell.
+    """
+
+    extended = LANES + ("media",)
     monkeypatch.setattr("lib.reaping.LANES", extended)
     return extended
 
@@ -49,7 +55,7 @@ def test_a_new_lane_is_scheduled_without_touching_the_scheduler(a_fourth_lane):
 
     scheduled = {lane.name for lane in run._reaper_lanes()}
 
-    assert "reap-flipper" in scheduled
+    assert "reap-media" in scheduled
     assert scheduled == {f"reap-{lane}" for lane in a_fourth_lane}
 
 
@@ -76,9 +82,9 @@ def test_a_declared_lane_with_no_builder_is_reported_rather_than_raised(
                          theses_path=tmp_path / "theses.json")
 
     assert [item.lane for item in assembled][:len(a_fourth_lane)] == list(a_fourth_lane)
-    flipper = next(item for item in assembled if item.lane == "flipper")
-    assert flipper.status == REFUSED
-    assert "assemble_flipper" in flipper.reason
+    media = next(item for item in assembled if item.lane == "media")
+    assert media.status == REFUSED
+    assert "assemble_media" in media.reason
 
 
 def test_the_api_accepts_a_new_lane_without_editing_the_request_model(a_fourth_lane):
@@ -91,7 +97,7 @@ def test_the_api_accepts_a_new_lane_without_editing_the_request_model(a_fourth_l
 
     from backend.app import ReaperCommand
 
-    assert ReaperCommand(lane="flipper").lane == "flipper"
+    assert ReaperCommand(lane="media").lane == "media"
     with pytest.raises(ValueError, match="unknown lane"):
         ReaperCommand(lane="roulette")
 
@@ -176,7 +182,7 @@ class TestANewLaneCannotBorrowAnotherLanesExecutionPath:
     def _autonomous(self):
         from lib.operating import AUTONOMOUS, Mode
 
-        return Mode("flipper", AUTONOMOUS, "config", "autonomous_execution is true")
+        return Mode("media", AUTONOMOUS, "config", "autonomous_execution is true")
 
     class _Ledger:
         readable = True
@@ -186,12 +192,12 @@ class TestANewLaneCannotBorrowAnotherLanesExecutionPath:
         from lib.placing import REFUSED, place_harvest
 
         placement = place_harvest(
-            self._ready("flipper"), mode=self._autonomous(), ledger=self._Ledger(),
+            self._ready("media"), mode=self._autonomous(), ledger=self._Ledger(),
             broker=object(),
         )
 
         assert placement.status == REFUSED
-        assert "no execution path is written for 'flipper'" in placement.reason
+        assert "no execution path is written for 'media'" in placement.reason
         # And it says which of the two registries the answer belongs in.
         assert "PLACERS" in placement.reason and "NO_ADAPTER" in placement.reason
 
@@ -212,7 +218,7 @@ class TestANewLaneCannotBorrowAnotherLanesExecutionPath:
                 raise AssertionError("recorded a position for a lane that cannot place")
 
         placement = place_harvest(
-            self._ready("flipper"), mode=self._autonomous(), ledger=Recording(),
+            self._ready("media"), mode=self._autonomous(), ledger=Recording(),
             broker=object(),
         )
 
@@ -240,4 +246,21 @@ class TestANewLaneCannotBorrowAnotherLanesExecutionPath:
     def test_a_lane_with_no_broker_factory_gets_none_rather_than_an_import_error(self):
         from lib.placing import broker_for
 
-        assert broker_for("flipper") is None
+        assert broker_for("media") is None
+
+    def test_the_flipper_now_declares_why_it_cannot_place_rather_than_being_unknown(self):
+        """It was the worked example of an unbuilt lane until it was built. Now it is in
+        NO_ADAPTER, and the refusal has to say WHY rather than "no execution path" — eBay
+        taking no automated purchase is a fact about eBay, not unfinished work here."""
+
+        from lib.placing import NOT_PLACED, place_harvest
+
+        from lib.operating import AUTONOMOUS, Mode
+
+        placement = place_harvest(
+            self._ready("flipper"),
+            mode=Mode("flipper", AUTONOMOUS, "config", "autonomous_execution is true"),
+            ledger=self._Ledger(), broker=object())
+
+        assert placement.status == NOT_PLACED
+        assert "no automated purchase" in placement.reason

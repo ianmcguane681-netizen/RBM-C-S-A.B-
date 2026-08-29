@@ -59,7 +59,7 @@ JOURNAL = Path("data/journal.sqlite3")
 #: constant above unpatchable and sent a full test run's journal into the live `data/`.
 _DEFAULT = object()
 
-LANES = ("arb", "stocks", "mispricing")
+LANES = ("arb", "stocks", "mispricing", "flipper")
 
 #: Lanes that are built and tested and are NOT being run, with the reason each one was
 #: stood down. Kept as a registry rather than as a deletion for the reason this whole
@@ -97,7 +97,7 @@ ALL_LANES = LANES + tuple(PARKED_LANES)
 #: function, so a default passed in by each caller would have left the panel and the lane
 #: free to disagree all over again.
 LANE_CURRENCY = {"arb": "EUR", "stocks": alpaca.QUOTES_IN, "crypto": "USD",
-                 "mispricing": "EUR"}
+                 "mispricing": "EUR", "flipper": "EUR"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -502,6 +502,111 @@ def _evidence_reader(settings: dict, directory: Path):
     return read
 
 
+def assemble_flipper(settings: dict, *, directory: Path, kill_switch: Path) -> Assembly:
+    """The flipper lane, per docs/flipper-design.md.
+
+    Refuses without a fee schedule, and that is the strictest thing here. Every floor and
+    every threshold in this lane moves with the real commission rate, and reading it off a
+    published fee card rather than off the account is how a margin becomes fiction — so an
+    absent schedule stops the lane rather than defaulting to an indicative number that
+    would make every margin look better than it is.
+    """
+
+    from lib.ebay_config import listings_from_config
+    from lib.flipper import FeeSchedule
+    from lib.flipper_reaper import BoundedAuthority, build_flipper_reaper
+    from lib.seen import SeenRegister
+
+    grant = settings.get("authority") or {}
+    if not grant:
+        return Assembly("flipper", REFUSED, reason=(
+            "no authority is declared. A flip claims the item is underpriced and will "
+            "resell — unlike an arb, which claims nothing about the fixture — so it needs "
+            "a named person's grant, bounded at the figure above which they want to look "
+            "at an item themselves."))
+
+    schedule = settings.get("fees") or {}
+    if not schedule:
+        return Assembly("flipper", REFUSED, reason=(
+            "no fee schedule. Commission, the fixed fee, processing, postage and a returns "
+            "rate must come from the account rather than from a help page: every floor and "
+            "threshold in this lane moves with the real rate, and an assumed one flatters "
+            "every margin it computes."))
+
+    try:
+        fees = FeeSchedule(
+            commission_pct=float(schedule["commission_pct"]),
+            fixed_fee=float(schedule["fixed_fee"]),
+            processing_pct=float(schedule.get("processing_pct", 0.0)),
+            postage=float(schedule.get("postage", 0.0)),
+            postage_charged=float(schedule.get("postage_charged", 0.0)),
+            returns_rate_pct=float(schedule.get("returns_rate_pct", 0.0)),
+            currency=str(settings.get("currency", LANE_CURRENCY["flipper"])),
+        )
+        authority = BoundedAuthority(
+            declared_by=str(grant["declared_by"]),
+            reasoning=str(grant["reasoning"]),
+            considered=tuple(grant.get("considered", ())),
+            expires_at=str(grant["expires_at"]),
+            per_item_ceiling=float(grant["per_item_ceiling"]),
+            max_exposure=float(grant["max_exposure"]),
+            declared_at=str(grant.get("declared_at", "")),
+            currency=str(grant.get("currency", LANE_CURRENCY["flipper"])),
+        )
+        breakers = breakers_for("flipper", settings, directory=directory,
+                                kill_switch=kill_switch)
+    except (KeyError, TypeError, ValueError) as error:
+        return Assembly("flipper", REFUSED,
+                        reason=f"{type(error).__name__}: {error}"[:240])
+
+    if not breakers.readable:
+        return Assembly("flipper", UNREADABLE, reason=(
+            f"the breaker state would not parse ({breakers.reason}). An unknown daily "
+            f"loss is not a satisfied daily loss limit."))
+
+    from connectors.ebay import COMPARABLES, EbaySoldSource, RecordedComparables
+
+    return Assembly("flipper", CONFIGURED, build_flipper_reaper(
+        authority=authority, breakers=breakers, fees=fees,
+        ring_fence_limit=float(authority.max_exposure),
+        sources=(RecordedComparables.load(directory / COMPARABLES.name),
+                 EbaySoldSource.from_directory()),
+        listings=listings_from_config(settings, directory=directory),
+        holdings=lambda: _flipper_holdings(directory),
+        theses=settings.get("item_theses") or {},
+        register=SeenRegister.load(directory / SEEN.name),
+        capacity_limit=int(settings.get("capacity", 20)),
+    ))
+
+
+def _flipper_holdings(directory: Path):
+    """Open flipper positions, read from the outcome ledger rather than a second store.
+
+    The ledger already records what was bought and what settled, and a lane keeping its own
+    parallel list of stock is a lane whose two answers to "how many items are in the
+    hallway" eventually disagree.
+    """
+
+    from lib.flipper import Holding
+    from lib.outcomes import LEDGER, OutcomeLedger
+
+    ledger = OutcomeLedger(directory / LEDGER.name)
+    if not getattr(ledger, "readable", False):
+        # An unreadable ledger means capacity is UNKNOWN. Reported as a full shelf, which
+        # refuses rather than permits: a lane that cannot count its stock must not be told
+        # it has room.
+        from lib.flipper import CAPACITY
+
+        return tuple(
+            Holding(key=f"unknown-{index}", bought_at="", cost=0.0)
+            for index in range(CAPACITY))
+    return tuple(
+        Holding(key=position.position_id, bought_at=getattr(position, "opened_at", ""),
+                cost=float(getattr(position, "staked", 0.0) or 0.0),
+                sold_at=getattr(position, "settled_at", "") or "")
+        for position in ledger.positions if position.lane == "flipper")
+
+
 def assemble_stocks(settings: dict, *, directory: Path, kill_switch: Path,
                     theses_path: Path) -> Assembly:
     from connectors import alpaca
@@ -628,6 +733,8 @@ def assemble(
                                             theses_path=theses_path),
         "mispricing": lambda s: assemble_mispricing(s, directory=directory,
                                                     kill_switch=kill_switch),
+        "flipper": lambda s: assemble_flipper(s, directory=directory,
+                                              kill_switch=kill_switch),
         "crypto": lambda s: assemble_crypto(s, directory=directory,
                                             kill_switch=kill_switch,
                                             theses_path=theses_path),

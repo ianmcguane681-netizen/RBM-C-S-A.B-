@@ -205,6 +205,89 @@
     }
   },
 
+  "flipper": {
+    "_README": [
+      "Graded sports cards, graded Pokémon and graded video games, bought to resell.",
+      "docs/flipper-design.md decided the scope, both thresholds, the floor, the capacity",
+      "and the horizon on 2026-08-09; read it before changing any number here.",
+      "",
+      "THE EXIT IS NEVER CONTRACTED. Stocks and arb settle on their own; a flip does not.",
+      "Sold comparables say others sold at that price, not that you will — so every",
+      "suggestion carries the count, the window and the spread, and an item unsold for 50",
+      "days comes off the book at cost.",
+      "",
+      "Two inputs live outside this file, both gitignored, both with an example beside",
+      "them: data/flipper-watchlist.json (what to examine) and data/comparables.json",
+      "(what similar items actually sold for). With no watchlist the lane reports",
+      "COULD_NOT_LOOK, which is correct and is not 'no deals today'.",
+      "",
+      "Disabled by default because the question at the top of the design document is",
+      "still open: can the eBay account read SOLD listings at all? Until it is answered,",
+      "record comparables by hand — the same evidence, less of it."
+    ],
+    "enabled": false,
+    "autonomous_execution": false,
+    "balance": 4000.0,
+    "currency": "EUR",
+
+    "_capacity": [
+      "How many items fit in your house and can be packed and posted in a week. A risk",
+      "control for stocks; a physical fact here, and usually tighter than the ring-fence:",
+      "20 items at the 75 floor is 1,500 and at 200 each is 4,000. At capacity the lane",
+      "reports AT_CAPACITY rather than finding nothing — a full shelf is a different fact",
+      "from a quiet market and the next thing to do is sell something."
+    ],
+    "capacity": 20,
+
+    "_fees": [
+      "READ THESE OFF THE ACCOUNT, NOT OFF A HELP PAGE. Every floor and threshold in the",
+      "lane moves with the real rate, and a Store subscription changes it materially. The",
+      "lane REFUSES to assemble without them rather than assuming an indicative number,",
+      "because an assumed rate flatters every margin it computes.",
+      "",
+      "The figures below are the indicative ones the design document's arithmetic used.",
+      "They are a placeholder and they are wrong for your account."
+    ],
+    "fees": {
+      "commission_pct": 13.25,
+      "fixed_fee": 0.30,
+      "processing_pct": 0.0,
+      "postage": 5.0,
+      "postage_charged": 0.0,
+      "returns_rate_pct": 3.0
+    },
+
+    "_authority": [
+      "A BOUNDED standing grant, and the bound is the point. An arb's standing authority",
+      "is defensible because the position makes no claim about the fixture; a flip claims",
+      "the item is underpriced and will resell, so an unbounded grant would authorise",
+      "that judgement in advance for every item forever.",
+      "",
+      "per_item_ceiling is the figure above which you look at something yourself before",
+      "money moves. Above it the lane blocks on PER_ITEM_THESIS_REQUIRED naming the item."
+    ],
+    "authority": {
+      "declared_by": "YOUR NAME",
+      "reasoning": "graded items have an exact identity and a comparable set, so what similar ones sold for is evidence rather than an estimate; below the per-item ceiling the sums are small enough to run on the comparable floor alone",
+      "considered": [
+        "the exit is not contracted and the item may not sell at all",
+        "an item unsold for 50 days is written off the book at cost",
+        "physical capacity binds before the ring-fence does",
+        "grade inflation between graders is a live argument, which is why grader is in the key"
+      ],
+      "expires_at": "2026-12-31T00:00:00Z",
+      "per_item_ceiling": 250.0,
+      "max_exposure": 200.0,
+      "currency": "EUR"
+    },
+
+    "_item_theses": [
+      "Per-item theses for anything above the ceiling, keyed by the item's subject line",
+      "exactly as the lane prints it. Written by a person; the lane cannot add one."
+    ],
+    "item_theses": {}
+  },
+
   "crypto": {
     "enabled": false,
     "balance": 1000.0,

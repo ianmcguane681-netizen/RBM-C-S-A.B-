@@ -34,7 +34,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Sequence
 
 READY = "READY"
 CONFIGURED = "CONFIGURED"
@@ -53,6 +53,7 @@ CRYPTO = "crypto"
 STOCKS = "stocks"
 ARB = "arb"
 MISPRICING = "mispricing"
+FLIPPER = "flipper"
 
 #: Statuses that mean the requirement is not currently usable.
 UNMET = frozenset({NOT_CONFIGURED, UNREACHABLE})
@@ -386,6 +387,101 @@ def mispricing_lane(*, probe: bool = False,
     )
 
 
+def flipper_lane(*, probe: bool = False,
+                 home: str | Path | None = None) -> LaneReadiness:
+    """What the flipper can see, led by the question that decides whether it works at all.
+
+    `docs/flipper-design.md` opens with it: can the eBay account read SOLD listings? Active
+    listings are free; completed sales are the gated part and the whole function rests on
+    them. If the answer is no, the honest reading is that the function does not work as
+    designed — not that asking prices are substituted.
+
+    So the summary leads with that and the requirement list is honest about the substitute:
+    comparables typed in by hand are the SAME EVIDENCE at lower volume, not a degraded
+    stand-in, because a sale somebody read off a completed-listings page really happened.
+    """
+
+    root = Path(home).expanduser() if home else Path.home()
+    requirements: list[Requirement] = []
+
+    token = root / ".ebay" / "oauth_token"
+    has_token = token.is_file() and token.read_text(encoding="utf-8").strip()
+    requirements.append(Requirement(
+        FLIPPER, "eBay completed sales", NOT_ATTEMPTED if has_token else NOT_CONFIGURED,
+        unlocks="sold comparables at volume, which is what this lane sizes against",
+        detail=("a token is present; whether the ACCOUNT is approved for sold data is a "
+                "separate question and the one that matters" if has_token else ""),
+        # Not required, because the hand-recorded source below is not a lesser substitute.
+        required=False,
+        remedy="developer portal: check what the production keys can actually call, "
+               "BEFORE anything is built on the assumption (design question 1)",
+    ))
+
+    recorded = Path("data/comparables.json")
+    requirements.append(Requirement(
+        FLIPPER, "comparables recorded by hand",
+        CONFIGURED if recorded.is_file() else NOT_CONFIGURED,
+        unlocks="the same evidence at lower volume; enough to run the lane today",
+        detail=("completed sales typed in from a completed-listings page" if
+                recorded.is_file() else
+                "five sold prices per item, typed in, is a couple of minutes and is the "
+                "same evidence an API would return"),
+        required=False,
+        remedy="connectors/ebay.template() prints the shape",
+    ))
+
+    watchlist = Path("data/flipper-watchlist.json")
+    requirements.append(Requirement(
+        FLIPPER, "items to examine",
+        CONFIGURED if watchlist.is_file() else NOT_CONFIGURED,
+        unlocks="the candidates. With none the lane reports COULD_NOT_LOOK, which is "
+                "correct and is not a finding that there is nothing worth buying",
+        detail="", required=True,
+        remedy="lib/ebay_config.template() prints the shape",
+    ))
+
+    fees = _flipper_fees()
+    requirements.append(Requirement(
+        FLIPPER, "the real fee schedule", CONFIGURED if fees else NOT_CONFIGURED,
+        unlocks="every floor and threshold in this lane, all of which move with the rate",
+        detail=(fees or "read it off the ACCOUNT, not off a help page: a Store "
+                        "subscription changes it materially, and an assumed rate flatters "
+                        "every margin the lane computes"),
+        required=True, remedy="the `fees` block in data/reapers.json",
+    ))
+
+    covered = sum(1 for r in requirements if r.is_met)
+    return LaneReadiness(
+        FLIPPER,
+        f"Graded cards and games, bought to resell. THE EXIT IS NEVER CONTRACTED: sold "
+        f"comparables say others sold at that price, not that you will. "
+        f"{covered} of {len(requirements)} input(s) present.\n"
+        f"         The question that decides whether this works at all: can the eBay "
+        f"account read SOLD listings? Until that is answered, record comparables by hand — "
+        f"the same evidence, less of it.",
+        tuple(requirements),
+    )
+
+
+def _flipper_fees() -> str:
+    """The configured fee schedule in one line, or empty when there is none."""
+
+    try:
+        from lib.reaping import CONFIG, load_config
+
+        config, unreadable = load_config(CONFIG)
+        if unreadable:
+            return ""
+        fees = (config.get("flipper") or {}).get("fees") or {}
+        if not fees:
+            return ""
+        return (f"{fees.get('commission_pct')}% + {fees.get('fixed_fee')} fixed, "
+                f"postage {fees.get('postage', 0)}, returns "
+                f"{fees.get('returns_rate_pct', 0)}%")
+    except Exception:  # noqa: BLE001 - a preflight that raises has failed its one job
+        return ""
+
+
 def _model_status() -> str:
     """Whether a model is declared, and whether it may size anything.
 
@@ -522,7 +618,7 @@ def all_lanes(*, probe: bool = False) -> tuple[LaneReadiness, ...]:
 
     described = {
         "crypto": crypto_lane, "stocks": stocks_lane, "arb": arb_lane,
-        "mispricing": mispricing_lane,
+        "mispricing": mispricing_lane, "flipper": flipper_lane,
     }
 
     out: list[LaneReadiness] = []

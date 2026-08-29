@@ -77,6 +77,11 @@ def _stamp() -> str:
 #:
 #: The odds would justify every five minutes. The allowance will not, and the allowance is
 #: the binding constraint until the tier is paid for.
+#: `flipper` is six hours, which is the only cadence here set by how fast an OPPORTUNITY
+#: disappears rather than by how fast the evidence changes: a severely underpriced graded
+#: card is gone in minutes, and the URGENT tier exists on the premise that somebody acts
+#: quickly. Its comparables come from a local file and cost nothing to re-read.
+#:
 #: `mispricing` is a day because it buys the SAME h2h prices from the SAME key as the arb
 #: lane, and the free tier is 500 requests a month. It also answers a slower question: a
 #: fair-value model does not change between breakfast and lunch, and the fixture list
@@ -87,7 +92,7 @@ def _stamp() -> str:
 #: lane silently gave it the six-hour default instead of the cadence somebody chose, and a
 #: cadence that changes because a lane was resumed is the kind of thing nobody notices.
 REAP_CADENCES = {"arb": 8 * 3600, "crypto": 6 * 3600, "stocks": 24 * 3600,
-                 "mispricing": 24 * 3600}
+                 "mispricing": 24 * 3600, "flipper": 6 * 3600}
 
 #: What a lane nobody has given a cadence gets. Six hours is chosen to be unremarkable —
 #: often enough to be useful, rare enough that a new lane cannot quietly exhaust a free

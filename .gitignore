@@ -95,3 +95,8 @@ data/outreach.json
 data/outreach-searches.json
 data/outreach-approaches.json
 data/outreach-suppression.json
+
+# The flipper's inputs. Both are watchlists by another name: the comparables file records
+# which items are being traded, and the watchlist records which are being considered.
+data/comparables.json
+data/flipper-watchlist.json

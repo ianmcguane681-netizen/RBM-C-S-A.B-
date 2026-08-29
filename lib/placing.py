@@ -82,6 +82,12 @@ NO_ADAPTER = {
     "arb": ("bookmakers have no betting API — bet365 and Sky Bet will not take an order "
             "from a program, and no amount of engineering changes that. The slip IS the "
             "deliverable; place it by hand from the printed order."),
+    "flipper": ("eBay takes no automated purchase worth relying on, and Facebook "
+                "Marketplace and DoneDeal have no public API at all. That is not a missing "
+                "adapter — it is the same fact as bookmakers not taking an order from a "
+                "program, and building a scraper for either is refused in "
+                "docs/flipper-design.md. The suggestion IS the deliverable; buy it by hand "
+                "and record the outcome through positions.py."),
     "mispricing": ("bookmakers have no betting API, exactly as for the arb lane. The "
                    "difference is what the ticket means: an arb slip is two legs that must "
                    "both go on, and this is one bet that may simply not win. Place it by "

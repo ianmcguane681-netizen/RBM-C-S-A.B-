@@ -1,0 +1,18 @@
+[
+  {
+    "_note": "One item somebody is selling. The grade and the grader are part of the identity rather than modifiers on it: the same card raw and at PSA 10 can differ by fifty times, so a comparable that does not match on both is a different item with the same name.",
+    "title": "Charizard Base Set Holo",
+    "qualifiers": [
+      "Base Set",
+      "1999",
+      "Unlimited"
+    ],
+    "grade": "9",
+    "grader": "PSA",
+    "price": 240.0,
+    "currency": "EUR",
+    "source": "eBay",
+    "url": "https://www.ebay.ie/itm/...",
+    "observed_at": "2026-08-29"
+  }
+]
