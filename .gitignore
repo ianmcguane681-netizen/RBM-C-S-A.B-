@@ -72,3 +72,9 @@ data/heartbeat.json
 # subjects of live opportunities travel through them, so neither belongs in a public repo.
 data/announced.json
 data/notifications.json
+
+# The settlement rulebooks: what each book's rules pages say, read by hand. It names which
+# books are being used and therefore which pairs are being arbed, so it goes the way of the
+# seen register and the outcome ledger. The receipt beside it is committed — it carries how
+# many clauses were recorded and when, never a book name or a clause.
+data/rulebooks.json

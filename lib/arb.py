@@ -244,6 +244,14 @@ class EquivalenceDeclaration:
     declared_by: str
     reasoning: str
     scenarios_checked: tuple[str, ...] = ()
+    #: When the judgement was made. Optional, and worth supplying: `lib.rulebook.compare`
+    #: uses it to find a declaration that PREDATES the wording it is about. Somebody
+    #: compares two abandonment clauses on the 10th; on the 20th one book's clause is
+    #: re-read and has changed; the declaration is still in the config, still passing the
+    #: cascade, and it is now a judgement about words that are no longer on the page.
+    #: Undated, that is undetectable — which is why the field exists even though nothing
+    #: requires it.
+    declared_at: str = ""
 
     def __post_init__(self) -> None:
         if not self.declared_by.strip() or self.declared_by.lower().startswith(

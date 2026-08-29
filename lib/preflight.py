@@ -290,16 +290,81 @@ def arb_lane(*, probe: bool = False, home: str | Path | None = None) -> LaneRead
             required=False, remedy=why,
         ))
 
+    # Not a credential, and the only requirement on this lane that no amount of money
+    # buys. Every candidate the lane finds reports INDETERMINATE until two books' rules
+    # have been read once, so a preflight that listed five paid feeds and omitted the one
+    # unpaid job standing between the lane and a placeable position would be describing
+    # the wrong bottleneck.
+    # Counted before the rulebook requirement is appended: a rulebook is not a source, and
+    # folding it into "reaches N of M sources" would move that number for a reason that has
+    # nothing to do with how many books the lane can see.
     covered = sum(1 for r in requirements if r.is_met)
+    sources = len(requirements)
+
+    rulebook = _rulebook_requirement()
+    requirements.append(rulebook)
+
     return LaneReadiness(
         ARB,
         f"Arb maths, settlement-rule divergence and stake sizing all run on typed odds "
         f"with no credentials at all. Live scanning currently reaches {covered} of "
-        f"{len(requirements)} sources. A feed gives discovery only: available stake and "
+        f"{sources} sources. A feed gives discovery only: available stake and "
         f"settlement rules are read at the book, never from an aggregator.\n"
+        f"         Settlement rulebooks: {rulebook.status}. {rulebook.detail}\n"
         f"         Quota at the current settings: {_arb_burn()}",
         tuple(requirements),
     )
+
+
+def _rulebook_requirement() -> Requirement:
+    """Whether anybody has read two books' settlement rules, and how far they got.
+
+    Three states rather than present/absent, because "no store" and "a store that will not
+    parse" send a person to opposite ends of the job — one to a rules page, one to a text
+    editor — and "one book read" is neither.
+    """
+
+    from lib.rulebook import DISQUALIFYING, RulebookStore
+    from lib.reaping import RULEBOOKS
+
+    store = RulebookStore.load(RULEBOOKS)
+    common = dict(
+        lane=ARB, name="settlement rulebooks",
+        unlocks="the arb lane's first gate; without it every candidate is INDETERMINATE",
+        remedy="python rulebook.py --topics, then --template and --record",
+        # NOT required, and the distinction is the one `DEGRADED` exists for. A lane with
+        # no rulebook still runs, still finds candidates and still reports each one as
+        # INDETERMINATE naming the two books whose rules need reading — which is the most
+        # useful output this lane produces before anybody has read anything. What it cannot
+        # do is reach READY. That is a lane seeing a fraction of its evidence, not a lane
+        # that cannot start.
+        required=False,
+    )
+    if not store.readable:
+        return Requirement(status=UNREACHABLE,
+                           detail=f"{RULEBOOKS} would not parse: {store.reason}", **common)
+    if store.lost:
+        return Requirement(status=NOT_CONFIGURED, detail=(
+            f"the store has been written before and the file is gone "
+            f"({store.status.describe()})"), **common)
+
+    books = store.books()
+    if len(books) < 2:
+        return Requirement(status=NOT_CONFIGURED, detail=(
+            f"{len(books)} book(s) recorded; a comparison needs two"), **common)
+
+    covered = [
+        (a, b) for index, a in enumerate(books) for b in books[index + 1:]
+        if store.compare(a, b, "soccer/h2h").verdict == "COVERED"
+    ]
+    if not covered:
+        return Requirement(status=CONFIGURED, detail=(
+            f"{len(books)} book(s) recorded and no pair is covered on all "
+            f"{len(DISQUALIFYING)} precondition(s) yet. Run "
+            f"`python rulebook.py` to see what is outstanding"), **common)
+    return Requirement(status=READY, detail=(
+        f"{len(covered)} pair(s) fully read: "
+        + "; ".join(f"{a} vs {b}" for a, b in covered)), **common)
 
 
 def _arb_burn() -> str:

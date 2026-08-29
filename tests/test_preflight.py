@@ -93,8 +93,27 @@ class TestDegradedIsItsOwnAnswer:
 
     def test_arb_says_how_many_sources_it_actually_reaches(self, tmp_path):
         lane = arb_lane(home=tmp_path)
+        # Counted over price SOURCES, not over every requirement. The settlement rulebook
+        # is a requirement and is not a source, and folding it in would move the coverage
+        # figure for a reason that has nothing to do with how many books the lane can see.
+        sources = [r for r in lane.requirements if r.name != "settlement rulebooks"]
 
-        assert f"0 of {len(lane.requirements)} sources" in lane.summary
+        assert f"0 of {len(sources)} sources" in lane.summary
+
+    def test_arb_reports_the_rulebook_beside_the_feeds_it_cannot_reach(self, tmp_path):
+        """The one requirement on this lane that no amount of money buys.
+
+        Five paid feeds listed and no mention of the unpaid evening standing between the
+        lane and a placeable position would be a preflight describing the wrong
+        bottleneck: every candidate reports INDETERMINATE until two books' rules are read.
+        """
+
+        lane = arb_lane(home=tmp_path)
+
+        assert "Settlement rulebooks:" in lane.summary
+        rulebook = next(r for r in lane.requirements if r.name == "settlement rulebooks")
+        assert rulebook.required is False   # it degrades the lane, it does not stop it
+        assert "rulebook.py" in rulebook.remedy
 
 
 class TestBetfairKeyKindMustBeDeclared:

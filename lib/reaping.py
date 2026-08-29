@@ -42,6 +42,11 @@ PARKED = "PARKED"
 
 CONFIG = Path("data/reapers.json")
 SEEN = Path("data/seen-register.json")
+#: The clauses somebody read off each book's rules pages. Gitignored with the rest of
+#: `data/*.json` and accompanied by a committed receipt, so a store that has been written
+#: forty times and then lost is LOST rather than reading as a lane nobody ever recorded
+#: anything for.
+RULEBOOKS = Path("data/rulebooks.json")
 LEDGER = Path("data/outcomes.json")
 THESES = Path("data/theses.json")
 BREAKER_DIR = Path("data")
@@ -342,6 +347,7 @@ def breakers_for(lane: str, settings: dict, *, directory: Path, kill_switch: Pat
 
 def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assembly:
     from lib.arb import EquivalenceDeclaration
+    from lib.rulebook import RulebookStore
     from lib.seen import SeenRegister
     from lib.arb_reaper import StandingAuthority, build_arb_reaper
 
@@ -375,6 +381,7 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
             key: EquivalenceDeclaration(
                 str(row["declared_by"]), str(row["reasoning"]),
                 tuple(row.get("scenarios_checked", ())),
+                str(row.get("declared_at", "")),
             )
             for key, row in (settings.get("declarations") or {}).items()
         }
@@ -388,8 +395,13 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
             f"the breaker state would not parse ({breakers.reason}). An unknown daily "
             f"loss is not a satisfied daily loss limit."))
 
+    # An UNREADABLE store is loaded and passed through rather than swapped for None. None
+    # means "no evidence layer was asked for", which PASSES the settlement stage on the
+    # declaration alone; a corrupt file must not be able to buy that treatment by failing
+    # to parse. It reaches the stage as INDETERMINATE, which is the whole doctrine.
     return Assembly("arb", CONFIGURED, build_arb_reaper(
         register=SeenRegister.load(directory / SEEN.name),
+        rulebooks=RulebookStore.load(directory / RULEBOOKS.name),
         authority=authority, breakers=breakers,
         sports=tuple(settings.get("sports", ())), declarations=declarations,
         bookmakers=bookmakers,

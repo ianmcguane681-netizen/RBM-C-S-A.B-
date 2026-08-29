@@ -44,6 +44,24 @@ from lib.http_retry import TransientRetrievalError, retrying_urlopen
 
 BASE = "https://api.the-odds-api.com/v4"
 
+
+def market_type_for(sport: str, market: str) -> str:
+    """The key a settlement rulebook is filed under, from the feed's sport and market keys.
+
+    Sport rather than competition — `soccer_epl` and `soccer_efl_cup` both become `soccer`
+    — because a book publishes one set of football rules and applies it across leagues. The
+    exceptions are real (a competition-specific abandonment policy for a cup replay) and
+    they are exceptions a person records in the clause wording, which is quoted verbatim
+    and can say so. Keying per competition instead would multiply the reading job by the
+    number of leagues scanned and guarantee that almost nothing was ever read.
+
+    Empty in, empty out. An unknown sport must not become a rulebook key that looks real.
+    """
+
+    family = str(sport).split("_", 1)[0].strip()
+    kind = str(market).strip()
+    return f"{family}/{kind}" if family and kind else ""
+
 #: Head-to-head. Chosen as the default because it is the market whose outcome set is
 #: unambiguous, which `find_arb` requires: totals and handicaps need a line as well as a
 #: side, and a market whose outcomes are guessed is a market that looks complete when it
@@ -384,7 +402,8 @@ class OddsApiSource:
                         if price is None or not name:
                             continue
                         try:
-                            out.append(Quote(book_name, title, name, float(price), stamp))
+                            out.append(Quote(book_name, title, name, float(price), stamp,
+                                             market_type=market_type_for(sport, market)))
                         except ValueError:
                             # Odds at or below 1.0 are not a price. Skipped rather than
                             # coerced, and the skip is invisible only because a missing

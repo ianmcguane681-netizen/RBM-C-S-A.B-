@@ -181,6 +181,86 @@ def declaration_for(books: Sequence[str], declarations: Mapping[str, Any] | None
     return declarations.get(books_key(books)) or declarations.get(ANY_BOOKS)
 
 
+# --- the evidence under a declaration ------------------------------------------------
+
+def rulebook_evidence(
+    books: Sequence[str],
+    market_type: str,
+    *,
+    rulebooks: Any = None,
+    declaration: Any = None,
+    now: datetime | None = None,
+):
+    """What is actually recorded about how these books settle, pair by pair.
+
+    Returns `(verdict, detail)` where verdict is one of `lib.rulebook`'s COVERED,
+    DIVERGENT or INCOMPLETE, or the string `NO_STORE` when no rulebook store was supplied
+    at all. That fourth value is the one worth having: it separates "the readings say these
+    books agree" from "nobody attached a record, so the declaration is a sentence with
+    nothing under it", and those are not the same standard of evidence for a lock.
+
+    Every PAIR is compared, not just the first two. A three-leg position across three books
+    has three pairs, and two of them agreeing establishes nothing about the third — which
+    is the leg that will void on its own while the other two stand.
+    """
+
+    from lib.rulebook import COVERED, DIVERGENT, INCOMPLETE, RulebookStore
+
+    if rulebooks is None:
+        return "NO_STORE", (
+            "no rulebook store is attached, so nothing underneath this declaration has "
+            "been recorded. The declaration is a person's sentence with no clause, no URL "
+            "and no reading date behind it — see lib/rulebook.py.")
+
+    if not getattr(rulebooks, "readable", True):
+        return INCOMPLETE, (
+            f"the rulebook store could not be read ({getattr(rulebooks, 'reason', '')}). "
+            f"What these books' rules say is UNKNOWN, which is not the same as their "
+            f"saying the same thing.")
+
+    if isinstance(rulebooks, RulebookStore) and rulebooks.lost:
+        return INCOMPLETE, (
+            f"the rulebook store is LOST: {rulebooks.status.describe()} The readings were "
+            f"taken and the record is gone, so nothing backs this declaration now.")
+
+    if not market_type:
+        # The most easily missed of the failures here. Every clause is filed under a market
+        # type, so with none established the store is queried for rules that cannot match
+        # and answers UNREAD — a refusal that looks like "go and read the pages" when the
+        # real problem is that the lane does not know which pages.
+        return INCOMPLETE, (
+            f"the market type is not established for {', '.join(books)}, so which "
+            f"rulebook applies was never looked up. A feed that does not name its sport "
+            f"leaves settlement unknown rather than ordinary.")
+
+    if len(books) < 2:
+        return INCOMPLETE, "a settlement comparison needs two books"
+
+    declared_at = str(getattr(declaration, "declared_at", "") or "")
+    verdicts: list[str] = []
+    details: list[str] = []
+    for index, first in enumerate(books):
+        for second in books[index + 1:]:
+            comparison = rulebooks.compare(first, second, market_type, now=now,
+                                           pair_declared_at=declared_at)
+            verdicts.append(comparison.verdict)
+            if comparison.verdict != COVERED:
+                outstanding = ", ".join(t.topic for t in comparison.outstanding)
+                details.append(
+                    f"{first} vs {second}: {comparison.verdict}"
+                    + (f" on {outstanding}" if outstanding else "")
+                    + (f". {comparison.superseded_declaration}"
+                       if comparison.superseded_declaration else ""))
+
+    if DIVERGENT in verdicts:
+        return DIVERGENT, "; ".join(details)
+    if INCOMPLETE in verdicts:
+        return INCOMPLETE, "; ".join(details)
+    return COVERED, (
+        f"every disqualifying topic is identical wording or declared alike across all "
+        f"{len(verdicts)} pair(s) of {', '.join(books)} for {market_type}")
+
+
 # --- the cascade -------------------------------------------------------------------
 
 def chosen_quotes(
@@ -204,6 +284,7 @@ def screen_candidate(
     candidate: ArbCandidate,
     *,
     declarations: Mapping[str, Any] | None = None,
+    rulebooks: Any = None,
     now: datetime | None = None,
     freshness_seconds: int = FRESHNESS_SECONDS,
     prefer_distinct_books: bool = True,
@@ -221,20 +302,7 @@ def screen_candidate(
     implied = sum(q.implied_pct for q in placed)
 
     declaration = declaration_for(books, declarations)
-    if declaration is not None:
-        stages.append(Stage(
-            "settlement equivalence", PASSED, disqualifying=True,
-            detail=(f"{declaration.declared_by} declared {', '.join(books)} settle alike: "
-                    f"{declaration.reasoning}"),
-        ))
-    else:
-        stages.append(Stage(
-            "settlement equivalence", INDETERMINATE, disqualifying=True,
-            detail=(f"no declaration covers {books_key(books)}. A price feed does not carry "
-                    f"a book's terms, and the only real position this board examined had a "
-                    f"positive margin and voided on one leg only. Read both books' rules "
-                    f"once and record an EquivalenceDeclaration under this key."),
-        ))
+    stages.append(_settlement(books, candidate.market_type, declaration, rulebooks, moment))
 
     if len(books) < 2:
         stages.append(Stage(
@@ -280,6 +348,72 @@ def screen_candidate(
     return Candidate(candidate.market, tuple(stages))
 
 
+def _settlement(
+    books: Sequence[str], market_type: str, declaration: Any, rulebooks: Any,
+    moment: datetime,
+) -> Stage:
+    """The first stage, and the only one that can be wrong in a way that costs everything.
+
+    Two things have to be true and they are separate. A named person must have declared
+    that these books settle alike — that judgement stays human and no amount of recorded
+    clause text replaces it. And the reading it was made from must still stand: the clauses
+    read, not stale, and not re-read since the declaration was signed.
+
+    The four outcomes are kept apart because a person acts differently on each:
+
+        no declaration      INDETERMINATE. Go and read two rules pages, once, ever.
+        declared, divergent REFUSED. The evidence contradicts the declaration; the
+                            declaration is the thing that is wrong and it must be revisited
+        declared, unread    INDETERMINATE naming the exact topics still to read
+        declared, covered   PASSED, and the report says what it rests on
+
+    A declaration with no rulebook store attached still PASSES, as it did before this
+    module existed — a system that started refusing every previously-working configuration
+    on the day the evidence layer arrived would simply be turned off. What changes is that
+    the stage now says out loud that nothing is underneath it.
+    """
+
+    from lib.rulebook import COVERED, DIVERGENT
+
+    if declaration is None:
+        return Stage(
+            "settlement equivalence", INDETERMINATE, disqualifying=True,
+            detail=(f"no declaration covers {books_key(books)}. A price feed does not carry "
+                    f"a book's terms, and the only real position this board examined had a "
+                    f"positive margin and voided on one leg only. Read both books' rules "
+                    f"once and record an EquivalenceDeclaration under this key."),
+        )
+
+    verdict, detail = rulebook_evidence(
+        books, market_type, rulebooks=rulebooks, declaration=declaration, now=moment)
+    signed = (f"{declaration.declared_by} declared {', '.join(books)} settle alike: "
+              f"{declaration.reasoning}")
+
+    if verdict == DIVERGENT:
+        return Stage(
+            "settlement equivalence", REFUSED, disqualifying=True,
+            detail=(f"{signed} — AND THE RECORDED RULES SAY OTHERWISE: {detail}. A "
+                    f"declaration contradicted by the clauses somebody read is not a "
+                    f"precondition that has been met; it is a judgement to make again."),
+        )
+    if verdict == COVERED:
+        return Stage(
+            "settlement equivalence", PASSED, disqualifying=True,
+            detail=f"{signed} Backed by the rulebook: {detail}.",
+        )
+    if verdict == "NO_STORE":
+        return Stage(
+            "settlement equivalence", PASSED, disqualifying=True,
+            detail=f"{signed} {detail}",
+        )
+    return Stage(
+        "settlement equivalence", INDETERMINATE, disqualifying=True,
+        detail=(f"{signed} — and the record does not yet support it: {detail}. The "
+                f"declaration is not being disbelieved; it is not established, and an "
+                f"unestablished precondition is not a satisfied one."),
+    )
+
+
 def _freshness(placed: Sequence[Quote], moment: datetime, window: int) -> Stage:
     stamps = sorted(q.observed_at for q in placed if q.observed_at)
     first, last = (stamps[0], stamps[-1]) if stamps else ("", "")
@@ -319,6 +453,7 @@ def gates_for(
     candidate: ArbCandidate,
     *,
     declarations: Mapping[str, Any] | None = None,
+    rulebooks: Any = None,
     starts_at: Callable[[str], datetime | None] = starts_at_from_market,
     register: Any = None,
     now: datetime | None = None,
@@ -340,11 +475,26 @@ def gates_for(
     books = tuple(sorted({q.book for q in chosen_quotes(
         candidate, prefer_distinct_books=prefer_distinct_books)}))
 
-    if declaration_for(books, declarations) is None:
+    declaration = declaration_for(books, declarations)
+    if declaration is None:
         readings.append(Reading(
             "SETTLEMENT_RULES_NOT_DECLARED",
             f"no EquivalenceDeclaration covers {books_key(books)}",
         ))
+    else:
+        # Asked again here, and deliberately not shared with the cascade's answer. The
+        # cascade decides whether to SURFACE and the gates decide whether the thesis may
+        # authorise, and a precondition that stopped one and not the other would be a hole
+        # exactly the width of whichever check somebody remembered to run.
+        from lib.rulebook import COVERED, DIVERGENT
+
+        verdict, detail = rulebook_evidence(
+            books, candidate.market_type, rulebooks=rulebooks,
+            declaration=declaration, now=moment)
+        if verdict == DIVERGENT:
+            readings.append(Reading("SETTLEMENT_RULES_DIVERGE", detail))
+        elif verdict not in {COVERED, "NO_STORE"}:
+            readings.append(Reading("SETTLEMENT_RULES_NOT_ESTABLISHED", detail))
 
     commencement = starts_at(candidate.market)
     if commencement is None:
@@ -440,6 +590,10 @@ def build_arb_reaper(
     #: the connector's docstring argues why that is the default rather than a book list.
     bookmakers: Sequence[str] = (),
     declarations: Mapping[str, Any] | None = None,
+    #: The clauses somebody actually read, as a `lib.rulebook.RulebookStore`. Optional: a
+    #: lane with none behaves exactly as it did before rulebooks existed and says so on
+    #: every settlement stage, rather than a missing store quietly tightening the lane.
+    rulebooks: Any = None,
     source: Any = None,
     register: Any = None,
     starts_at: Callable[[str], datetime | None] = starts_at_from_market,
@@ -495,12 +649,13 @@ def build_arb_reaper(
         name="arb", lane="arb",
         look=look,
         screen=lambda c: screen_candidate(
-            c, declarations=declarations, now=now(),
+            c, declarations=declarations, rulebooks=rulebooks, now=now(),
             freshness_seconds=freshness_seconds,
             prefer_distinct_books=prefer_distinct_books),
         gates=lambda c: gates_for(
-            c, declarations=declarations, starts_at=starts_at, register=register,
-            now=now(), prefer_distinct_books=prefer_distinct_books),
+            c, declarations=declarations, rulebooks=rulebooks, starts_at=starts_at,
+            register=register, now=now(),
+            prefer_distinct_books=prefer_distinct_books),
         thesis_for=lambda c: authority.thesis_for(c.market),
         size=lambda c, _permission: size_candidate(
             c, bankroll_limit=limit, minimum_return_pct=minimum_return_pct,

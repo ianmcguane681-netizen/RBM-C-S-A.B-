@@ -32,7 +32,7 @@ arb evaporates.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import product
 from typing import Iterable, Sequence
 
@@ -69,6 +69,16 @@ class Quote:
     #: keeping it per-quote means a mixed scan reports honestly rather than at the level of
     #: its weakest source.
     available_stake: float = UNKNOWN_STAKE
+    #: Which class of market this is — `soccer/h2h`, `tennis/h2h`. Empty when the source
+    #: did not say, which is a third state and not a default: settlement rules are keyed by
+    #: market type, and "which rules apply here" has no safe fallback. `lib.rulebook` blocks
+    #: on an empty one rather than guessing football.
+    #:
+    #: Last in the field order, behind `available_stake`, purely so that existing callers
+    #: passing `commission_pct` positionally keep meaning what they said. A new field
+    #: inserted mid-signature silently reinterprets every positional call site, which for
+    #: a value type carrying a price is a change nothing would report.
+    market_type: str = ""
 
     def __post_init__(self) -> None:
         if self.decimal_odds <= 1.0:
@@ -125,6 +135,19 @@ class ArbCandidate:
     @property
     def books(self) -> tuple[str, ...]:
         return tuple(sorted({q.book for q in self.quotes}))
+
+    @property
+    def market_type(self) -> str:
+        """The class of market every leg belongs to, or "" when that is not established.
+
+        Empty on disagreement as well as on absence, and the two are one answer on purpose:
+        a combination whose legs claim different market types is a combination whose
+        settlement rules nobody can look up, exactly like one whose legs claim none. Both
+        must reach the rulebook gate as "not known" rather than as a plausible guess.
+        """
+
+        types = {q.market_type for q in self.quotes}
+        return types.pop() if len(types) == 1 else ""
 
     @property
     def observation_spread(self) -> tuple[str, str]:
@@ -238,6 +261,7 @@ def quotes_from_legs(legs: Iterable) -> tuple[Quote, ...]:
         Quote(
             book=leg.book, market=leg.market, selection=leg.selection,
             decimal_odds=leg.decimal_odds, observed_at=leg.observed_at,
+            market_type=getattr(leg, "market_type", ""),
             commission_pct=leg.commission_pct, available_stake=leg.max_stake,
         )
         for leg in legs

@@ -1,0 +1,58 @@
+{
+  "_what_this_is": [
+    "The shape `python rulebook.py --record` takes. Copy it, fill it in with what you",
+    "read on the books' own rules pages, and record it once per pair of books per market",
+    "type. The wordings below are ILLUSTRATIVE PLACEHOLDERS, not quotations — replace",
+    "every one of them with what the page actually says, word for word.",
+    "",
+    "Summarising is the failure this whole file exists to prevent: a summary is where two",
+    "different rules become one, and the only real position this board examined had a",
+    "positive margin net of commission and was refused because one leg voided on",
+    "abandonment while the other stood.",
+    "",
+    "`python rulebook.py --topics` lists the ten questions and why each one has cost",
+    "somebody money."
+  ],
+  "clauses": [
+    {
+      "book": "Smarkets",
+      "market_type": "soccer/h2h",
+      "topic": "abandonment",
+      "verbatim": "REPLACE ME with the exchange's abandonment clause, word for word",
+      "source_url": "https://help.smarkets.com/hc/en-gb/articles/REPLACE-ME",
+      "read_by": "Your Name",
+      "read_at": "2026-08-29"
+    },
+    {
+      "book": "William Hill",
+      "market_type": "soccer/h2h",
+      "topic": "abandonment",
+      "verbatim": "REPLACE ME with the bookmaker's abandonment clause, word for word",
+      "source_url": "https://sports.williamhill.com/betting/en-gb/REPLACE-ME",
+      "read_by": "Your Name",
+      "read_at": "2026-08-29"
+    }
+  ],
+  "declarations": [
+    {
+      "_note": [
+        "Only needed where the two wordings DIFFER. Identical wording needs no judgement",
+        "and none is recorded. `settle_alike: false` is just as valuable as true — it",
+        "stops the pair being re-examined every season and it is the finding that keeps",
+        "the lane from placing."
+      ],
+      "book_a": "Smarkets",
+      "book_b": "William Hill",
+      "topic": "abandonment",
+      "settle_alike": true,
+      "declared_by": "Your Name",
+      "reasoning": "REPLACE ME: why these two wordings put the same money back in the same place",
+      "declared_at": "2026-08-29",
+      "scenarios_checked": [
+        "abandoned at 70 minutes with the score 2-0 and not replayed",
+        "abandoned at 70 minutes and replayed within 48 hours",
+        "abandoned before a ball is kicked"
+      ]
+    }
+  ]
+}
