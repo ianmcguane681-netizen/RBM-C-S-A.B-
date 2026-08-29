@@ -126,6 +126,85 @@
     "watchlist": ["MODN", "AAPL"]
   },
 
+  "mispricing": {
+    "_README": [
+      "A FORECAST lane, and the only one in this repository. It says a book's price is",
+      "WRONG, which is a claim about the fixture — unlike the arb lane, which says two",
+      "prices cannot both be right and needs no view at all. If the model is wrong about",
+      "a fixture the whole stake is lost. Read lib/mispricing.py before enabling it.",
+      "",
+      "Disabled by default for two reasons and both are money:",
+      "",
+      "  1. It buys the SAME h2h prices from the SAME odds key as the arb lane. The free",
+      "     tier is 500 requests a month. Check `python preflight.py` before enabling —",
+      "     it prints what both lanes spend together against the allowance.",
+      "  2. The model ships as PAPER and cannot size anything until a named person has",
+      "     read enough settled predictions to promote it. That is not a formality: a",
+      "     model can satisfy every other guard here and still simply be bad, and only",
+      "     time and a ledger find that out."
+    ],
+    "enabled": false,
+    "autonomous_execution": false,
+    "balance": 200.0,
+    "currency": "EUR",
+    "sports": ["soccer_epl"],
+
+    "_competitions": [
+      "football-data.org competition codes for the league tables. Free key at",
+      "football-data.org, saved to ~/.footballdata/key. With none, every fixture is",
+      "reported UNPRICED naming the strengths it could not get, which is the correct",
+      "answer and not a failure."
+    ],
+    "competitions": ["PL"],
+
+    "_team_aliases": [
+      "The odds feed says 'Manchester United'; football-data says 'Manchester United FC'.",
+      "Suffixes like FC are stripped automatically. Anything else is an alias you record",
+      "here once — matching is exact on purpose, because a fuzzy matcher that is right",
+      "95% of the time models the wrong team's goals one fixture in twenty with no signal."
+    ],
+    "team_aliases": {},
+
+    "_venues": [
+      "Market name -> ground, so the weather can be looked up (open-meteo, no key). Omit",
+      "and the weather features report UNKNOWN, which the forecast carries as an",
+      "assumption rather than as a still, dry evening."
+    ],
+    "venues": {},
+    "use_weather": true,
+
+    "model": {
+      "_note": [
+        "A forecasting model is a FORECAST and needs a named human, exactly as",
+        "lib/stocks_reaper.Criterion's FORECAST criterion does. It cannot be declared by",
+        "an agent and construction refuses one that tries.",
+        "",
+        "stated_error_pct is in PROBABILITY POINTS and it is mandatory. An edge inside it",
+        "is reported FAIR, not 'a small edge'. 4.0 is a deliberately unflattering figure",
+        "for a Poisson model with no expected-goals data and no team news: independent",
+        "Poisson is known to under-predict draws, and the book prices the team news that",
+        "this system cannot see.",
+        "",
+        "status is PAPER until a person writes promoted_on. LIVE without it is refused."
+      ],
+      "name": "poisson-league-goals-v1",
+      "declared_by": "YOUR NAME",
+      "reasoning": "league scoring rates and home advantage, against the book's de-vigged price; the claim is that a book's shorter prices on mid-table fixtures carry more margin than its headline overround suggests",
+      "requires": [
+        "home_attack_strength",
+        "home_defence_strength",
+        "away_attack_strength",
+        "away_defence_strength"
+      ],
+      "stated_error_pct": 4.0,
+      "devig_method": "SHIN",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "max_exposure": 10.0,
+      "currency": "EUR",
+      "status": "PAPER"
+    }
+  },
+
   "crypto": {
     "enabled": false,
     "balance": 1000.0,
@@ -135,6 +214,10 @@
     "wallet": "0xYOUR_WALLET_ADDRESS",
     "watchlist": ["0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"],
     "_note": [
+      "PARKED on 2026-08-29 — see lib/reaping.PARKED_LANES. Whatever this section says,",
+      "the lane is not in the rotation and `assemble` reports it PARKED rather than",
+      "reading these settings. Kept here because parking is one line to undo.",
+      "",
       "This lane produces unsigned transactions and cannot sign or send them. That is",
       "structural: connectors/chain_exec has no key path, no signing library and no",
       "send method. Sign the steps in a wallet you control, after checking the token",

@@ -77,10 +77,17 @@ def _stamp() -> str:
 #:
 #: The odds would justify every five minutes. The allowance will not, and the allowance is
 #: the binding constraint until the tier is paid for.
+#: `mispricing` is a day because it buys the SAME h2h prices from the SAME key as the arb
+#: lane, and the free tier is 500 requests a month. It also answers a slower question: a
+#: fair-value model does not change between breakfast and lunch, and the fixture list
+#: changes once a day. Shortening it spends the arb lane's allowance, and an exhausted key
+#: reports no opportunity — indistinguishable from a quiet market for the rest of the month.
+#:
 #: `crypto` keeps its entry while the lane is parked. Deleting it would mean unparking the
 #: lane silently gave it the six-hour default instead of the cadence somebody chose, and a
 #: cadence that changes because a lane was resumed is the kind of thing nobody notices.
-REAP_CADENCES = {"arb": 8 * 3600, "crypto": 6 * 3600, "stocks": 24 * 3600}
+REAP_CADENCES = {"arb": 8 * 3600, "crypto": 6 * 3600, "stocks": 24 * 3600,
+                 "mispricing": 24 * 3600}
 
 #: What a lane nobody has given a cadence gets. Six hours is chosen to be unremarkable —
 #: often enough to be useful, rare enough that a new lane cannot quietly exhaust a free

@@ -51,6 +51,7 @@ def config(**overrides):
         "arb": {"enabled": True, "balance": 500.0, "sports": ["soccer_epl"],
                 "authority": dict(AUTHORITY)},
         "stocks": {"enabled": True, "balance": 5000.0, "watchlist": ["MODN"]},
+        "mispricing": {"enabled": False},
         "crypto": {"enabled": False},
     }
     base.update(overrides)
@@ -66,7 +67,7 @@ class TestFourOutcomesNotTwo:
     def test_every_lane_is_always_reported(self, tmp_path):
         assembled = assemble(config(), **paths(tmp_path))
 
-        assert [a.lane for a in assembled] == ["arb", "stocks", "crypto"]
+        assert [a.lane for a in assembled] == list(LANES) + list(PARKED_LANES)
 
     def test_a_parked_lane_is_printed_after_the_running_ones(self, tmp_path):
         """The running lanes first, then what deliberately did not run. Order is the
@@ -267,7 +268,7 @@ class TestTheConfigFileItself:
 
         assembled = assemble(payload, **paths(tmp_path))
 
-        assert [a.lane for a in assembled] == ["arb", "stocks", "crypto"]
+        assert [a.lane for a in assembled] == list(LANES) + list(PARKED_LANES)
         assert assembled[0].status == CONFIGURED
 
     def test_the_example_config_is_not_the_live_one(self):

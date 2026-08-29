@@ -78,3 +78,11 @@ data/notifications.json
 # seen register and the outcome ledger. The receipt beside it is committed — it carries how
 # many clauses were recorded and when, never a book name or a clause.
 data/rulebooks.json
+
+# Team news typed in by hand. It names the fixtures being modelled and therefore the ones
+# being bet, the same reason the seen register and the outcome ledger are ignored.
+data/team-news.json
+
+# Venue coordinates for the weather lookup. Not a secret and not a credential, and it is
+# still a list of the grounds this operator's fixtures are at. Ignored for the same reason.
+data/venues.json

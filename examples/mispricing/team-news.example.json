@@ -1,0 +1,15 @@
+[
+  {
+    "team": "Arsenal",
+    "key_absences": 2,
+    "names": [
+      "a first-choice centre back",
+      "a first-choice striker"
+    ],
+    "source": "the manager's Friday press conference, as reported by <publication>",
+    "reported_by": "Your Name",
+    "reported_at": "2026-08-29",
+    "_note": "Copy to data/team-news.json. There is no free, structured, reliable feed of confirmed absentees \u2014 the sites that look like one are scrapes of press conferences with no guarantee about accuracy or timing, and confirmed line-ups appear about an hour before kick-off, after the prices worth taking have moved. So this is typed by a person. A fixture with no report is forecast as fully fit AND SAYS SO on every forecast it produces; the book is not making that assumption. A report older than three days is STALE rather than usable: a squad changes in three days.",
+    "_names": "Name all of the absentees or none of them. A partial list reads as the whole one, and construction refuses a count that disagrees with the names."
+  }
+]

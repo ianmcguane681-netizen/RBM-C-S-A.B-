@@ -1,0 +1,15 @@
+[
+  {
+    "_note": "Copy to data/venues.json. Recorded coordinates are consulted BEFORE the geocoder, because a geocoder asked for 'Anfield' will answer, and it will also answer for a street of that name in another country. The `source` field is not decoration: a coordinate read off a club's own page and one a geocoder matched are different qualities of fact, and a wind adjustment applied at the wrong stadium is confidently wrong with nothing downstream able to detect it.",
+    "name": "Emirates Stadium",
+    "latitude": 51.5549,
+    "longitude": -0.1084,
+    "source": "REPLACE ME with where you read these — the club's own page, OpenStreetMap, an OS grid reference"
+  },
+  {
+    "name": "Anfield",
+    "latitude": 53.4308,
+    "longitude": -2.9608,
+    "source": "REPLACE ME"
+  }
+]

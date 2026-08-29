@@ -59,7 +59,7 @@ JOURNAL = Path("data/journal.sqlite3")
 #: constant above unpatchable and sent a full test run's journal into the live `data/`.
 _DEFAULT = object()
 
-LANES = ("arb", "stocks")
+LANES = ("arb", "stocks", "mispricing")
 
 #: Lanes that are built and tested and are NOT being run, with the reason each one was
 #: stood down. Kept as a registry rather than as a deletion for the reason this whole
@@ -96,7 +96,8 @@ ALL_LANES = LANES + tuple(PARKED_LANES)
 #: dollars to the share arithmetic. `status.py` builds its breakers through the same
 #: function, so a default passed in by each caller would have left the panel and the lane
 #: free to disagree all over again.
-LANE_CURRENCY = {"arb": "EUR", "stocks": alpaca.QUOTES_IN, "crypto": "USD"}
+LANE_CURRENCY = {"arb": "EUR", "stocks": alpaca.QUOTES_IN, "crypto": "USD",
+                 "mispricing": "EUR"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -409,6 +410,98 @@ def assemble_arb(settings: dict, *, directory: Path, kill_switch: Path) -> Assem
     ))
 
 
+def assemble_mispricing(settings: dict, *, directory: Path, kill_switch: Path) -> Assembly:
+    """The mispricing lane. Refuses without a declared model; runs blind without evidence.
+
+    Two different bars on purpose. The MODEL is a person's forecast method and the lane
+    cannot exist without one — a lane that minted its own would be automation originating
+    its own reason to move money, which `lib.mispricing.MispricingModel` refuses at
+    construction and this refuses at assembly so the failure lands where it can be read.
+
+    The EVIDENCE is different: a lane with no football-data key still assembles, still runs,
+    and reports every fixture as UNPRICED naming the features it could not get. That is the
+    honest first run and it is far more useful than a refusal, because it tells an operator
+    exactly which key would change the answer.
+    """
+
+    from lib.mispricing import MispricingModel
+    from lib.mispricing_reaper import build_mispricing_reaper
+    from lib.seen import SeenRegister
+
+    declared = settings.get("model") or {}
+    if not declared:
+        return Assembly("mispricing", REFUSED, reason=(
+            "no forecasting model is declared. This lane bets on a claim about a fixture, "
+            "so it needs a named person's method behind it — see lib/mispricing.py and "
+            "examples/reapers.example.json. A lane that minted its own would be "
+            "automation originating its own reason to move money."))
+
+    try:
+        listed = settings.get("bookmakers") or ()
+        if isinstance(listed, str):
+            # The same typo the arb lane refuses: a bare string iterates into single
+            # characters and asks for eleven bookmakers named "b", "e", "t".
+            raise ValueError(
+                'bookmakers must be a JSON list such as ["skybet", "paddypower"], not '
+                'one string')
+        model = MispricingModel(
+            name=str(declared["name"]),
+            declared_by=str(declared["declared_by"]),
+            reasoning=str(declared["reasoning"]),
+            requires=tuple(declared.get("requires", ())),
+            stated_error_pct=float(declared["stated_error_pct"]),
+            devig_method=str(declared["devig_method"]),
+            expires_at=str(declared["expires_at"]),
+            max_exposure=float(declared["max_exposure"]),
+            status=str(declared.get("status", "PAPER")),
+            declared_at=str(declared.get("declared_at", "")),
+            currency=str(declared.get("currency", LANE_CURRENCY["mispricing"])),
+            promoted_on=str(declared.get("promoted_on", "")),
+        )
+        breakers = breakers_for("mispricing", settings, directory=directory,
+                                kill_switch=kill_switch)
+    except (KeyError, TypeError, ValueError) as error:
+        return Assembly("mispricing", REFUSED,
+                        reason=f"{type(error).__name__}: {error}"[:240])
+
+    if not breakers.readable:
+        return Assembly("mispricing", UNREADABLE, reason=(
+            f"the breaker state would not parse ({breakers.reason}). An unknown daily "
+            f"loss is not a satisfied daily loss limit."))
+
+    return Assembly("mispricing", CONFIGURED, build_mispricing_reaper(
+        model=model, breakers=breakers,
+        bankroll=float(settings.get("balance", 0.0)),
+        sports=tuple(settings.get("sports", ())),
+        bookmakers=tuple(str(book) for book in listed),
+        evidence_for=_evidence_reader(settings, directory),
+        register=SeenRegister.load(directory / SEEN.name),
+    ))
+
+
+def _evidence_reader(settings: dict, directory: Path):
+    """Assemble one fixture's evidence from whatever is actually configured.
+
+    Returns a callable, and never None. A lane with no sources still gets a reader that
+    produces an empty `Evidence` per fixture — every forecast then comes back UNPRICED
+    naming the features it needed, which is the correct answer and is what an operator
+    should see before they have a key rather than after.
+
+    Built here rather than inside the reaper because which sources exist is a configuration
+    question, and `lib/mispricing_reaper.py` must not know what a football-data key is.
+    """
+
+    from lib.mispricing import Evidence
+
+    def read(market: str) -> Evidence:
+        from lib.mispricing_evidence import assemble_evidence
+
+        return assemble_evidence(
+            market, settings=settings, directory=directory) or Evidence(market)
+
+    return read
+
+
 def assemble_stocks(settings: dict, *, directory: Path, kill_switch: Path,
                     theses_path: Path) -> Assembly:
     from connectors import alpaca
@@ -533,6 +626,8 @@ def assemble(
         "stocks": lambda s: assemble_stocks(s, directory=directory,
                                             kill_switch=kill_switch,
                                             theses_path=theses_path),
+        "mispricing": lambda s: assemble_mispricing(s, directory=directory,
+                                                    kill_switch=kill_switch),
         "crypto": lambda s: assemble_crypto(s, directory=directory,
                                             kill_switch=kill_switch,
                                             theses_path=theses_path),

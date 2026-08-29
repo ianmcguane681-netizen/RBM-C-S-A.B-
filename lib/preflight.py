@@ -52,6 +52,7 @@ PARKED = "PARKED"
 CRYPTO = "crypto"
 STOCKS = "stocks"
 ARB = "arb"
+MISPRICING = "mispricing"
 
 #: Statuses that mean the requirement is not currently usable.
 UNMET = frozenset({NOT_CONFIGURED, UNREACHABLE})
@@ -316,6 +317,105 @@ def arb_lane(*, probe: bool = False, home: str | Path | None = None) -> LaneRead
     )
 
 
+def mispricing_lane(*, probe: bool = False,
+                    home: str | Path | None = None) -> LaneReadiness:
+    """What the forecasting lane can actually see, and what it is forecasting without.
+
+    The summary leads with the model's PAPER status rather than with the credentials,
+    because that is the binding constraint: a lane with every key present and a PAPER model
+    places nothing, and a reader who scanned the requirement list and saw three green lines
+    would take the wrong thing from it.
+
+    Only the odds feed is `required`. Everything else DEGRADES: without a league table the
+    lane reports every fixture UNPRICED naming the strengths it wanted, which is a correct
+    and useful answer, where without prices it has nothing to compare a forecast against
+    and has not looked at all.
+    """
+
+    root = Path(home).expanduser() if home else Path.home()
+    requirements: list[Requirement] = []
+
+    oddsapi = root / ".oddsapi" / "key"
+    has_odds = oddsapi.is_file() and oddsapi.read_text(encoding="utf-8").strip()
+    requirements.append(Requirement(
+        MISPRICING, "The Odds API", NOT_ATTEMPTED if has_odds else NOT_CONFIGURED,
+        unlocks="the prices a forecast is compared against; without it nothing is compared",
+        detail="key present" if has_odds else "",
+        # The only hard requirement. A model with no price to disagree with has not looked.
+        required=True,
+        remedy="free key at the-odds-api.com, then ~/.oddsapi/key. SHARED with the arb "
+               "lane — check the burn line below before enabling both",
+    ))
+
+    football = root / ".footballdata" / "key"
+    has_league = football.is_file() and football.read_text(encoding="utf-8").strip()
+    requirements.append(Requirement(
+        MISPRICING, "football-data.org", NOT_ATTEMPTED if has_league else NOT_CONFIGURED,
+        unlocks="league tables, and therefore team attack and defence strengths",
+        detail="key present" if has_league else "", required=False,
+        remedy="free key at football-data.org, then ~/.footballdata/key",
+    ))
+
+    # No credential, so it is CONFIGURED whenever the lane is allowed out to the network.
+    requirements.append(Requirement(
+        MISPRICING, "open-meteo", CONFIGURED,
+        unlocks="wind and rain at the ground, a small adjustment applied only when known",
+        detail="no key needed; conditions are UNKNOWN per fixture if the call fails",
+        required=False, remedy="none — it needs no account",
+    ))
+
+    news = Path("data/team-news.json")
+    requirements.append(Requirement(
+        MISPRICING, "team news", CONFIGURED if news.is_file() else NOT_CONFIGURED,
+        unlocks="the largest single input a book prices that this system cannot retrieve",
+        detail=("recorded by hand in data/team-news.json" if news.is_file() else
+                "no free structured source exists for this. Every fixture is forecast as "
+                "fully fit AND SAYS SO; the book is not making that assumption"),
+        required=False,
+        remedy="record what you read, in the shape connectors/teamnews.template() prints",
+    ))
+
+    covered = sum(1 for r in requirements if r.is_met)
+    return LaneReadiness(
+        MISPRICING,
+        f"A FORECAST lane — it claims a price is wrong, which the arb lane never does, and "
+        f"a wrong forecast loses the whole stake. {_model_status()}\n"
+        f"         Evidence: {covered} of {len(requirements)} source(s) reachable.\n"
+        f"         Quota, SHARED with the arb lane: {_arb_burn()}",
+        tuple(requirements),
+    )
+
+
+def _model_status() -> str:
+    """Whether a model is declared, and whether it may size anything.
+
+    Read from the config rather than asserted, because PAPER versus LIVE is the difference
+    between a lane that records what it would have done and one that spends money, and it
+    is a one-word edit in a file on a box.
+    """
+
+    try:
+        from lib.reaping import CONFIG, load_config
+
+        config, unreadable = load_config(CONFIG)
+        if unreadable:
+            return f"The model is UNKNOWN — {CONFIG} would not parse ({unreadable})."
+        declared = (config.get("mispricing") or {}).get("model") or {}
+        if not declared:
+            return ("No model is declared, so this lane will REFUSE to assemble. It bets "
+                    "on a claim about a fixture and needs a named person's method.")
+        status = str(declared.get("status", "PAPER"))
+        if status != "LIVE":
+            return (f"{declared.get('name', 'the model')} is {status}: it evaluates every "
+                    f"fixture and CANNOT SIZE ANYTHING. Only a named person promotes it, "
+                    f"against a settled record.")
+        promoted = str(declared.get("promoted_on") or "NOTHING RECORDED")
+        return (f"{declared.get('name', 'the model')} is LIVE and may size. "
+                f"Promoted on: {promoted}.")
+    except Exception as error:  # noqa: BLE001 - a preflight that raises has failed its job
+        return f"The model status could not be read ({type(error).__name__})."
+
+
 def _rulebook_requirement() -> Requirement:
     """Whether anybody has read two books' settlement rules, and how far they got.
 
@@ -422,6 +522,7 @@ def all_lanes(*, probe: bool = False) -> tuple[LaneReadiness, ...]:
 
     described = {
         "crypto": crypto_lane, "stocks": stocks_lane, "arb": arb_lane,
+        "mispricing": mispricing_lane,
     }
 
     out: list[LaneReadiness] = []
