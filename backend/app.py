@@ -70,6 +70,10 @@ class ReaperCommand(BaseModel):
     422 from a file nobody would think to look in — the lane assembles, schedules and
     places perfectly well and only the API says it does not exist. More lanes are planned,
     so the allowed set is read from `lib.reaping.LANES` at validation time.
+
+    A PARKED lane is refused separately from an unknown one. "Unknown lane: crypto" is a
+    false statement about a lane that exists, works and was stood down on purpose, and it
+    sends whoever reads it looking for a typo instead of at the decision.
     """
 
     lane: str | None = None
@@ -79,8 +83,11 @@ class ReaperCommand(BaseModel):
     @field_validator("lane")
     @classmethod
     def _known_lane(cls, value: str | None) -> str | None:
-        from lib.reaping import LANES
+        from lib.reaping import LANES, PARKED_LANES
 
+        if value in PARKED_LANES:
+            raise ValueError(
+                f"the {value} lane is PARKED and will not run: {PARKED_LANES[value]}")
         if value is not None and value not in LANES:
             raise ValueError(f"unknown lane {value!r}; choose from {', '.join(LANES)}")
         return value

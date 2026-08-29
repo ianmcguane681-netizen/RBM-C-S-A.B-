@@ -21,7 +21,7 @@ import pytest
 
 import run
 import status
-from lib.reaping import LANES, REFUSED, assemble
+from lib.reaping import LANES, PARKED, PARKED_LANES, REFUSED, assemble
 
 
 @pytest.fixture
@@ -75,7 +75,7 @@ def test_a_declared_lane_with_no_builder_is_reported_rather_than_raised(
     assembled = assemble(config, directory=tmp_path, kill_switch=tmp_path / "HALT",
                          theses_path=tmp_path / "theses.json")
 
-    assert [item.lane for item in assembled] == list(a_fourth_lane)
+    assert [item.lane for item in assembled][:len(a_fourth_lane)] == list(a_fourth_lane)
     flipper = next(item for item in assembled if item.lane == "flipper")
     assert flipper.status == REFUSED
     assert "assemble_flipper" in flipper.reason
@@ -112,7 +112,7 @@ def test_the_dashboard_names_a_lane_it_has_no_label_for(a_fourth_lane):
     assert "laneIcons[" not in script
 
 
-def test_the_three_lanes_that_exist_still_assemble_unchanged(tmp_path):
+def test_the_lanes_that_exist_still_assemble_unchanged(tmp_path):
     """The guard must not be bought by breaking the case it protects."""
 
     config = {lane: {} for lane in LANES}
@@ -120,8 +120,36 @@ def test_the_three_lanes_that_exist_still_assemble_unchanged(tmp_path):
     assembled = assemble(config, directory=tmp_path, kill_switch=tmp_path / "HALT",
                          theses_path=tmp_path / "theses.json")
 
-    assert [item.lane for item in assembled] == list(LANES)
+    assert [item.lane for item in assembled][:len(LANES)] == list(LANES)
     assert all(item.status != REFUSED for item in assembled)
+
+
+def test_a_parked_lane_reaches_the_report_without_reaching_the_scheduler(tmp_path):
+    """The two halves of parking, asserted together because either alone is a bug.
+
+    A parked lane that still gets scheduled goes on spending an API quota nobody meant to
+    spend. A parked lane that vanishes from the assembly report is indistinguishable from
+    a lane that was never written, which is the whole failure this repository is organised
+    around — and it is worse here than elsewhere, because the thing that went missing is
+    a decision somebody made rather than a value somebody failed to read.
+    """
+
+    scheduled = {lane.name for lane in run._reaper_lanes()}
+    assembled = assemble({}, directory=tmp_path, kill_switch=tmp_path / "HALT",
+                         theses_path=tmp_path / "theses.json")
+
+    for lane in PARKED_LANES:
+        assert f"reap-{lane}" not in scheduled
+        assert next(a for a in assembled if a.lane == lane).status == PARKED
+
+
+def test_the_api_refuses_a_parked_lane_by_name_rather_than_as_unknown(tmp_path):
+    """A 422 saying "unknown lane: crypto" is a lie about a lane that exists and works."""
+
+    from backend.app import ReaperCommand
+
+    with pytest.raises(ValueError, match="PARKED"):
+        ReaperCommand(lane="crypto")
 
 
 class TestANewLaneCannotBorrowAnotherLanesExecutionPath:

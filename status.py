@@ -50,6 +50,7 @@ OUTCOMES = Path("data/outcomes.json")
 #: lane would have been assembled, scheduled and placed while remaining invisible on the
 #: money panel — the one screen whose job is to show every lane that can spend. More lanes
 #: than these three are planned, which makes a second list a defect waiting for a date.
+from lib.reaping import PARKED_LANES  # noqa: E402
 from lib.reaping import LANES as MONEY_LANES  # noqa: E402
 
 
@@ -489,6 +490,20 @@ def money_panel(
                       ledger.realised(lane).describe().splitlines()]
         lines.append("")
 
+    # Printed under the running lanes rather than omitted. A lane that disappears off the
+    # money panel is a lane a reader assumes was never built — and the point of recording
+    # the decision is that nobody has to reconstruct it. No ring-fence, no breaker and no
+    # ledger figures, because none of them is a fact about a lane that is not running.
+    for lane, why in PARKED_LANES.items():
+        lines.append(f"  {lane.upper()}")
+        lines.append(f"    PARKED  {why}")
+        lines.append(
+            "    No ring-fence, breaker or exposure is reported for a parked lane. That "
+            "is not 0.00 at risk: any position it left open is in the ledger and in "
+            "`python positions.py`, which does not read this list."
+        )
+        lines.append("")
+
     return lines
 
 
@@ -582,6 +597,31 @@ def money_state(
         if lane == "arb":
             item["quota"] = _odds_quota(config.get("arb") or {})
         states.append(item)
+
+    # Parked lanes are projected too, with the same keys and every figure null. A front
+    # end that receives no row for a lane renders no card, and a lane with no card is one
+    # nobody asks about again. `mode` is PARKED rather than a placing mode, because "who
+    # places for this lane" has no answer for a lane that is not running — and answering
+    # it with OWNER_OPERATING_MANUALLY would be a small lie in the direction of a person
+    # believing the lane is merely idle.
+    for lane, why in PARKED_LANES.items():
+        states.append({
+            "lane": lane,
+            "mode": "PARKED",
+            "mode_source": "lib.reaping.PARKED_LANES",
+            "places_without_asking": False,
+            "parked_because": why,
+            "balance": None,
+            "currency": None,
+            "breaker": {"status": "PARKED", "reason": why},
+            "positions": {"status": "PARKED", "open": None,
+                          "unsettled_exposure": None, "stale_open": None,
+                          "reason": "not read: this lane is not running. Any position it "
+                                    "left open is still in the ledger and in "
+                                    "`python positions.py`."},
+            "realised": {"status": "PARKED", "realised_profit": None,
+                         "settled": None, "covers_the_whole_book": False},
+        })
 
     return states
 

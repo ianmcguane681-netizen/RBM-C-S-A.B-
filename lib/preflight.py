@@ -44,6 +44,10 @@ NOT_ATTEMPTED = "NOT_ATTEMPTED"
 
 DEGRADED = "DEGRADED"
 BLOCKED = "BLOCKED"
+#: A lane taken out of the rotation on purpose. Reported rather than dropped, because a
+#: preflight that simply stopped mentioning a lane would read as a lane that never existed
+#: — and the next person would go looking for why its credentials are not checked.
+PARKED = "PARKED"
 
 CRYPTO = "crypto"
 STOCKS = "stocks"
@@ -90,6 +94,10 @@ class LaneReadiness:
     lane: str
     summary: str
     requirements: tuple[Requirement, ...] = field(default_factory=tuple)
+    #: Why this lane is out of the rotation. Set only for a parked lane, and it outranks
+    #: every requirement below: an unchecked credential on a lane that is not running is
+    #: not a thing anybody needs to go and fix.
+    parked_because: str = ""
 
     @property
     def missing(self) -> tuple[Requirement, ...]:
@@ -97,8 +105,10 @@ class LaneReadiness:
 
     @property
     def status(self) -> str:
-        """BLOCKED beats DEGRADED beats READY."""
+        """PARKED beats BLOCKED beats DEGRADED beats READY."""
 
+        if self.parked_because:
+            return PARKED
         if any(r.required for r in self.missing):
             return BLOCKED
         if self.missing:
@@ -107,6 +117,9 @@ class LaneReadiness:
 
     def describe(self) -> str:
         lines = [f"{self.lane.upper():<8} {self.status}", f"         {self.summary}", ""]
+        if self.parked_because:
+            lines.append(f"         NOT IN THE ROTATION: {self.parked_because}")
+            lines.append("")
         lines += [r.describe() for r in self.requirements]
         return "\n".join(lines)
 
@@ -340,14 +353,23 @@ def all_lanes(*, probe: bool = False) -> tuple[LaneReadiness, ...]:
     said what it needs, and those must not render alike.
     """
 
-    from lib.reaping import LANES
+    from lib.reaping import ALL_LANES, PARKED_LANES
 
     described = {
         "crypto": crypto_lane, "stocks": stocks_lane, "arb": arb_lane,
     }
 
     out: list[LaneReadiness] = []
-    for lane in LANES:
+    for lane in ALL_LANES:
+        if lane in PARKED_LANES:
+            # Its requirements are deliberately NOT evaluated. Probing a parked lane's
+            # endpoint would put a credential nobody needs on a report of things to go and
+            # do, and a red line against a lane that is not running is noise that teaches
+            # a reader to skim the ones that are.
+            out.append(LaneReadiness(
+                lane, "Built and tested, and out of the rotation.",
+                parked_because=PARKED_LANES[lane]))
+            continue
         build = described.get(lane)
         if build is None:
             out.append(LaneReadiness(lane, (
@@ -377,7 +399,11 @@ def report(lanes: Sequence[LaneReadiness]) -> str:
     blocked = [l for l in lanes if l.status == BLOCKED]
     degraded = [l for l in lanes if l.status == DEGRADED]
     ready = [l for l in lanes if l.status == READY]
+    parked = [l for l in lanes if l.status == PARKED]
 
+    if parked:
+        lines.append(f"PARKED:   {', '.join(l.lane for l in parked)} -- not running, and "
+                     f"nothing here has been checked for them")
     if ready:
         lines.append(f"READY:    {', '.join(l.lane for l in ready)}")
     if degraded:

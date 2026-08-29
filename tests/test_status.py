@@ -53,10 +53,37 @@ def test_an_autonomous_lane_is_visually_distinct(tmp_path):
 def test_missing_money_files_are_not_rendered_as_zero_exposure(tmp_path):
     output = render(tmp_path)
 
-    assert output.count("NOT_CONFIGURED") >= 6
+    # Two per running lane — no ring-fence and no ledger — expressed against the registry
+    # rather than as a literal, so parking or adding a lane does not silently weaken it.
+    from lib.reaping import LANES
+
+    assert output.count("NOT_CONFIGURED") >= 2 * len(LANES)
     assert "not a zero balance or zero exposure" in output
     assert "not 0.00 at risk" in output
     assert "0.00 at risk" not in output.replace("not 0.00 at risk", "")
+
+
+def test_a_parked_lane_still_appears_on_the_money_panel(tmp_path):
+    """It can hold open positions, and a lane missing from this screen is a lane whose
+    exposure nobody goes looking for. PARKED with its reason, never a blank."""
+
+    from lib.reaping import PARKED_LANES
+
+    output = render(tmp_path)
+
+    for lane in PARKED_LANES:
+        assert f"  {lane.upper()}" in output
+        assert "PARKED" in output
+    assert "any position it left open is in the ledger" in output
+
+
+def test_a_parked_lane_reports_no_ring_fence_rather_than_a_zero_one(tmp_path):
+    """A parked lane has no limits because it is not operating, which must not be printed
+    as limits of nought — the reading that says every control is satisfied."""
+
+    output = render(tmp_path)
+
+    assert "No ring-fence, breaker or exposure is reported for a parked lane" in output
 
 
 def test_a_ring_fence_reports_its_balance_and_currency(tmp_path):

@@ -1,8 +1,8 @@
-"""Assemble the three lanes from one config file and run them, without lying about gaps.
+"""Assemble every lane from one config file and run them, without lying about gaps.
 
-`python run.py --reap` is one command and three lanes, and the thing it must not do is the
-thing every dashboard does: present a lane that was never configured beside a lane that
-looked and found nothing, in the same list, in the same colour.
+`python run.py --reap` is one command and every running lane, and the thing it must not do
+is the thing every dashboard does: present a lane that was never configured beside a lane
+that looked and found nothing, in the same list, in the same colour.
 
 So assembly is a first-class result rather than a try/except. A lane arrives as one of:
 
@@ -10,6 +10,12 @@ So assembly is a first-class result rather than a try/except. A lane arrives as 
     NOT_CONFIGURED   nothing was asked of it. It looked at nothing and found nothing
     UNREADABLE       something was asked of it and could not be read. Not the same
     REFUSED          the configuration was read and is not usable, and why
+    PARKED           it works, and somebody decided it should not run. Never a gap
+
+`PARKED` is the newest of the five and it is the same distinction one level up. A lane
+taken out of `LANES` and nowhere else would be *absent* from every list, which reads as a
+lane that was never written — so the decision to stand one down is carried as a registry
+entry with its reason attached, and it prints beside the lanes that are running.
 
 The whole file being unreadable refuses the run outright, exactly as `run.py` refuses when
 the orchestrator state will not parse: proceeding would run every lane as though nothing had
@@ -29,6 +35,10 @@ CONFIGURED = "CONFIGURED"
 NOT_CONFIGURED = "NOT_CONFIGURED"
 UNREADABLE = "UNREADABLE"
 REFUSED = "REFUSED"
+#: A lane that exists, works, and has been deliberately taken out of the rotation. Its own
+#: status rather than NOT_CONFIGURED, because "nobody has configured this" and "somebody
+#: decided this should not run" are different facts and only the second one has an author.
+PARKED = "PARKED"
 
 CONFIG = Path("data/reapers.json")
 SEEN = Path("data/seen-register.json")
@@ -44,7 +54,32 @@ JOURNAL = Path("data/journal.sqlite3")
 #: constant above unpatchable and sent a full test run's journal into the live `data/`.
 _DEFAULT = object()
 
-LANES = ("arb", "stocks", "crypto")
+LANES = ("arb", "stocks")
+
+#: Lanes that are built and tested and are NOT being run, with the reason each one was
+#: stood down. Kept as a registry rather than as a deletion for the reason this whole
+#: repository is written around: a lane that simply vanishes from `LANES` is
+#: indistinguishable from a lane nobody ever wrote, and six weeks later somebody rebuilds
+#: it. `assemble` emits a PARKED assembly for each of these, so the parking is visible in
+#: every place a lane is listed instead of being a gap a reader has to notice.
+#:
+#: Unparking is one line — move the name back into `LANES` — and nothing else has to
+#: change, because the builder, the preflight description, the breakers and the placing
+#: refusal are all still here and still tested.
+PARKED_LANES = {
+    "crypto": (
+        "parked on 2026-08-29 at Ian's instruction, to put the effort into betting arbs, "
+        "mispricing, outreach and the flipper. The lane still works: docs/crypto-thesis.md "
+        "records why it was never going to place anything much anyway — the two assets "
+        "with the best case (BTC, ETH) are the ones the ERC-20 gates structurally cannot "
+        "see, AAVE is a measured upgradeable proxy, and stablecoins do not fit a value "
+        "thesis. Nothing has been deleted; move 'crypto' back into LANES to resume."
+    ),
+}
+
+#: Every lane this repository knows about, running or not. Anything reporting on lanes
+#: reads this; anything RUNNING lanes reads `LANES`.
+ALL_LANES = LANES + tuple(PARKED_LANES)
 
 #: What a lane's ring-fence is denominated in when the config does not say, per lane,
 #: because the answer is a fact about where the money goes rather than a house preference:
@@ -79,6 +114,10 @@ class Assembly:
                     f"not the same as nothing being asked.")
         if self.status == REFUSED:
             return f"REFUSED  [{self.lane}]\n  {self.reason}"
+        if self.status == PARKED:
+            return (f"PARKED  [{self.lane}]\n  {self.reason}\n"
+                    f"  It was not asked to look and it did not fail to look. Nothing "
+                    f"about this lane's subject matter has been established by this run.")
         return f"CONFIGURED  [{self.lane}]"
 
 
@@ -463,13 +502,18 @@ def assemble(
     kill_switch: Path = KILL_SWITCH,
     theses_path: Path = THESES,
 ) -> tuple[Assembly, ...]:
-    """One assembly per lane in `LANES`, in a stable order, whatever that list holds.
+    """One assembly per lane, in a stable order, whatever the registries hold.
 
-    More lanes than these three are planned, so the loop is written against `LANES`
-    rather than against the number three, and a lane listed without a builder is
-    REPORTED rather than raised. `builders[lane]` on an unknown key is a `KeyError` out
-    of the middle of an assembly pass — every OTHER lane's result is lost with it, so
-    the run reports nothing at all because one lane was half-added.
+    More lanes are planned, so the loop is written against `LANES` rather than against a
+    number, and a lane listed without a builder is REPORTED rather than raised.
+    `builders[lane]` on an unknown key is a `KeyError` out of the middle of an assembly
+    pass — every OTHER lane's result is lost with it, so the run reports nothing at all
+    because one lane was half-added.
+
+    **Parked lanes are appended, not omitted.** They come last and they carry the reason
+    they were stood down. Dropping them would make a deliberate decision look like a lane
+    that had never existed, and the whole point of writing the decision down is that the
+    next person to read this list does not have to wonder.
     """
 
     builders = {
@@ -496,6 +540,13 @@ def assemble(
                 f"a lane nobody asked for: write its assemble_{lane}() before running it.")))
             continue
         out.append(build(settings))
+
+    # After the running lanes and in registry order, so the report reads as "here is what
+    # ran, and here is what deliberately did not". A parked lane never consults its config:
+    # whether somebody left `enabled: true` in the file is not the question — the question
+    # is whether it is in the rotation, and it is not.
+    for lane, why in PARKED_LANES.items():
+        out.append(Assembly(lane, PARKED, reason=why))
     return tuple(out)
 
 
@@ -578,17 +629,28 @@ def reap(
             f"parse error."))
 
     selected = tuple(lanes) if lanes is not None else LANES
+    # Named before the unknown check, because "you asked for a lane that does not exist"
+    # and "you asked for a lane somebody stood down, here is who and why" send a reader to
+    # two different places, and only one of them is a typo.
+    parked = [lane for lane in selected if lane in PARKED_LANES]
+    if parked:
+        return Reaping(refusal="; ".join(
+            f"the {lane} lane is PARKED: {PARKED_LANES[lane]}" for lane in parked))
     unknown = set(selected) - set(LANES)
     if unknown:
         return Reaping(refusal=(
             f"unknown reaper lane(s): {', '.join(sorted(unknown))}. Choose from "
             f"{', '.join(LANES)}."))
 
+    # PARKED assemblies survive the filter on a full run and are dropped when one lane was
+    # named: "I asked for stocks" should not print a paragraph about crypto, but "I asked
+    # for everything" must still say what is not running.
+    keep = set(selected) | (set(PARKED_LANES) if lanes is None else set())
     assemblies = tuple(
         assembly for assembly in assemble(
             config, directory=directory, kill_switch=kill_switch,
             theses_path=theses_path
-        ) if assembly.lane in selected
+        ) if assembly.lane in keep
     )
 
     ledger = OutcomeLedger(ledger_path)

@@ -14,8 +14,28 @@ from run import LANES, reap
 def test_each_reaper_lane_has_the_cadence_of_its_evidence():
     lanes = {lane.name: lane for lane in LANES}
 
-    assert lanes["reap-crypto"].cadence_seconds == 6 * 3600
     assert lanes["reap-stocks"].cadence_seconds == 24 * 3600
+    assert lanes["reap-arb"].cadence_seconds == 8 * 3600
+
+
+def test_a_parked_lane_keeps_its_cadence_without_being_scheduled():
+    """Two properties, and the second is the one that would rot quietly.
+
+    A parked lane must not be on the timer — that is the whole point of parking it. But
+    its chosen cadence stays in the table, because deleting the entry would mean the day
+    somebody unparks the lane it silently picks up the six-hour default instead of the
+    interval that was argued for. A cadence that changes because a lane was resumed is
+    exactly the kind of thing nobody notices until the API allowance is spent.
+    """
+
+    import run
+    from lib.reaping import PARKED_LANES
+
+    scheduled = {lane.name for lane in LANES}
+
+    for lane in PARKED_LANES:
+        assert f"reap-{lane}" not in scheduled
+        assert lane in run.REAP_CADENCES
 
 
 def test_the_arb_cadence_is_set_by_the_allowance_rather_than_by_the_odds():

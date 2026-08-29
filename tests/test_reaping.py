@@ -1,12 +1,18 @@
 """A lane nobody configured must never appear beside a lane that looked and found nothing.
 
 The recurring defect, at the level of the command a person actually types. `--reap` runs
-three lanes; if two of them were never set up, printing three tidy "nothing found" lines is
-a confident report assembled out of an empty config file.
+every lane; if two of them were never set up, printing tidy "nothing found" lines for them
+is a confident report assembled out of an empty config file.
 
-So assembly is a first-class result with four outcomes — CONFIGURED, NOT_CONFIGURED,
-UNREADABLE, REFUSED — and an unparseable config refuses the whole run rather than treating
-every lane as unconfigured.
+So assembly is a first-class result with five outcomes — CONFIGURED, NOT_CONFIGURED,
+UNREADABLE, REFUSED, PARKED — and an unparseable config refuses the whole run rather than
+treating every lane as unconfigured.
+
+`PARKED` is the fifth and it draws the same line one level up. Crypto was stood down on
+2026-08-29; a lane simply removed from `LANES` would be *absent*, and absent reads as never
+written. The tests below therefore assert that a parked lane is still printed, still
+carries the reason it was parked, and is never reported as NOT_CONFIGURED — which would
+say nobody had set it up, when in fact somebody decided.
 """
 from __future__ import annotations
 
@@ -17,12 +23,16 @@ import pytest
 
 from lib.reaping import (
     CONFIGURED,
+    LANES,
     NOT_CONFIGURED,
+    PARKED,
+    PARKED_LANES,
     REFUSED,
     UNREADABLE,
     Assembly,
     Reaping,
     assemble,
+    assemble_crypto,
     load_config,
     reap,
 )
@@ -58,19 +68,70 @@ class TestFourOutcomesNotTwo:
 
         assert [a.lane for a in assembled] == ["arb", "stocks", "crypto"]
 
-    def test_a_disabled_lane_is_not_configured_rather_than_absent(self, tmp_path):
-        crypto = assemble(config(), **paths(tmp_path))[2]
+    def test_a_parked_lane_is_printed_after_the_running_ones(self, tmp_path):
+        """The running lanes first, then what deliberately did not run. Order is the
+        message: a reader scanning the top of the report sees what was actually asked."""
 
-        assert crypto.status == NOT_CONFIGURED
+        assembled = assemble(config(), **paths(tmp_path))
+
+        assert [a.lane for a in assembled[:len(LANES)]] == list(LANES)
+        assert [a.lane for a in assembled[len(LANES):]] == list(PARKED_LANES)
+
+    def test_a_disabled_lane_is_not_configured_rather_than_absent(self, tmp_path):
+        stocks = assemble(config(stocks={"enabled": False}), **paths(tmp_path))[1]
+
+        assert stocks.status == NOT_CONFIGURED
 
     def test_not_configured_says_it_did_not_look(self, tmp_path):
-        described = assemble(config(), **paths(tmp_path))[2].describe()
+        described = assemble(
+            config(stocks={"enabled": False}), **paths(tmp_path))[1].describe()
 
         assert "did not look" in described
         assert "has not reported that there is nothing to find" in described
 
-    def test_an_empty_config_leaves_every_lane_unconfigured(self, tmp_path):
-        assert {a.status for a in assemble({}, **paths(tmp_path))} == {NOT_CONFIGURED}
+    def test_an_empty_config_leaves_every_running_lane_unconfigured(self, tmp_path):
+        assembled = assemble({}, **paths(tmp_path))
+
+        running = {a.status for a in assembled if a.lane in LANES}
+        assert running == {NOT_CONFIGURED}
+
+    def test_a_parked_lane_is_parked_rather_than_unconfigured(self, tmp_path):
+        """The distinction the status exists for, and the one most worth a test.
+
+        NOT_CONFIGURED means nobody set this up and it has an obvious remedy: set it up.
+        PARKED means somebody looked at it and decided. Reporting the second as the first
+        sends the next reader off to configure a lane that is working exactly as intended.
+        """
+
+        crypto = next(a for a in assemble({}, **paths(tmp_path)) if a.lane == "crypto")
+
+        assert crypto.status == PARKED
+        assert crypto.status != NOT_CONFIGURED
+
+    def test_a_parked_lane_carries_the_reason_it_was_parked(self, tmp_path):
+        """"PARKED" alone trains a reader to skim. The whole value is the sentence after
+        it: who decided, when, and what would undo it."""
+
+        crypto = next(a for a in assemble({}, **paths(tmp_path)) if a.lane == "crypto")
+
+        assert "Ian" in crypto.reason and "2026-08-29" in crypto.reason
+        assert "move 'crypto' back into LANES" in crypto.reason
+        assert "did not fail to look" in crypto.describe()
+
+    def test_a_parked_lane_is_parked_even_when_the_config_still_enables_it(self, tmp_path):
+        """An `enabled: true` left in the file must not resurrect a lane by accident.
+
+        The rotation is the registry in code, which is reviewed; the config file is data on
+        a box. A stale key in the second one is the likeliest way a stood-down lane starts
+        spending money again without anybody deciding it should.
+        """
+
+        still_on = config(crypto={"enabled": True, "balance": 100.0, "wallet": "0x" + "a" * 40})
+
+        crypto = next(a for a in assemble(still_on, **paths(tmp_path)) if a.lane == "crypto")
+
+        assert crypto.status == PARKED
+        assert crypto.reaper is None
 
     def test_a_configured_lane_carries_a_reaper(self, tmp_path):
         arb = assemble(config(), **paths(tmp_path))[0]
@@ -156,9 +217,16 @@ class TestConfigurationIsRefusedRatherThanPatched:
         assert "positive balance" in arb.reason
 
     def test_crypto_without_a_wallet_is_refused(self, tmp_path):
-        broken = config(crypto={"enabled": True, "balance": 100.0})
+        """Asserted against the builder rather than through `assemble`, because the lane
+        is parked and `assemble` never reaches its builder now.
 
-        crypto = assemble(broken, **paths(tmp_path))[2]
+        Kept rather than deleted: parking is meant to be reversible in one line, and a
+        builder whose tests were removed with its rotation entry is a lane that comes back
+        untested. The refusal it makes is still the refusal it will make on the day
+        somebody moves 'crypto' back into LANES.
+        """
+
+        crypto = assemble_crypto({"enabled": True, "balance": 100.0}, **paths(tmp_path))
 
         assert crypto.status == REFUSED
         assert "nobody to build a transaction for" in crypto.reason

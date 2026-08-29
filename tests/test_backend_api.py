@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 import json
 
+import pytest
+
 from backend.app import create_app
 from lib.reaping import Reaping
 
@@ -215,7 +217,44 @@ def test_the_hidden_attribute_is_not_defeated_by_a_display_rule():
     assert "[hidden]{display:none!important}" in css.replace(" ", "")
 
 
-def test_connector_projection_preserves_missing_as_missing(monkeypatch):
+@pytest.fixture
+def crypto_unparked(monkeypatch):
+    """Put crypto back in the rotation for the length of one test.
+
+    The two projection tests below are about the PROJECTION — a missing credential must
+    reach the API as missing, a present one as ready — and crypto is the vehicle because
+    it is the one lane whose credential is a single environment variable a test can own.
+    The lane itself was parked on 2026-08-29, so the fixture states that dependency out
+    loud instead of the tests quietly asserting something about a lane that is no longer
+    evaluated. Parking is meant to be one line to undo; this is that line.
+    """
+
+    import lib.reaping as reaping
+
+    monkeypatch.setattr(reaping, "LANES", reaping.LANES + ("crypto",))
+    monkeypatch.setattr(reaping, "PARKED_LANES", {})
+    monkeypatch.setattr(reaping, "ALL_LANES", reaping.LANES + ("crypto",))
+
+
+def test_a_parked_lane_projects_as_parked_rather_than_blocked(monkeypatch):
+    """The API must not report a stood-down lane as a credential somebody should go and
+    set. BLOCKED is a job on a list; PARKED is a decision that has already been made."""
+
+    monkeypatch.setenv("PROVENA_COMMAND_KEY", "test-key")
+    monkeypatch.delenv("QUICKNODE_ETHEREUM_URL", raising=False)
+
+    response_status, response = request(
+        create_app(), "GET", "/api/v1/connectors",
+        headers={"X-Provena-Command-Key": "test-key"})
+
+    assert response_status == 200
+    crypto = next(row for row in response["lanes"] if row["lane"] == "crypto")
+    assert crypto["status"] == "PARKED"
+    # And it is not silently dropped, which would read as a lane that never existed.
+    assert crypto["requirements"] == []
+
+
+def test_connector_projection_preserves_missing_as_missing(monkeypatch, crypto_unparked):
     """A missing connector must project as missing, and the test must MAKE it missing.
 
     This asserted crypto was BLOCKED without removing `QUICKNODE_ETHEREUM_URL`, so it
@@ -242,7 +281,7 @@ def test_connector_projection_preserves_missing_as_missing(monkeypatch):
     assert crypto["requirements"][0]["status"] == "NOT_CONFIGURED"
 
 
-def test_a_configured_chain_endpoint_projects_as_ready(monkeypatch):
+def test_a_configured_chain_endpoint_projects_as_ready(monkeypatch, crypto_unparked):
     """The other half, which nothing asserted: a lane that IS configured says so.
 
     Without this the suite only ever checked the unconfigured case, so the projection

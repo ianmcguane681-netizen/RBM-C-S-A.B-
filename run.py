@@ -4,7 +4,7 @@
     python run.py --go            actually run them, once
     python run.py --serve         run them on their cadences, forever
     python run.py --queue         just the human queue
-    python run.py --reap [lane]   every lane, or one of arb/crypto/stocks; places where
+    python run.py --reap [lane]   every lane, or one by name; places where
                                   the mode allows
     python run.py --reap --dry    the same, and sends nothing whatever the mode says
     python run.py --reap --json   the same run, as the UI contract instead of prose
@@ -77,6 +77,9 @@ def _stamp() -> str:
 #:
 #: The odds would justify every five minutes. The allowance will not, and the allowance is
 #: the binding constraint until the tier is paid for.
+#: `crypto` keeps its entry while the lane is parked. Deleting it would mean unparking the
+#: lane silently gave it the six-hour default instead of the cadence somebody chose, and a
+#: cadence that changes because a lane was resumed is the kind of thing nobody notices.
 REAP_CADENCES = {"arb": 8 * 3600, "crypto": 6 * 3600, "stocks": 24 * 3600}
 
 #: What a lane nobody has given a cadence gets. Six hours is chosen to be unremarkable —
@@ -458,6 +461,20 @@ def reap(lane: str = "", dry: bool = False, *, as_json: bool = False) -> int:
     from lib.reaping import LANES as REAPER_LANES
     from lib.reaping import reap as run_reapers
     from lib.ui_contract import SCHEMA_VERSION
+
+    from lib.reaping import PARKED_LANES
+
+    if lane and lane in PARKED_LANES:
+        # Distinct from the unknown-lane message below on purpose. "No such lane" sends a
+        # reader looking for a typo; this one tells them the lane is fine and somebody
+        # stood it down, which is the answer to the question they actually asked.
+        refusal = f"the {lane} lane is PARKED: {PARKED_LANES[lane]}"
+        if as_json:
+            print(json.dumps({"schema_version": SCHEMA_VERSION, "status": "PARKED",
+                              "lane": lane, "reason": refusal}, indent=2))
+        else:
+            print(refusal)
+        return 2
 
     if lane and lane not in REAPER_LANES:
         choices = ", ".join(REAPER_LANES[:-1]) + f" or {REAPER_LANES[-1]}"
