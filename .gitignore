@@ -86,3 +86,12 @@ data/team-news.json
 # Venue coordinates for the weather lookup. Not a secret and not a credential, and it is
 # still a list of the grounds this operator's fixtures are at. Ignored for the same reason.
 data/venues.json
+
+# The outreach lane's state. All three name real businesses and what has been said to
+# them, which is exactly what must not be published: the configuration names the towns
+# being worked, the search log names who was checked, the approach log names who was
+# written to, and the suppression list names people who asked to be left alone.
+data/outreach.json
+data/outreach-searches.json
+data/outreach-approaches.json
+data/outreach-suppression.json

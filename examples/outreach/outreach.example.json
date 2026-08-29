@@ -1,0 +1,31 @@
+{
+  "_README": [
+    "Copy to data/outreach.json. That path is gitignored: it records which towns and",
+    "which businesses are being approached, and this repository is public.",
+    "",
+    "`sender` and `sender_detail` are mandatory. An unsolicited business message must",
+    "identify who is sending it, and this refuses to draft one that cannot.",
+    "",
+    "Areas are small bounding boxes \u2014 south, west, north, east \u2014 of at most 0.25",
+    "degrees. Overpass is donated infrastructure with no key; cover more ground with",
+    "more small queries over time rather than one large one now."
+  ],
+  "sender": "YOUR NAME",
+  "sender_detail": "I build small websites for local businesses in <your town>",
+  "areas": [
+    {
+      "name": "Cork city centre",
+      "south": 51.888,
+      "west": -8.5,
+      "north": 51.909,
+      "east": -8.455
+    }
+  ],
+  "categories": [
+    "shop=hairdresser",
+    "craft=plumber",
+    "craft=electrician",
+    "amenity=cafe"
+  ],
+  "check_sites": true
+}

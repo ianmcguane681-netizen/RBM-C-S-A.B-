@@ -153,6 +153,21 @@ LANES = (
         unconfigured_exit_codes=(2,),
     ),
     Lane(
+        name="outreach",
+        command=("python", "outreach.py"),
+        # Weekly. The underlying thing barely moves — a town's businesses and their
+        # websites change over months, not hours — and the binding constraint is not a
+        # quota but a person: every run produces leads that need thirty seconds each of
+        # somebody's search engine, and a daily cadence would produce a backlog nobody
+        # works through, which is how a lane stops being read at all.
+        cadence_seconds=7 * 24 * 3600,
+        produces_decisions=True,
+        # 1 = drafts are waiting, or leads need a search. Both are work for a person.
+        findings_exit_codes=(1,),
+        # 2 = nothing was looked at: no config, an unreadable one, or no area answered.
+        unconfigured_exit_codes=(2,),
+    ),
+    Lane(
         name="status",
         command=("python", "status.py"),
         cadence_seconds=24 * 3600,
