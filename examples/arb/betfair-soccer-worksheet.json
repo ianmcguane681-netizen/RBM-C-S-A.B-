@@ -1,0 +1,145 @@
+{
+  "_README": [
+    "A WORKSHEET, not a record. Generated 2026-08-30 from the Betfair reference document,",
+    "which states plainly that it paraphrases rather than reproduces Betfair's text.",
+    "",
+    "Every `verbatim` field is EMPTY on purpose. lib.rulebook.Clause refuses a clause with",
+    "no wording, so this file CANNOT be recorded until a person has opened each page and",
+    "pasted the actual words. That is the guard working: a paraphrase is a normalisation,",
+    "and normalising is exactly where two different rules become one and the arb becomes",
+    "a bet.",
+    "",
+    "`_where` says which page. `_look_for` says what the paraphrase claims is there, so you",
+    "know when you have found the right clause \u2014 it is a search hint and it is NOT the",
+    "record. Do not paste it into `verbatim`.",
+    "",
+    "Fill in `verbatim`, `source_url` and `read_by`, then:",
+    "    python rulebook.py --record examples/arb/betfair-soccer-worksheet.json",
+    "",
+    "Then do the same for the SECOND book. Smarkets is the recommended pair."
+  ],
+  "clauses": [
+    {
+      "_where": "Exchange Rules > Specific Sports Rules > Football/Soccer, plus the market's own Rules tab",
+      "_look_for": "Your reference: already-decided outcomes stand and all other selections void. If it is announced within 3 hours of kick-off that the game restarts within 3 days of the abandonment, bets stand. A temporary removal of players that resumes and finishes by midnight local time is NOT an abandonment.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "abandonment",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "Football/Soccer rules",
+      "_look_for": "Your reference: stands if confirmed to take place within the current or following 3 days of the original local kick-off DATE \u2014 but voids if the rescheduled start-time confirmation is not received within 3 HOURS of the original kick-off. Two different windows in one clause; quote both.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "postponement",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "Football/Soccer rules",
+      "_look_for": "Your reference: stands unless switched to the OPPONENT'S ground, then voids. Major international tournaments deem all venues neutral. Note this differs from the General Rules team-sport clause \u2014 quote the football one.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "venue_change",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "General Rules > Periods of Time, and the market's Rules tab",
+      "_look_for": "Your reference: 90 minutes plus stoppage; extra time and penalties EXCLUDED unless stated. Stoppage-time events are deemed to occur at the end of regular time.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "extra_time",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "General Rules > Settlement",
+      "_look_for": "Your reference: the official result of the relevant governing body, ignoring later amendment EXCEPT one announced within 24 hours solely to correct a REPORTING error. New information within 48 hours may trigger resettlement; after 48 hours it is disregarded. Three separate numbers \u2014 quote the clause carrying all of them.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "result_source",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "General Rules > Obvious errors / resettlement",
+      "_look_for": "Your reference: Betfair may void all matched bets on a market for wrong competitor name, wrong number of outcomes, wrong exposure, or a cross-matching algorithm deployed. Note this is BROADER than a bookmaker's palpable-error clause, not narrower \u2014 it includes the venue's own matching error.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "palpable_error",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "Betfair charges / commission pages \u2014 NOT the rules pages",
+      "_look_for": "Your reference explicitly does not capture this: commission %, market base rate and minimum stake live on the charges page and the API PriceLadderDescription. An exchange has no max-payout cap in the bookmaker sense, but commission on winnings is the equivalent truncation of the winning leg and must be quoted from the account.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "maximum_payout",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "General Rules > Managing markets in-play; Unmatched bets at the off",
+      "_look_for": "THE ONE YOUR DOCUMENT SURFACED. Your reference: unmatched bets are CANCELLED at the off unless set to Keep or Take-SP; there is an in-play bet delay; no part-suspension of individual selections in an in-play Exchange market; Betfair may cancel unmatched bets at any time. Quote the cancellation clause and the Keep/Take-SP options.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "unmatched_or_cancelled",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "General Rules > Dead heats",
+      "_look_for": "Your reference: reduced stake = stake x (expected winners / actual winners); the backer is paid reduced stake x traded price and the remainder goes to the layer. This is the worked case lib/arb.py already argues from \u2014 quote it exactly, it is what a bookmaker's very differently-worded clause has to be compared against.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "dead_heat",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "Horse Racing rules (reduction factors)",
+      "_look_for": "Not applicable to soccer/h2h. Recorded here only so the topic is not left UNREAD by accident \u2014 if you are only doing football, say so in the verbatim field in your own words rather than leaving it blank.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "non_runner",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    },
+    {
+      "_where": "General Rules; Cash Out",
+      "_look_for": "Your reference: Cash Out is per-market not per-bet, is not guaranteed, and is reversed if the market later voids. An exchange does not restrict winning accounts the way a soft book does, which is the reason this pair was recommended \u2014 quote whatever the page actually says.",
+      "book": "Betfair",
+      "market_type": "soccer/h2h",
+      "topic": "cash_out_and_restriction",
+      "verbatim": "",
+      "source_url": "https://support.betfair.com/app/answers/list/exchange-market-rules",
+      "read_by": "YOUR NAME",
+      "read_at": "2026-08-30"
+    }
+  ],
+  "declarations": []
+}

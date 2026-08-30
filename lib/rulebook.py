@@ -170,6 +170,18 @@ TOPICS: tuple[Topic, ...] = (
         "binds at stake sizes worth having, which is the only size that matters.",
     ),
     Topic(
+        "unmatched_or_cancelled",
+        "Can one leg fail to go on, or be cancelled by the venue, while the other stands?",
+        "Added 2026-08-30 after reading Betfair's exchange rules, which produce this "
+        "board's founding failure by a door the other nine topics do not watch: unmatched "
+        "bets are CANCELLED at the off unless set to Keep or Take-SP. Nothing voids and no "
+        "rule is breached — the bookmaker leg is on, the exchange lay never matched, and "
+        "the position is an unhedged single bet for the whole stake. An in-play bet delay, "
+        "a venue that suspends a whole market rather than one selection, and a right to "
+        "void matched bets for the venue's own matching error all belong to the same "
+        "question, which is about MECHANICS rather than settlement and is fatal all the same.",
+    ),
+    Topic(
         "dead_heat",
         "How is a tie between two selections settled?",
         "The worked example in `lib.arb.EquivalenceDeclaration`: Betfair and bet365 use "
